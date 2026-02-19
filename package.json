@@ -1,0 +1,33 @@
+{
+  "name": "aero-slider",
+  "version": "1.0.0",
+  "description": "A lightweight, CSS-first slider library for the modern web",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./slider.css": "./dist/slider.css"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "cd site && bun run dev",
+    "site:dev": "cd site && bun run dev",
+    "site:build": "cd site && bun run build",
+    "prepare": "bun run build"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "tsup": "^8.5.1",
+    "typescript": "^5"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
