@@ -19,6 +19,7 @@ export const VELOCITY_SMOOTHING = 0.3;
 export const MOMENTUM_FACTOR = 80;
 export const SCROLL_END_DELAY = 150;
 export const WHEEL_IDLE_MS = 300;
+export const RESIZE_DEBOUNCE_MS = 100;
 
 export const SLIDE_INDEX_ATTR = "data-aero-slider-index";
 export const LOOP_CLONE_ATTR = "data-aero-slider-clone";

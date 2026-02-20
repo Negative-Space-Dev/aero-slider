@@ -35,3 +35,21 @@ body {
 .aero-slider--no-pagination .aero-slider__pagination {
   display: none !important;
 }
+
+/* Responsive example: layout adapts via media queries */
+.aero-slider--responsive {
+  --slides-per-view: 1;
+  --slide-gap: 8px;
+}
+@media (min-width: 640px) {
+  .aero-slider--responsive {
+    --slides-per-view: 2;
+    --slide-gap: 12px;
+  }
+}
+@media (min-width: 1024px) {
+  .aero-slider--responsive {
+    --slides-per-view: 3;
+    --slide-gap: 16px;
+  }
+}

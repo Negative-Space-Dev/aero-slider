@@ -35,6 +35,11 @@ const autoplay = createSlider(getRequiredElementById<HTMLElement>("autoplay"), {
   navigation: true,
 });
 
+createSlider(getRequiredElementById<HTMLElement>("responsive"), {
+  pagination: true,
+  navigation: true,
+});
+
 // ── Hero interactive slider ───────────────────────────────────────────
 const form = getRequiredElementById<HTMLFormElement>("config-form");
 const logList = getRequiredElementById<HTMLTableSectionElement>("event-log");
@@ -77,7 +82,7 @@ function createHeroSlide(n: number): HTMLElement {
   const [from, to] = SLIDE_GRADIENTS[(n - 1) % SLIDE_GRADIENTS.length];
   const label = n <= 5 ? ORDINALS[n - 1] : String(n);
   const div = document.createElement("div");
-  div.className = `bg-gradient-to-br ${from} ${to} text-white rounded-2xl`;
+  div.className = `bg-linear-to-br ${from} ${to} text-white rounded-2xl`;
   div.innerHTML = `<div class="flex flex-col items-center justify-center gap-2 p-8 text-center"><span class="text-5xl font-bold">${n}</span><span class="text-sm font-medium opacity-75">Slide ${label}</span></div>`;
   return div;
 }
@@ -85,7 +90,7 @@ function createHeroSlide(n: number): HTMLElement {
 function createThumbSlide(n: number): HTMLElement {
   const [from, to] = SLIDE_GRADIENTS[(n - 1) % SLIDE_GRADIENTS.length];
   const div = document.createElement("div");
-  div.className = `rounded-md bg-gradient-to-br ${from} ${to} text-white`;
+  div.className = `rounded-md bg-linear-to-br ${from} ${to} text-white`;
   div.innerHTML = `<div class="flex items-center justify-center text-xs font-bold">${n}</div>`;
   return div;
 }
@@ -163,11 +168,15 @@ function applyLayoutFromFormToContainer(container: HTMLElement): void {
   }
 }
 
-function logEvent(name: string, idx: number): void {
+function logEvent(name: string, data: { index: number; fromIndex?: number }): void {
   const row = document.createElement("tr");
   row.className = "group hover:bg-slate-50 transition-colors";
   const time = new Date().toLocaleTimeString();
-  row.innerHTML = `<td class="truncate px-4 py-2 font-medium text-slate-900">${name}</td><td class="truncate px-4 py-2 text-slate-500">index=${idx}</td><td class="px-4 py-2 text-left tabular-nums text-slate-400">${time}</td>`;
+  const dataStr =
+    data.fromIndex !== undefined
+      ? `${data.fromIndex}→${data.index}`
+      : `index=${data.index}`;
+  row.innerHTML = `<td class="truncate px-4 py-2 font-medium text-slate-900">${name}</td><td class="truncate px-4 py-2 text-slate-500">${dataStr}</td><td class="px-4 py-2 text-left tabular-nums text-slate-400">${time}</td>`;
   logList.prepend(row);
   while (logList.children.length > 30) logList.lastElementChild?.remove();
 }
@@ -220,7 +229,7 @@ function rebuildHero(): void {
   ] as const;
 
   for (const event of events) {
-    heroSlider.on(event, (d) => logEvent(event, d.index));
+    heroSlider.on(event, (d) => logEvent(event, d));
   }
 
   const showPagination = config.pagination && !config.thumbnails;

@@ -42,7 +42,8 @@ export function createDragController(
     track.style.scrollBehavior = "auto";
     track.style.scrollSnapType = "none";
     container.classList.add("aero-slider--dragging");
-    ctx.emit("dragStart", { index: state.currentIndex });
+    const startIndex = state.currentIndex;
+    ctx.emit("dragStart", { index: startIndex });
     pauseAutoplay();
 
     function onPointerMove(ev: PointerEvent): void {
@@ -129,7 +130,7 @@ export function createDragController(
         }
       }
 
-      ctx.emit("dragEnd", { index: state.currentIndex });
+      ctx.emit("dragEnd", { index: state.currentIndex, fromIndex: startIndex });
       track.removeEventListener("pointermove", onPointerMove);
       track.removeEventListener("pointerup", onPointerUp);
       track.removeEventListener("pointercancel", onPointerUp);

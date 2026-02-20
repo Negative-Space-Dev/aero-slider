@@ -11,6 +11,7 @@ import type {
 import {
   DEFAULTS,
   LAYOUT_DEFAULTS,
+  RESIZE_DEBOUNCE_MS,
   SCROLL_END_DELAY,
   SLIDE_INDEX_ATTR,
   WHEEL_IDLE_MS,
@@ -68,6 +69,7 @@ export function createSlider(
   // ── Timers ───────────────────────────────────────────────────────────
   let scrollRafId: number | null = null;
   let scrollEndTimer: ReturnType<typeof setTimeout> | null = null;
+  let resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   let resizeObserver: ResizeObserver | null = null;
 
   // ── Core Helpers ─────────────────────────────────────────────────────
@@ -109,36 +111,8 @@ export function createSlider(
     getSlideWidth();
   }
 
-  function parseAspectRatio(value: string): number {
-    const parts = value.split("/").map((s) => parseFloat(s.trim()));
-    if (parts.length === 2 && parts[0] && parts[1]) {
-      return parts[0] / parts[1];
-    }
-    return parseFloat(value) || 16 / 9;
-  }
-
-  function computeContainerAspect(): void {
-    const containerWidth = container.clientWidth;
-    if (containerWidth === 0) return;
-
-    const N = config.slidesPerView;
-    const G = config.gap;
-    const slideAspect = parseAspectRatio(config.aspectRatio);
-
-    // slideWidth = (containerWidth - (N-1) * gap) / N
-    // slideHeight = slideWidth / slideAspect
-    // containerAspect = containerWidth / slideHeight
-    //                 = N * containerWidth * slideAspect / (containerWidth - (N-1) * G)
-    const denominator = containerWidth - (N - 1) * G;
-    if (denominator <= 0) return;
-
-    const containerAspect = (N * containerWidth * slideAspect) / denominator;
-    track.style.setProperty("--container-aspect", String(containerAspect));
-  }
-
   function applyCssCustomProperties(): void {
     Object.assign(config, readCssLayoutConfig());
-    computeContainerAspect();
   }
 
   // ── Fractional slidesPerView: alignment helpers ──────────────────────
@@ -179,17 +153,25 @@ export function createSlider(
     const w = getSlideWidth();
     if (w === 0) return state.currentIndex;
 
+    const maxIdx = state.loopModeActive ? slideCount - 1 : getMaxIndex();
+    const maxScroll = track.scrollWidth - track.clientWidth;
+
     if (!isFractionalView()) {
       const raw = Math.round(scrollLeft / w);
-      return Math.max(0, Math.min(raw, getMaxIndex()));
+      return Math.max(0, Math.min(raw, maxIdx));
     }
+
+    // At scroll boundaries, avoid oscillation from scroll-snap/sub-pixel settling
+    if (maxScroll <= 0) return 0;
+    if (scrollLeft <= 1) return 0;
+    if (scrollLeft >= maxScroll - 1) return maxIdx;
 
     // Fractional view — determine index from viewport center
     const trackWidth = track.clientWidth;
     const slideVisual = w - config.gap;
     const viewportCenter = scrollLeft + trackWidth / 2;
     const raw = Math.round((viewportCenter - slideVisual / 2) / w);
-    return Math.max(0, Math.min(raw, state.loopModeActive ? slideCount - 1 : getMaxIndex()));
+    return Math.max(0, Math.min(raw, maxIdx));
   }
 
   function applySnapAlignment(): void {
@@ -305,16 +287,16 @@ export function createSlider(
   }
 
   // ── Resize Observer ──────────────────────────────────────────────────
+  // Re-run update() when the track resizes (e.g. viewport crosses a media
+  // query). Debounced to avoid layout thrashing during active window resize.
   function setupResizeObserver(): void {
     resizeObserver?.disconnect();
     resizeObserver = new ResizeObserver(() => {
-      computeContainerAspect();
-      if (state.loopModeActive) {
-        loop.setupLoopTrack(state.currentIndex);
-      } else {
-        recalcSlideMetrics();
-        track.scrollTo({ left: getScrollLeftForIndex(state.currentIndex), behavior: "auto" });
-      }
+      if (resizeDebounceTimer !== null) clearTimeout(resizeDebounceTimer);
+      resizeDebounceTimer = setTimeout(() => {
+        resizeDebounceTimer = null;
+        if (!state.isDestroyed) update();
+      }, RESIZE_DEBOUNCE_MS);
     });
     resizeObserver.observe(track);
   }
@@ -370,6 +352,7 @@ export function createSlider(
       return;
     }
 
+    state.isProgrammaticScroll = true;
     track.scrollTo({ left: getScrollLeftForIndex(target), behavior: "smooth" });
   }
 
@@ -450,6 +433,8 @@ export function createSlider(
 
     resizeObserver?.disconnect();
     resizeObserver = null;
+    if (resizeDebounceTimer !== null) clearTimeout(resizeDebounceTimer);
+    resizeDebounceTimer = null;
 
     track.removeEventListener("scroll", onScroll);
     track.removeEventListener("wheel", onWheel);
@@ -464,7 +449,6 @@ export function createSlider(
     pagination.clear();
 
     container.removeAttribute("aria-roledescription");
-    track.style.removeProperty("--container-aspect");
     container.classList.remove("aero-slider--dragging");
     if (host.aeroSlider === api) {
       delete host.aeroSlider;

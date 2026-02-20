@@ -4,5 +4,6 @@ export type {
   SliderConfig,
   SliderInstance,
   SliderEvent,
+  SliderEventData,
   SliderEventCallback,
 } from "./types.ts";

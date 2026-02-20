@@ -6,7 +6,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  --slide-aspect: 16 / 9;
+  --slide-aspect: 5 / 3;
   --slides-per-view: 1;
   --slide-gap: 0px;
 }
@@ -22,14 +22,8 @@
 }
 
 /* === Track === */
-/*
- * Track aspect ratio formula (computed by JS via --container-aspect):
- * When showing N slides with gaps, slide height = (trackWidth - (N-1)*gap) / N / slideAspect.
- * Track aspect = trackWidth / trackHeight.
- * Pagination, nav, etc. live as siblings in the container without affecting track height.
- */
+/* Height is driven by slides (each has aspect-ratio); no JS aspect calculation needed. */
 .aero-slider__track {
-  aspect-ratio: var(--container-aspect, var(--slide-aspect, 16 / 9));
   min-height: 0;
   display: flex;
   flex-direction: row;
@@ -153,7 +147,6 @@
 .aero-slider__nav:disabled {
   opacity: 0.3;
   cursor: default;
-  pointer-events: none;
 }
 
 .aero-slider__nav--prev {

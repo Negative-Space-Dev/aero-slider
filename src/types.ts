@@ -40,7 +40,9 @@ export type SliderEvent =
   | "autoplayStart"
   | "autoplayStop";
 
-export type SliderEventCallback = (data: { index: number }) => void;
+/** Event payload. dragEnd includes fromIndex (slide index at drag start). */
+export type SliderEventData = { index: number; fromIndex?: number };
+export type SliderEventCallback = (data: SliderEventData) => void;
 
 export interface SliderState {
   currentIndex: number;
@@ -59,7 +61,7 @@ export interface SliderContext {
   config: SliderConfigFull;
   state: SliderState;
   listeners: Map<SliderEvent, Set<SliderEventCallback>>;
-  emit(event: SliderEvent, data: { index: number }): void;
+  emit(event: SliderEvent, data: SliderEventData): void;
   getSlideWidth(): number;
   recalcSlideMetrics(): void;
   normalizeIndex(index: number): number;
