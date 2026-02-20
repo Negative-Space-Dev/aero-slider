@@ -39,7 +39,7 @@
   overflow-x: auto;
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
-  touch-action: pan-y;
+  touch-action: manipulation;
   overscroll-behavior-x: contain;
   /* Prevent browser scroll anchoring from fighting clone prepend/removal */
   overflow-anchor: none;
@@ -115,6 +115,7 @@
 
 /* === Navigation Buttons === */
 .aero-slider__nav {
+  touch-action: manipulation;
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
@@ -179,6 +180,7 @@
 }
 
 .aero-slider__dot {
+  touch-action: manipulation;
   cursor: pointer;
 }
 

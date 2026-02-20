@@ -19,6 +19,9 @@ export function createDragController(
 
   function onPointerDown(e: PointerEvent): void {
     if (e.button !== 0) return;
+    /* On touch devices, let native scroll handle horizontal panning; avoid
+     * intercepting touch with custom drag which feels broken on mobile Safari. */
+    if (e.pointerType === "touch") return;
 
     track.setPointerCapture(e.pointerId);
     state.isDragging = true;
