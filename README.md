@@ -1,6 +1,13 @@
 # Aero Slider
 
-A lightweight, CSS-first slider library for the modern web.
+A lightweight (~6KB), CSS-first slider library for the modern web.
+
+- **CSS-First Architecture** — Layout via custom properties, responsive via media queries
+- **Native Scroll Snapping** — Hardware-accelerated, smooth scrolling
+- **Minimal JS Footprint** — Only handles events, loop cloning, pagination, autoplay
+- **Zero Dependencies** — No external libraries required
+- **Thumbnail Syncing** — Link primary sliders with thumbnail navigation
+- **iOS-Style Pagination** — Optional `maxDots` for windowed dot navigation
 
 **Documentation:** [aeroslider.com](https://aeroslider.com)
 

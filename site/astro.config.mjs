@@ -15,5 +15,8 @@ export default defineConfig({
         "aero-slider": resolve(root, "src/index.ts"),
       },
     },
+    server: {
+      allowedHosts: ["localhost", ".ngrok-free.app"],
+    },
   },
 });

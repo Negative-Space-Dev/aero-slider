@@ -5,6 +5,7 @@ export const DEFAULTS: Required<SliderConfig> = {
   autoplay: false,
   autoplayInterval: 5000,
   draggable: true,
+  maxDots: 0, // 0 means unlimited
 };
 
 export const LAYOUT_DEFAULTS: SliderLayoutConfig = {

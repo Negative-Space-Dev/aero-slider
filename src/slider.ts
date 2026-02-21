@@ -373,7 +373,7 @@ export function createSlider(
     keyboard.setEnabled(true);
     autoplay.setHoverPause(config.autoplay);
 
-    if (prev.slidesPerView !== config.slidesPerView || prev.loop !== config.loop) {
+    if (prev.slidesPerView !== config.slidesPerView || prev.loop !== config.loop || prev.maxDots !== config.maxDots) {
       pagination.clear();
       pagination.build();
     }

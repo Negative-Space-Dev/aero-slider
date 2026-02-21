@@ -1,6 +1,29 @@
 import { createSlider, syncThumbnails } from "aero-slider";
 import type { SliderConfig, SliderInstance } from "aero-slider";
 
+// Discrete steps for slidesPerView with exponential curve
+const SPV_STEPS = [
+  1, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.5,
+  1.75, 2, 2.5, 3, 4, 5,
+];
+
+function spvIndexToValue(index: number): number {
+  return SPV_STEPS[Math.max(0, Math.min(SPV_STEPS.length - 1, index))];
+}
+
+function spvValueToIndex(value: number): number {
+  let closest = 0;
+  let minDiff = Math.abs(SPV_STEPS[0] - value);
+  for (let i = 1; i < SPV_STEPS.length; i++) {
+    const diff = Math.abs(SPV_STEPS[i] - value);
+    if (diff < minDiff) {
+      minDiff = diff;
+      closest = i;
+    }
+  }
+  return closest;
+}
+
 function getRequiredElementById<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id) as T | null;
   if (!el) throw new Error(`Missing element #${id}`);
@@ -9,14 +32,26 @@ function getRequiredElementById<T extends HTMLElement>(id: string): T {
 
 function formatOutputValue(name: string, value: string): string {
   if (name === "slidesPerView") {
-    const n = Number(value);
-    if (Number.isNaN(n)) return value;
-    return n.toFixed(2).replace(/\.?0+$/, "");
+    const idx = Number(value);
+    if (Number.isNaN(idx)) return value;
+    const spv = spvIndexToValue(idx);
+    return spv.toFixed(2).replace(/\.?0+$/, "");
   }
   if (name === "slideCount") {
     const n = Number(value);
     if (Number.isNaN(n)) return value;
     return String(Math.min(20, Math.max(3, Math.round(n))));
+  }
+  if (name === "gap") {
+    return `${value}px`;
+  }
+  if (name === "autoplayInterval") {
+    return `${value}ms`;
+  }
+  if (name === "maxDots") {
+    const n = Number(value);
+    if (n >= 21) return "∞";
+    return String(n);
   }
   return value;
 }
@@ -35,12 +70,14 @@ const form = getRequiredElementById<HTMLFormElement>("config-form");
 const logList = getRequiredElementById<HTMLTableSectionElement>("event-log");
 const heroSliderEl = getRequiredElementById<HTMLElement>("hero-slider");
 const heroThumbsWrapper = getRequiredElementById<HTMLElement>("hero-thumbs-wrapper");
+const heroStableContainer = document.getElementById("hero-stable-container");
 
 const outputs: Record<string, HTMLOutputElement> = {
   slidesPerView: getRequiredElementById<HTMLOutputElement>("out-spv"),
   gap: getRequiredElementById<HTMLOutputElement>("out-gap"),
   autoplayInterval: getRequiredElementById<HTMLOutputElement>("out-interval"),
   slideCount: getRequiredElementById<HTMLOutputElement>("out-slideCount"),
+  maxDots: getRequiredElementById<HTMLOutputElement>("out-maxDots"),
 };
 
 const SLIDE_GRADIENTS = [
@@ -122,6 +159,7 @@ let syncTeardown: (() => void) | null = null;
 
 function readConfig(): SliderConfig & { thumbnails?: boolean; slideCount?: number } {
   const fd = new FormData(form);
+  const maxDotsVal = Number(fd.get("maxDots")) || 10;
   return {
     autoplay: fd.get("autoplay") === "on",
     autoplayInterval: Number(fd.get("autoplayInterval")) || 4000,
@@ -129,6 +167,7 @@ function readConfig(): SliderConfig & { thumbnails?: boolean; slideCount?: numbe
     draggable: fd.get("draggable") === "on",
     thumbnails: fd.get("thumbnails") === "on",
     slideCount: Math.min(20, Math.max(3, Number(fd.get("slideCount")) || 5)),
+    maxDots: maxDotsVal >= 21 ? undefined : maxDotsVal,
   };
 }
 
@@ -190,9 +229,11 @@ function ensureHeroNavAndPagination(): void {
 function applyLayoutFromFormToContainer(container: HTMLElement): void {
   const fd = new FormData(form);
   const gap = Number(fd.get("gap")) || 0;
+  const spvIndex = Number(fd.get("slidesPerView")) || 0;
+  const spvValue = spvIndexToValue(spvIndex);
   container.style.setProperty(
     "--slides-per-view",
-    String(Number(fd.get("slidesPerView")) || 1),
+    String(spvValue),
   );
   container.style.setProperty(
     "--slide-gap",
@@ -211,7 +252,16 @@ function applyLayoutFromFormToContainer(container: HTMLElement): void {
   }
 }
 
+const eventLogEmpty = document.getElementById("event-log-empty");
+const eventLogTable = document.getElementById("event-log-table");
+
 function logEvent(name: string, data: { index: number; fromIndex?: number }): void {
+  // Hide empty state, show table
+  if (eventLogEmpty && eventLogTable) {
+    eventLogEmpty.classList.add("hidden");
+    eventLogTable.classList.remove("hidden");
+  }
+  
   const row = document.createElement("tr");
   row.className = "group hover:bg-slate-50 transition-colors";
   const time = new Date().toLocaleTimeString();
@@ -288,10 +338,23 @@ for (const [name, output] of Object.entries(outputs)) {
   }
 }
 
+function updateAutoplayIntervalState(): void {
+  const autoplayChecked = (form.elements.namedItem("autoplay") as HTMLInputElement)?.checked ?? false;
+  const intervalControl = document.getElementById("interval-control");
+  if (intervalControl) {
+    intervalControl.classList.toggle("opacity-40", !autoplayChecked);
+    intervalControl.classList.toggle("pointer-events-none", !autoplayChecked);
+  }
+}
+
 form.addEventListener("input", (e) => {
   const target = e.target as HTMLInputElement;
   const out = outputs[target.name];
   if (out) out.textContent = formatOutputValue(target.name, target.value);
+  
+  if (target.name === "autoplay") {
+    updateAutoplayIntervalState();
+  }
 
   if (
     target.name === "slideCount" ||
@@ -321,3 +384,112 @@ form.addEventListener("change", (e) => {
 });
 
 initHero();
+updateAutoplayIntervalState();
+
+// Lock the container height to prevent layout shift when changing SPV
+if (heroStableContainer) {
+  // Use requestAnimationFrame to ensure layout is complete
+  requestAnimationFrame(() => {
+    const height = heroSliderEl.offsetHeight;
+    heroStableContainer.style.height = `${height}px`;
+  });
+}
+
+// ── Install Widget ────────────────────────────────────────────────────
+const installCommands: Record<string, string> = {
+  bun: "bun add aero-slider",
+  npm: "npm install aero-slider",
+  yarn: "yarn add aero-slider",
+  pnpm: "pnpm add aero-slider",
+};
+
+const installWidget = document.getElementById("install-widget");
+if (installWidget) {
+  const tabs = installWidget.querySelectorAll<HTMLButtonElement>(".install-tab");
+  const commandEl = document.getElementById("install-command");
+  const copyBtn = document.getElementById("copy-install");
+  const copyIcon = document.getElementById("copy-icon");
+  const checkIcon = document.getElementById("check-icon");
+
+  // Set initial active tab (bun)
+  tabs[0]?.setAttribute("data-active", "");
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      tabs.forEach((t) => t.removeAttribute("data-active"));
+      tab.setAttribute("data-active", "");
+      const pm = tab.dataset.pm ?? "bun";
+      if (commandEl) commandEl.textContent = installCommands[pm] ?? installCommands.bun;
+    });
+  });
+
+  copyBtn?.addEventListener("click", async () => {
+    const command = commandEl?.textContent ?? "";
+    await navigator.clipboard.writeText(command);
+    copyIcon?.classList.add("hidden");
+    checkIcon?.classList.remove("hidden");
+    setTimeout(() => {
+      copyIcon?.classList.remove("hidden");
+      checkIcon?.classList.add("hidden");
+    }, 2000);
+  });
+}
+
+// ── Mobile Draggable Tooltip ──────────────────────────────────────────
+const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0;
+const draggableInput = form.querySelector<HTMLInputElement>('input[name="draggable"]');
+const draggableLabel = draggableInput?.closest("label");
+
+// ── Mobile Event Log Collapse ─────────────────────────────────────────
+const eventLogToggle = document.getElementById("event-log-toggle");
+const eventLogContent = document.getElementById("event-log-content");
+const eventLogIcon = document.getElementById("event-log-icon");
+
+if (eventLogToggle && eventLogContent && eventLogIcon) {
+  let isExpanded = true; // Start expanded on all devices
+
+  // Set initial icon to minus (expanded state)
+  eventLogIcon.innerHTML = '<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" /></svg>';
+  
+  // Remove initial hidden classes
+  eventLogContent.classList.remove("max-sm:hidden", "max-sm:h-0");
+
+  eventLogToggle.addEventListener("click", () => {
+    if (window.innerWidth >= 640) return; // Only toggle on mobile
+    isExpanded = !isExpanded;
+    eventLogContent.classList.toggle("max-sm:hidden", !isExpanded);
+    eventLogContent.classList.toggle("max-sm:h-0", !isExpanded);
+    eventLogIcon.innerHTML = isExpanded
+      ? '<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" /></svg>'
+      : '<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>';
+  });
+}
+
+if (isTouchDevice && draggableLabel) {
+  // Create tooltip element
+  const tooltip = document.createElement("div");
+  tooltip.className = "fixed z-50 max-w-xs px-3 py-2 text-xs text-white bg-slate-800 rounded-lg shadow-lg opacity-0 pointer-events-none transition-opacity";
+  tooltip.textContent = "Touch devices have native swipe support — this setting is for enabling drag on desktop.";
+  document.body.appendChild(tooltip);
+
+  let tooltipTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  draggableLabel.addEventListener("click", (e) => {
+    // Shake animation
+    draggableLabel.style.animation = "none";
+    draggableLabel.offsetHeight; // Trigger reflow
+    draggableLabel.style.animation = "shake 0.5s ease-in-out";
+
+    // Position and show tooltip
+    const rect = draggableLabel.getBoundingClientRect();
+    tooltip.style.left = `${rect.left + rect.width / 2}px`;
+    tooltip.style.top = `${rect.bottom + 8}px`;
+    tooltip.style.transform = "translateX(-50%)";
+    tooltip.style.opacity = "1";
+
+    if (tooltipTimeout) clearTimeout(tooltipTimeout);
+    tooltipTimeout = setTimeout(() => {
+      tooltip.style.opacity = "0";
+    }, 3000);
+  });
+}

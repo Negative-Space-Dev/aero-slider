@@ -3,6 +3,7 @@
 /* Disable double-tap zoom on the whole page; keep pinch-to-zoom */
 html {
   touch-action: manipulation;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -82,4 +83,10 @@ body {
 
 .animate-marquee-reverse {
   animation: marquee-reverse 50s linear infinite;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
 }

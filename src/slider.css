@@ -132,6 +132,42 @@
 .aero-slider__dot {
   touch-action: manipulation;
   cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+}
+
+/* iOS-style windowed pagination */
+.aero-slider__pagination--windowed {
+  width: var(--pagination-width);
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  overflow: hidden;
+  justify-content: flex-start;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.aero-slider__pagination-track {
+  display: flex;
+  gap: inherit;
+  align-items: center;
+  transform: translateX(var(--track-offset, 0));
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dot scale states for windowed pagination (CSS-driven, not inline styles) */
+.aero-slider__dot--hidden {
+  transform: scale(0.4);
+  opacity: 0;
+}
+
+.aero-slider__dot--edge {
+  transform: scale(0.6);
+}
+
+.aero-slider__dot--near-edge {
+  transform: scale(0.8);
 }
 
 /* === Thumbnail strip active indicator (syncThumbnails adds aero-slider__thumb--active) */

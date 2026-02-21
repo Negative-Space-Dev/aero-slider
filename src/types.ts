@@ -3,6 +3,8 @@ export interface SliderConfig {
   autoplay?: boolean;
   autoplayInterval?: number;
   draggable?: boolean;
+  /** Maximum number of pagination dots to show. Beyond this, edge indicators are used. */
+  maxDots?: number;
 }
 
 /** Layout options read from CSS custom properties; not passed via JS config. */

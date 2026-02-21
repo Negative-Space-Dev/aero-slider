@@ -24,11 +24,11 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
   <!-- ─── Navbar ──────────────────────────────────────────────── -->
   <nav class="relative z-50 bg-transparent">
     <div
-      class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-4 sm:flex-row sm:px-6 sm:py-6"
+      class="mx-auto flex max-w-6xl flex-row items-center justify-between gap-4 px-4 py-4 sm:px-6 sm:py-6"
     >
       <a href="/" class="text-xl font-bold tracking-tight text-slate-900">Aero Slider</a>
       <div
-        class="flex flex-wrap items-center justify-center gap-4 text-sm font-medium text-slate-600 sm:gap-6"
+        class="flex items-center gap-4 text-sm font-medium text-slate-600 sm:gap-6"
       >
         <a href="#examples" class="transition hover:text-slate-900">Examples</a>
         <a href="#api" class="transition hover:text-slate-900">API</a>
@@ -163,27 +163,42 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
           </div>
         </div>
 
-        <div class="mb-8 flex flex-wrap items-center justify-center gap-4">
-          <a
-            href="https://github.com/Negative-Space-Dev/aero-slider"
-            target="_blank"
-            rel="noopener"
-            class="inline-flex items-center justify-center rounded-lg bg-[#0f172a] px-6 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
-            >View GitHub</a
-          >
-          <a
-            href="#examples"
-            class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-6 py-3 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-            >View Examples</a
-          >
+        <!-- Install Widget -->
+        <div class="mb-8 flex justify-center">
+          <div class="w-full max-w-md">
+            <div id="install-widget" class="rounded-2xl border border-slate-200 bg-slate-900 overflow-hidden">
+              <!-- Package Manager Tabs -->
+              <div class="flex justify-start border-b border-slate-700 bg-slate-800/50">
+                <button type="button" data-pm="bun" class="install-tab px-4 py-2 text-xs font-medium text-slate-400 hover:text-white transition border-b-2 border-transparent data-[active]:border-emerald-400 data-[active]:text-white">bun</button>
+                <button type="button" data-pm="npm" class="install-tab px-4 py-2 text-xs font-medium text-slate-400 hover:text-white transition border-b-2 border-transparent data-[active]:border-emerald-400 data-[active]:text-white">npm</button>
+                <button type="button" data-pm="yarn" class="install-tab px-4 py-2 text-xs font-medium text-slate-400 hover:text-white transition border-b-2 border-transparent data-[active]:border-emerald-400 data-[active]:text-white">yarn</button>
+                <button type="button" data-pm="pnpm" class="install-tab px-4 py-2 text-xs font-medium text-slate-400 hover:text-white transition border-b-2 border-transparent data-[active]:border-emerald-400 data-[active]:text-white">pnpm</button>
+              </div>
+              <!-- Install Command -->
+              <div class="flex items-center justify-between px-4 py-3">
+                <code id="install-command" class="font-mono text-sm text-emerald-400">bun add aero-slider</code>
+                <button id="copy-install" type="button" class="p-1.5 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition" aria-label="Copy to clipboard">
+                  <svg id="copy-icon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  <svg id="check-icon" class="h-4 w-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="grid gap-8 lg:grid-cols-[1fr_320px]">
         <!-- Slider Column -->
         <div class="min-w-0">
-          <!-- Main Hero Slider -->
-          <div id="hero-slider" class="aero-slider">
+          <!-- Stable height container - JS sets height based on SPV=1 -->
+          <div id="hero-stable-container" class="flex items-end">
+            <!-- Main Hero Slider -->
+            <div id="hero-slider" class="aero-slider w-full">
             <div class="aero-slider__viewport relative rounded-2xl">
               <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -233,6 +248,7 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
               ></span>
             </div>
           </div>
+          </div><!-- /stable height container -->
 
           <!-- Thumbnail Strip -->
           <div id="hero-thumbs-wrapper" hidden class="mt-4">
@@ -266,12 +282,24 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
           </div>
 
           <!-- Event Log -->
-          <div class="mt-6 rounded-xl border border-slate-200 bg-white">
-            <h3 class="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900">
-              Event Log
-            </h3>
-            <div class="max-h-48 overflow-auto">
-              <table class="w-full text-sm min-w-[300px]">
+          <div id="event-log-container" class="mt-6 rounded-xl border border-slate-200 bg-white">
+            <button type="button" id="event-log-toggle" class="w-full flex items-center justify-between border-b border-slate-200 px-4 py-3 text-left sm:cursor-default">
+              <h3 class="text-sm font-semibold text-slate-900">Event Log</h3>
+              <span id="event-log-icon" class="sm:hidden text-slate-400 transition-transform">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" />
+                </svg>
+              </span>
+            </button>
+            <div id="event-log-content" class="h-48 overflow-auto transition-all">
+              <!-- Empty State -->
+              <div id="event-log-empty" class="flex flex-col items-center justify-center h-full text-center px-4">
+                <svg class="h-12 w-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <p class="text-sm text-slate-400">Interact with the slider to see events</p>
+              </div>
+              <table class="w-full text-sm min-w-[300px] hidden" id="event-log-table">
                 <thead>
                   <tr class="border-b border-slate-100 text-left text-xs text-slate-400">
                     <th class="px-4 py-2 font-medium">Event</th>
@@ -319,10 +347,10 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
                 id="spv"
                 type="range"
                 name="slidesPerView"
-                min="1"
-                max="4"
-                step="0.25"
-                value="1"
+                min="0"
+                max="16"
+                step="1"
+                value="0"
                 class="w-full accent-slate-800"
               />
             </div>
@@ -330,8 +358,8 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
             <!-- Gap -->
             <div>
               <div class="mb-1 flex items-center justify-between text-sm">
-                <label for="gap" class="font-medium text-slate-700">Gap (px)</label>
-                <output id="out-gap" class="tabular-nums text-slate-500">10</output>
+                <label for="gap" class="font-medium text-slate-700">Gap</label>
+                <output id="out-gap" class="tabular-nums text-slate-500">10px</output>
               </div>
               <input
                 id="gap"
@@ -346,10 +374,10 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
             </div>
 
             <!-- Autoplay Interval -->
-            <div>
+            <div id="interval-control">
               <div class="mb-1 flex items-center justify-between text-sm">
                 <label for="interval" class="font-medium text-slate-700">Autoplay Interval</label>
-                <output id="out-interval" class="tabular-nums text-slate-500">4000</output>
+                <output id="out-interval" class="tabular-nums text-slate-500">4000ms</output>
               </div>
               <input
                 id="interval"
@@ -359,6 +387,24 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
                 max="8000"
                 step="500"
                 value="4000"
+                class="w-full accent-slate-800"
+              />
+            </div>
+
+            <!-- Max Dots -->
+            <div>
+              <div class="mb-1 flex items-center justify-between text-sm">
+                <label for="maxDots" class="font-medium text-slate-700">Max Dots</label>
+                <output id="out-maxDots" class="tabular-nums text-slate-500">10</output>
+              </div>
+              <input
+                id="maxDots"
+                type="range"
+                name="maxDots"
+                min="3"
+                max="21"
+                step="1"
+                value="10"
                 class="w-full accent-slate-800"
               />
             </div>
@@ -584,7 +630,7 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
       <div>
         <h3 class="mb-1 text-lg font-semibold text-slate-800">Autoplay + Loop</h3>
         <p class="mb-4 text-sm text-slate-500">
-          Auto-advances every 3 seconds with infinite looping. Pauses on hover.
+          Auto-advances every 3 seconds with infinite looping. Pauses on hover and drag.
         </p>
         <div id="autoplay" class="aero-slider">
           <div class="aero-slider__viewport relative rounded-2xl">
@@ -742,11 +788,18 @@ const slider = createSlider(document.getElementById("my-slider"), {
                     >boolean</td
                   ><td class="py-2 pr-4">false</td><td class="py-2">Auto-advance slides</td></tr
                 >
-                <tr
+                <tr class="border-b border-slate-100"
                   ><td class="py-2 pr-4 font-mono text-xs">autoplayInterval</td><td
                     class="py-2 pr-4">number</td
                   ><td class="py-2 pr-4">4000</td><td class="py-2"
                     >Delay between auto-advances (ms)</td
+                  ></tr
+                >
+                <tr
+                  ><td class="py-2 pr-4 font-mono text-xs">maxDots</td><td
+                    class="py-2 pr-4">number</td
+                  ><td class="py-2 pr-4">undefined</td><td class="py-2"
+                    >Max pagination dots; shows iOS-style sliding window when exceeded</td
                   ></tr
                 >
               </tbody>

@@ -52,8 +52,13 @@ export function createLoopController(ctx: SliderContext): LoopController {
     const realStart = getLoopRealStart();
     const realEnd = getLoopRealEnd();
     let pos = track.scrollLeft;
+    
+    // Tolerance (px) to prevent sub-pixel oscillation near boundaries.
+    // Without this, scroll positions like 5470.5 vs realStart 5472.0 can
+    // cause rapid teleport flickering due to browser sub-pixel rounding.
+    const TELEPORT_TOLERANCE = 2;
 
-    if (pos < realStart || pos >= realEnd) {
+    if (pos < realStart - TELEPORT_TOLERANCE || pos >= realEnd + TELEPORT_TOLERANCE) {
       while (pos < realStart) pos += sectionWidth;
       while (pos >= realEnd) pos -= sectionWidth;
       instantScrollTo(pos);
@@ -79,18 +84,21 @@ export function createLoopController(ctx: SliderContext): LoopController {
     const w = state.slideWidthPx;
     if (w === 0) return state.currentIndex;
 
+    let result: number;
     if (ctx.isFractionalView()) {
       const trackWidth = track.clientWidth;
       const slideVisual = w - ctx.config.gap;
       const viewportCenter = track.scrollLeft + trackWidth / 2;
       const realStart = getLoopRealStart();
       const raw = Math.round((viewportCenter - realStart - slideVisual / 2) / w);
-      return ((raw % slideCount) + slideCount) % slideCount;
+      result = ((raw % slideCount) + slideCount) % slideCount;
+    } else {
+      const offset = track.scrollLeft - getLoopRealStart();
+      const raw = Math.round(offset / w);
+      result = ((raw % slideCount) + slideCount) % slideCount;
     }
-
-    const offset = track.scrollLeft - getLoopRealStart();
-    const raw = Math.round(offset / w);
-    return ((raw % slideCount) + slideCount) % slideCount;
+    
+    return result;
   }
 
   function setupLoopTrack(anchorIndex: number): void {
