@@ -1,6 +1,8 @@
 import type { SliderContext } from "./types.ts";
 
 // ── Navigation Arrows ──────────────────────────────────────────────────
+// User provides elements with .aero-slider__nav--prev and .aero-slider__nav--next.
+// If they exist, we wire click handlers and manage disabled state.
 export interface NavigationController {
   build(): void;
   clear(): void;
@@ -18,36 +20,20 @@ export function createNavigation(
   function clear(): void {
     if (prevBtn) {
       prevBtn.removeEventListener("click", prev);
-      prevBtn.remove();
       prevBtn = null;
     }
     if (nextBtn) {
       nextBtn.removeEventListener("click", next);
-      nextBtn.remove();
       nextBtn = null;
     }
   }
 
   function build(): void {
-    if (!ctx.config.navigation) return;
-
-    prevBtn = document.createElement("button");
-    prevBtn.className = "aero-slider__nav aero-slider__nav--prev";
-    prevBtn.type = "button";
-    prevBtn.setAttribute("aria-label", "Previous slide");
-    prevBtn.textContent = "Prev";
-    prevBtn.addEventListener("click", prev);
-
-    nextBtn = document.createElement("button");
-    nextBtn.className = "aero-slider__nav aero-slider__nav--next";
-    nextBtn.type = "button";
-    nextBtn.setAttribute("aria-label", "Next slide");
-    nextBtn.textContent = "Next";
-    nextBtn.addEventListener("click", next);
-
-    const navHost = ctx.container.querySelector<HTMLElement>(".aero-slider__viewport") ?? ctx.container;
-    navHost.appendChild(prevBtn);
-    navHost.appendChild(nextBtn);
+    clear();
+    prevBtn = ctx.container.querySelector<HTMLButtonElement>(".aero-slider__nav--prev");
+    nextBtn = ctx.container.querySelector<HTMLButtonElement>(".aero-slider__nav--next");
+    if (prevBtn) prevBtn.addEventListener("click", prev);
+    if (nextBtn) nextBtn.addEventListener("click", next);
     refresh();
   }
 
@@ -111,8 +97,6 @@ export function createPagination(
   }
 
   function build(): void {
-    if (!ctx.config.pagination) return;
-
     container = ctx.container.querySelector<HTMLElement>(".aero-slider__pagination");
     if (!container) return;
 

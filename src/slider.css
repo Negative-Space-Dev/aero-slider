@@ -107,54 +107,11 @@
   scroll-snap-type: none;
 }
 
-/* === Navigation Buttons === */
-.aero-slider__nav {
-  touch-action: manipulation;
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 40px;
-  height: 40px;
-  padding: 0 12px;
-  border: none;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.9);
-  color: #333;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transition: opacity 0.2s, background-color 0.2s, transform 0.15s;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-
-.aero-slider__nav:hover:not(:disabled) {
-  background: #fff;
-  transform: translateY(-50%) scale(1.08);
-}
-
-.aero-slider__nav:active:not(:disabled) {
-  transform: translateY(-50%) scale(0.95);
-}
-
-.aero-slider__nav:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
-
-.aero-slider__nav--prev {
-  left: 12px;
-}
-
+/* === Navigation === */
+/* User provides .aero-slider__nav--prev and .aero-slider__nav--next. Style with Tailwind. */
+.aero-slider__nav--prev,
 .aero-slider__nav--next {
-  right: 12px;
+  touch-action: manipulation;
 }
 
 /* === Pagination === */

@@ -2,8 +2,6 @@ export interface SliderConfig {
   loop?: boolean;
   autoplay?: boolean;
   autoplayInterval?: number;
-  pagination?: boolean;
-  navigation?: boolean;
   draggable?: boolean;
 }
 

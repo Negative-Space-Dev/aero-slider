@@ -1,6 +1,23 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { Code } from 'astro:components';
+
+import SparklesIcon from '../components/icons/SparklesIcon.astro';
+import ZapIcon from '../components/icons/ZapIcon.astro';
+import BoxIcon from '../components/icons/BoxIcon.astro';
+import WrenchIcon from '../components/icons/WrenchIcon.astro';
+import TargetIcon from '../components/icons/TargetIcon.astro';
+import HandIcon from '../components/icons/HandIcon.astro';
+import AccessibilityIcon from '../components/icons/AccessibilityIcon.astro';
+import InfinityIcon from '../components/icons/InfinityIcon.astro';
+import PlayIcon from '../components/icons/PlayIcon.astro';
+import ColumnsIcon from '../components/icons/ColumnsIcon.astro';
+import RulerIcon from '../components/icons/RulerIcon.astro';
+import MoreHorizontalIcon from '../components/icons/MoreHorizontalIcon.astro';
+import ImageIcon from '../components/icons/ImageIcon.astro';
+import ActivityIcon from '../components/icons/ActivityIcon.astro';
+import AnchorIcon from '../components/icons/AnchorIcon.astro';
+import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
 ---
 
 <BaseLayout title="Aero Slider — Lightweight CSS-first Slider">
@@ -19,7 +36,7 @@ import { Code } from 'astro:components';
           href="https://github.com/Negative-Space-Dev/aero-slider"
           target="_blank"
           rel="noopener"
-          class="text-slate-400 transition hover:text-slate-900"
+          class="transition hover:text-slate-900"
           aria-label="GitHub"
         >
           <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"
@@ -33,12 +50,12 @@ import { Code } from 'astro:components';
     </div>
   </nav>
 
-  <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+  <main class="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
     <!-- ════════════════════════════════════════════════════════════
          HERO — Interactive Playground
          ════════════════════════════════════════════════════════════ -->
     <section class="mb-12 sm:mb-20">
-      <div class="mb-8 mt-4 sm:mb-12 sm:mt-8 text-center">
+      <div class="mb-8 sm:mb-12 text-center">
         <div class="mb-6 flex flex-wrap items-center justify-center gap-3">
           <span
             class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600"
@@ -70,15 +87,89 @@ import { Code } from 'astro:components';
         >
           CSS-first slider for the modern web.
         </h1>
-        <p class="mx-auto mt-4 sm:mt-6 max-w-2xl text-base sm:text-lg text-slate-500">
-          A lightweight, performant, and accessible slider library. Built with modern CSS features.
-          Drag, loop, autoplay, and configure with ease. Zero dependencies.
-        </p>
-        <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+        <div class="mt-8 mb-10 overflow-hidden relative flex flex-col gap-3 md:gap-4 [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)] -mx-4 sm:mx-0 [--marquee-gap:0.75rem] md:[--marquee-gap:1rem]">
+          <!-- Row 1: Left to right -->
+          <div class="flex w-max animate-marquee hover:pause gap-3 md:gap-4">
+            <!-- First set -->
+            <div class="flex shrink-0 gap-3 md:gap-4 px-1.5 md:px-2">
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><SparklesIcon class="size-4 shrink-0 text-slate-500" /> CSS-First Architecture</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><ZapIcon class="size-4 shrink-0 text-slate-500" /> ~6KB Minzipped</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><BoxIcon class="size-4 shrink-0 text-slate-500" /> Zero Dependencies</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><WrenchIcon class="size-4 shrink-0 text-slate-500" /> Highly Extensible</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><TargetIcon class="size-4 shrink-0 text-slate-500" /> Native Scroll Snapping</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><HandIcon class="size-4 shrink-0 text-slate-500" /> Touch &amp; Swipe Friendly</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><AccessibilityIcon class="size-4 shrink-0 text-slate-500" /> Accessible</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><InfinityIcon class="size-4 shrink-0 text-slate-500" /> Infinite Looping</span>
+            </div>
+            <!-- Duplicated set -->
+            <div class="flex shrink-0 gap-3 md:gap-4 px-1.5 md:px-2" aria-hidden="true">
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><SparklesIcon class="size-4 shrink-0 text-slate-500" /> CSS-First Architecture</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><ZapIcon class="size-4 shrink-0 text-slate-500" /> ~6KB Minzipped</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><BoxIcon class="size-4 shrink-0 text-slate-500" /> Zero Dependencies</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><WrenchIcon class="size-4 shrink-0 text-slate-500" /> Highly Extensible</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><TargetIcon class="size-4 shrink-0 text-slate-500" /> Native Scroll Snapping</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><HandIcon class="size-4 shrink-0 text-slate-500" /> Touch &amp; Swipe Friendly</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><AccessibilityIcon class="size-4 shrink-0 text-slate-500" /> Accessible</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><InfinityIcon class="size-4 shrink-0 text-slate-500" /> Infinite Looping</span>
+            </div>
+            <!-- Third set for seamless fill and loop -->
+            <div class="flex shrink-0 gap-3 md:gap-4 px-1.5 md:px-2" aria-hidden="true">
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><SparklesIcon class="size-4 shrink-0 text-slate-500" /> CSS-First Architecture</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><ZapIcon class="size-4 shrink-0 text-slate-500" /> ~6KB Minzipped</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><BoxIcon class="size-4 shrink-0 text-slate-500" /> Zero Dependencies</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><WrenchIcon class="size-4 shrink-0 text-slate-500" /> Highly Extensible</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><TargetIcon class="size-4 shrink-0 text-slate-500" /> Native Scroll Snapping</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><HandIcon class="size-4 shrink-0 text-slate-500" /> Touch &amp; Swipe Friendly</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><AccessibilityIcon class="size-4 shrink-0 text-slate-500" /> Accessible</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><InfinityIcon class="size-4 shrink-0 text-slate-500" /> Infinite Looping</span>
+            </div>
+          </div>
+
+          <!-- Row 2: Right to left -->
+          <div class="flex w-max animate-marquee-reverse hover:pause gap-3 md:gap-4">
+            <!-- First set -->
+            <div class="flex shrink-0 gap-3 md:gap-4 px-1.5 md:px-2">
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><PlayIcon class="size-4 shrink-0 text-slate-500" /> Smooth Autoplay</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ColumnsIcon class="size-4 shrink-0 text-slate-500" /> Multi-Slide Views</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><RulerIcon class="size-4 shrink-0 text-slate-500" /> Responsive API</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><MoreHorizontalIcon class="size-4 shrink-0 text-slate-500" /> Custom Pagination</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ImageIcon class="size-4 shrink-0 text-slate-500" /> Thumbnail Syncing</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ActivityIcon class="size-4 shrink-0 text-slate-500" /> Event Callbacks</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><AnchorIcon class="size-4 shrink-0 text-slate-500" /> Zero CLS</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><KeyboardIcon class="size-4 shrink-0 text-slate-500" /> Keyboard Nav</span>
+            </div>
+            <!-- Duplicated set -->
+            <div class="flex shrink-0 gap-3 md:gap-4 px-1.5 md:px-2" aria-hidden="true">
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><PlayIcon class="size-4 shrink-0 text-slate-500" /> Smooth Autoplay</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ColumnsIcon class="size-4 shrink-0 text-slate-500" /> Multi-Slide Views</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><RulerIcon class="size-4 shrink-0 text-slate-500" /> Responsive API</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><MoreHorizontalIcon class="size-4 shrink-0 text-slate-500" /> Custom Pagination</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ImageIcon class="size-4 shrink-0 text-slate-500" /> Thumbnail Syncing</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ActivityIcon class="size-4 shrink-0 text-slate-500" /> Event Callbacks</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><AnchorIcon class="size-4 shrink-0 text-slate-500" /> Zero CLS</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><KeyboardIcon class="size-4 shrink-0 text-slate-500" /> Keyboard Nav</span>
+            </div>
+            <!-- Third set for seamless fill and loop -->
+            <div class="flex shrink-0 gap-3 md:gap-4 px-1.5 md:px-2" aria-hidden="true">
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><PlayIcon class="size-4 shrink-0 text-slate-500" /> Smooth Autoplay</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ColumnsIcon class="size-4 shrink-0 text-slate-500" /> Multi-Slide Views</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><RulerIcon class="size-4 shrink-0 text-slate-500" /> Responsive API</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><MoreHorizontalIcon class="size-4 shrink-0 text-slate-500" /> Custom Pagination</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ImageIcon class="size-4 shrink-0 text-slate-500" /> Thumbnail Syncing</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ActivityIcon class="size-4 shrink-0 text-slate-500" /> Event Callbacks</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><AnchorIcon class="size-4 shrink-0 text-slate-500" /> Zero CLS</span>
+              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><KeyboardIcon class="size-4 shrink-0 text-slate-500" /> Keyboard Nav</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-8 flex flex-wrap items-center justify-center gap-4">
           <a
-            href="#getting-started"
+            href="https://github.com/Negative-Space-Dev/aero-slider"
+            target="_blank"
+            rel="noopener"
             class="inline-flex items-center justify-center rounded-lg bg-[#0f172a] px-6 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
-            >Get Started</a
+            >View GitHub</a
           >
           <a
             href="#examples"
@@ -88,69 +179,22 @@ import { Code } from 'astro:components';
         </div>
       </div>
 
-      <!-- Features callout -->
-      <div class="mb-8 grid gap-4 sm:grid-cols-3">
-        <div class="rounded-xl border border-slate-200 bg-white p-5">
-          <div class="mb-2 text-slate-400">
-            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-              ><path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
-              ></path></svg
-            >
-          </div>
-          <h3 class="font-semibold text-slate-900">CSS-First</h3>
-          <p class="mt-1 text-sm text-slate-600">
-            Layout driven by custom properties. Style with standard CSS—no inline styles or
-            JS-driven dimensions.
-          </p>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-5">
-          <div class="mb-2 text-slate-400">
-            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-              ><path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg
-            >
-          </div>
-          <h3 class="font-semibold text-slate-900">Lightweight</h3>
-          <p class="mt-1 text-sm text-slate-600">
-            JS + CSS combined ~6KB minzipped. Ideal for performance-critical projects.
-          </p>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-white p-5">
-          <div class="mb-2 text-slate-400">
-            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-              ><path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-              ></path><path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg
-            >
-          </div>
-          <h3 class="font-semibold text-slate-900">Extensible</h3>
-          <p class="mt-1 text-sm text-slate-600">
-            Hook into events, sync multiple sliders, or extend with your own navigation and
-            controls.
-          </p>
-        </div>
-      </div>
-
       <div class="grid gap-8 lg:grid-cols-[1fr_320px]">
         <!-- Slider Column -->
         <div class="min-w-0">
           <!-- Main Hero Slider -->
           <div id="hero-slider" class="aero-slider">
-            <div class="aero-slider__viewport rounded-2xl">
+            <div class="aero-slider__viewport relative rounded-2xl">
+              <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m15 18-6-6 6-6"/>
+                </svg>
+              </button>
+              <button type="button" class="aero-slider__nav--next" aria-label="Next slide">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6"/>
+                </svg>
+              </button>
               <div class="aero-slider__track">
                 <div class="bg-linear-to-br from-indigo-500 to-purple-600 text-white rounded-2xl">
                   <div class="flex flex-col items-center justify-center gap-2 p-8 text-center">
@@ -322,32 +366,78 @@ import { Code } from 'astro:components';
             <hr class="border-slate-200" />
 
             <!-- Toggles -->
-            <fieldset class="space-y-3">
+            <fieldset>
               <legend class="sr-only">Feature toggles</legend>
-              <label class="flex items-center gap-3 text-sm">
-                <input type="checkbox" name="loop" class="h-4 w-4 accent-slate-800" />
-                <span class="text-slate-700">Loop</span>
-              </label>
-              <label class="flex items-center gap-3 text-sm">
-                <input type="checkbox" name="pagination" checked class="h-4 w-4 accent-slate-800" />
-                <span class="text-slate-700">Pagination</span>
-              </label>
-              <label class="flex items-center gap-3 text-sm">
-                <input type="checkbox" name="navigation" checked class="h-4 w-4 accent-slate-800" />
-                <span class="text-slate-700">Navigation Arrows</span>
-              </label>
-              <label class="flex items-center gap-3 text-sm">
-                <input type="checkbox" name="draggable" checked class="h-4 w-4 accent-slate-800" />
-                <span class="text-slate-700">Draggable</span>
-              </label>
-              <label class="flex items-center gap-3 text-sm">
-                <input type="checkbox" name="autoplay" class="h-4 w-4 accent-slate-800" />
-                <span class="text-slate-700">Autoplay</span>
-              </label>
-              <label class="flex items-center gap-3 text-sm">
-                <input type="checkbox" name="thumbnails" class="h-4 w-4 accent-slate-800" />
-                <span class="text-slate-700">Thumbnails</span>
-              </label>
+              <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 mt-2">
+                <label class="relative cursor-pointer">
+                  <input type="checkbox" name="loop" class="peer sr-only" />
+                  <div class="flex flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-slate-500 transition hover:bg-slate-50 peer-checked:border-slate-800 peer-checked:bg-slate-800 peer-checked:text-white peer-checked:hover:border-slate-700 peer-checked:hover:bg-slate-700">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="m17 2 4 4-4 4"/>
+                      <path d="M3 11v-1a4 4 0 0 1 4-4h14"/>
+                      <path d="m7 22-4-4 4-4"/>
+                      <path d="M21 13v1a4 4 0 0 1-4 4H3"/>
+                    </svg>
+                    <span class="text-xs font-medium">Loop</span>
+                  </div>
+                </label>
+                <label class="relative cursor-pointer">
+                  <input type="checkbox" name="pagination" checked class="peer sr-only" />
+                  <div class="flex flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-slate-500 transition hover:bg-slate-50 peer-checked:border-slate-800 peer-checked:bg-slate-800 peer-checked:text-white peer-checked:hover:border-slate-700 peer-checked:hover:bg-slate-700">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="1.5"/>
+                      <circle cx="19" cy="12" r="1.5"/>
+                      <circle cx="5" cy="12" r="1.5"/>
+                    </svg>
+                    <span class="text-xs font-medium">Pagination</span>
+                  </div>
+                </label>
+                <label class="relative cursor-pointer">
+                  <input type="checkbox" name="navigation" checked class="peer sr-only" />
+                  <div class="flex flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-slate-500 transition hover:bg-slate-50 peer-checked:border-slate-800 peer-checked:bg-slate-800 peer-checked:text-white peer-checked:hover:border-slate-700 peer-checked:hover:bg-slate-700">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="m8 3-5 5 5 5"/>
+                      <path d="M3 8h18"/>
+                      <path d="m16 21 5-5-5-5"/>
+                      <path d="M21 16H3"/>
+                    </svg>
+                    <span class="text-xs font-medium text-center">Navigation</span>
+                  </div>
+                </label>
+                <label class="relative cursor-pointer">
+                  <input type="checkbox" name="draggable" checked class="peer sr-only" />
+                  <div class="flex flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-slate-500 transition hover:bg-slate-50 peer-checked:border-slate-800 peer-checked:bg-slate-800 peer-checked:text-white peer-checked:hover:border-slate-700 peer-checked:hover:bg-slate-700">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/>
+                      <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/>
+                      <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/>
+                      <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
+                    </svg>
+                    <span class="text-xs font-medium">Draggable</span>
+                  </div>
+                </label>
+                <label class="relative cursor-pointer">
+                  <input type="checkbox" name="autoplay" class="peer sr-only" />
+                  <div class="flex flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-slate-500 transition hover:bg-slate-50 peer-checked:border-slate-800 peer-checked:bg-slate-800 peer-checked:text-white peer-checked:hover:border-slate-700 peer-checked:hover:bg-slate-700">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polygon points="6 3 20 12 6 21 6 3"/>
+                    </svg>
+                    <span class="text-xs font-medium">Autoplay</span>
+                  </div>
+                </label>
+                <label class="relative cursor-pointer">
+                  <input type="checkbox" name="thumbnails" class="peer sr-only" />
+                  <div class="flex flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-slate-500 transition hover:bg-slate-50 peer-checked:border-slate-800 peer-checked:bg-slate-800 peer-checked:text-white peer-checked:hover:border-slate-700 peer-checked:hover:bg-slate-700">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M18 22H4a2 2 0 0 1-2-2V6"/>
+                      <path d="m22 13-1.296-1.296a2.41 2.41 0 0 0-3.408 0L11 18"/>
+                      <circle cx="12" cy="8" r="2"/>
+                      <rect width="16" height="16" x="6" y="2" rx="2"/>
+                    </svg>
+                    <span class="text-xs font-medium">Thumbnails</span>
+                  </div>
+                </label>
+              </div>
             </fieldset>
           </form>
         </aside>
@@ -365,7 +455,17 @@ import { Code } from 'astro:components';
         <h3 class="mb-1 text-lg font-semibold text-slate-800">Multi-Slide View</h3>
         <p class="mb-4 text-sm text-slate-500">Show multiple slides at once with gap spacing.</p>
         <div id="multi" class="aero-slider" style="--slides-per-view: 2.25; --slide-gap: 16px;">
-          <div class="aero-slider__viewport">
+          <div class="aero-slider__viewport relative">
+            <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m15 18-6-6 6-6"/>
+              </svg>
+            </button>
+            <button type="button" class="aero-slider__nav--next" aria-label="Next slide">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m9 18 6-6-6-6"/>
+              </svg>
+            </button>
             <div class="aero-slider__track">
               <div class="rounded-lg bg-linear-to-br from-violet-400 to-fuchsia-500 text-white">
                 <div class="flex items-center justify-center text-3xl font-bold">A</div>
@@ -406,7 +506,17 @@ import { Code } from 'astro:components';
           from CSS.
         </p>
         <div id="responsive" class="aero-slider aero-slider--responsive">
-          <div class="aero-slider__viewport rounded-xl">
+          <div class="aero-slider__viewport relative rounded-xl">
+            <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m15 18-6-6 6-6"/>
+              </svg>
+            </button>
+            <button type="button" class="aero-slider__nav--next" aria-label="Next slide">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m9 18 6-6-6-6"/>
+              </svg>
+            </button>
             <div class="aero-slider__track">
               <div class="rounded-lg bg-linear-to-br from-slate-600 to-slate-800 text-white">
                 <div class="flex flex-col items-center justify-center gap-1 p-6 text-center">
@@ -477,7 +587,17 @@ import { Code } from 'astro:components';
           Auto-advances every 3 seconds with infinite looping. Pauses on hover.
         </p>
         <div id="autoplay" class="aero-slider">
-          <div class="aero-slider__viewport rounded-2xl">
+          <div class="aero-slider__viewport relative rounded-2xl">
+            <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m15 18-6-6 6-6"/>
+              </svg>
+            </button>
+            <button type="button" class="aero-slider__nav--next" aria-label="Next slide">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m9 18 6-6-6-6"/>
+              </svg>
+            </button>
             <div class="aero-slider__track">
               <div class="bg-linear-to-br from-slate-700 to-slate-900 text-white">
                 <div class="flex flex-col items-center justify-center gap-1 p-8">
@@ -526,7 +646,17 @@ import { Code } from 'astro:components';
             createSlider(element, config?)
           </h3>
           <p class="mt-2 text-sm text-slate-600">
-            Creates a new slider instance on the given container element.
+            Creates a new slider instance on the given container element. Navigation and
+            pagination are opt-in: include elements with
+            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs"
+              >.aero-slider__nav--prev</code
+            >, <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs"
+              >.aero-slider__nav--next</code
+            >, and
+            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs"
+              >.aero-slider__pagination</code
+            >
+            to wire them up automatically.
           </p>
           <div class="mt-4 overflow-x-auto rounded-lg">
             <Code
@@ -535,8 +665,6 @@ import "aero-slider/slider.css";
 
 const slider = createSlider(document.getElementById("my-slider"), { 
   loop: true,
-  pagination: true,
-  navigation: true,
   draggable: true,
 });`}
               lang="typescript"
@@ -603,16 +731,6 @@ const slider = createSlider(document.getElementById("my-slider"), {
                   ><td class="py-2 pr-4 font-mono text-xs">loop</td><td class="py-2 pr-4"
                     >boolean</td
                   ><td class="py-2 pr-4">false</td><td class="py-2">Infinite looping</td></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">pagination</td><td class="py-2 pr-4"
-                    >boolean</td
-                  ><td class="py-2 pr-4">true</td><td class="py-2">Show pagination dots</td></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">navigation</td><td class="py-2 pr-4"
-                    >boolean</td
-                  ><td class="py-2 pr-4">true</td><td class="py-2">Show prev/next arrows</td></tr
                 >
                 <tr class="border-b border-slate-100"
                   ><td class="py-2 pr-4 font-mono text-xs">draggable</td><td class="py-2 pr-4"
@@ -726,7 +844,7 @@ const slider = createSlider(document.getElementById("my-slider"), {
               code={`import { createSlider, syncThumbnails } from "aero-slider";
 
 const main = createSlider(mainEl, { loop: true });
-const thumbs = createSlider(thumbsEl, { pagination: false });
+const thumbs = createSlider(thumbsEl);
 const teardown = syncThumbnails(main, thumbs);
 
 // Later: teardown();`}

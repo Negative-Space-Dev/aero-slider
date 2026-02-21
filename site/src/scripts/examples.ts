@@ -22,23 +22,13 @@ function formatOutputValue(name: string, value: string): string {
 }
 
 // ── Examples (static) ─────────────────────────────────────────────────
-const multi = createSlider(getRequiredElementById<HTMLElement>("multi"), {
-  pagination: true,
-  navigation: true,
-});
-
-const autoplay = createSlider(getRequiredElementById<HTMLElement>("autoplay"), {
+createSlider(getRequiredElementById<HTMLElement>("multi"));
+createSlider(getRequiredElementById<HTMLElement>("autoplay"), {
   autoplay: true,
   autoplayInterval: 3000,
   loop: true,
-  pagination: true,
-  navigation: true,
 });
-
-createSlider(getRequiredElementById<HTMLElement>("responsive"), {
-  pagination: true,
-  navigation: true,
-});
+createSlider(getRequiredElementById<HTMLElement>("responsive"));
 
 // ── Hero interactive slider ───────────────────────────────────────────
 const form = getRequiredElementById<HTMLFormElement>("config-form");
@@ -136,12 +126,65 @@ function readConfig(): SliderConfig & { thumbnails?: boolean; slideCount?: numbe
     autoplay: fd.get("autoplay") === "on",
     autoplayInterval: Number(fd.get("autoplayInterval")) || 4000,
     loop: fd.get("loop") === "on",
-    pagination: fd.get("pagination") === "on",
-    navigation: fd.get("navigation") === "on",
     draggable: fd.get("draggable") === "on",
     thumbnails: fd.get("thumbnails") === "on",
     slideCount: Math.min(20, Math.max(3, Number(fd.get("slideCount")) || 5)),
   };
+}
+
+function getFormBool(name: string): boolean {
+  return (form.elements.namedItem(name) as HTMLInputElement | null)?.checked ?? false;
+}
+
+/** Add or remove nav/pagination DOM elements based on form state. Slider discovers them at init. */
+function ensureHeroNavAndPagination(): void {
+  const showNav = getFormBool("navigation");
+  const showPagination = getFormBool("pagination");
+  const viewport = heroSliderEl.querySelector<HTMLElement>(".aero-slider__viewport");
+  if (!viewport) return;
+
+  // Navigation: prev/next buttons inside viewport (before track)
+  const track = heroSliderEl.querySelector<HTMLElement>(".aero-slider__track");
+  let prevBtn = heroSliderEl.querySelector<HTMLButtonElement>(".aero-slider__nav--prev");
+  let nextBtn = heroSliderEl.querySelector<HTMLButtonElement>(".aero-slider__nav--next");
+
+  if (showNav) {
+    if (!prevBtn) {
+      prevBtn = document.createElement("button");
+      prevBtn.type = "button";
+      prevBtn.className = "aero-slider__nav--prev";
+      prevBtn.setAttribute("aria-label", "Previous slide");
+      prevBtn.innerHTML = `<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
+      viewport.insertBefore(prevBtn, track);
+    }
+    if (!nextBtn) {
+      nextBtn = document.createElement("button");
+      nextBtn.type = "button";
+      nextBtn.className = "aero-slider__nav--next";
+      nextBtn.setAttribute("aria-label", "Next slide");
+      nextBtn.innerHTML = `<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>`;
+      viewport.insertBefore(nextBtn, track);
+    }
+  } else {
+    prevBtn?.remove();
+    nextBtn?.remove();
+  }
+
+  // Pagination: container with one dot template, sibling to viewport
+  let pagination = heroSliderEl.querySelector<HTMLElement>(".aero-slider__pagination");
+
+  if (showPagination) {
+    if (!pagination) {
+      pagination = document.createElement("div");
+      pagination.className = "aero-slider__pagination";
+      const dot = document.createElement("span");
+      dot.className = "aero-slider__dot h-2.5 w-2.5 rounded-full bg-slate-300 transition-all";
+      pagination.appendChild(dot);
+      heroSliderEl.appendChild(pagination);
+    }
+  } else {
+    pagination?.remove();
+  }
 }
 
 function applyLayoutFromFormToContainer(container: HTMLElement): void {
@@ -185,10 +228,7 @@ function updateThumbnailState(show: boolean): void {
   heroThumbsWrapper.hidden = !show;
   if (show) {
     if (!heroThumbs) {
-      heroThumbs = createSlider(getRequiredElementById<HTMLElement>("hero-thumbs"), {
-        pagination: false,
-        navigation: false,
-      });
+      heroThumbs = createSlider(getRequiredElementById<HTMLElement>("hero-thumbs"));
     }
     if (syncTeardown) syncTeardown();
     syncTeardown = syncThumbnails(heroSlider, heroThumbs!);
@@ -218,6 +258,7 @@ function rebuildHero(): void {
   reconcileSlideCount(targetCount);
 
   applyLayoutFromFormToContainer(heroSliderEl);
+  ensureHeroNavAndPagination();
   heroSlider = createSlider(heroSliderEl, config);
 
   const events = [
@@ -232,9 +273,7 @@ function rebuildHero(): void {
     heroSlider.on(event, (d) => logEvent(event, d));
   }
 
-  const showPagination = config.pagination && !config.thumbnails;
-  heroSliderEl.classList.toggle("aero-slider--no-pagination", !showPagination);
-
+  heroSliderEl.classList.toggle("aero-slider--no-pagination", config.thumbnails ?? false);
   updateThumbnailState(config.thumbnails ?? false);
 }
 
@@ -254,7 +293,11 @@ form.addEventListener("input", (e) => {
   const out = outputs[target.name];
   if (out) out.textContent = formatOutputValue(target.name, target.value);
 
-  if (target.name === "slideCount") {
+  if (
+    target.name === "slideCount" ||
+    target.name === "pagination" ||
+    target.name === "navigation"
+  ) {
     rebuildHero();
     return;
   }
@@ -263,9 +306,7 @@ form.addEventListener("input", (e) => {
   const config = readConfig();
   heroSlider.update(config);
 
-  const showPagination = config.pagination && !config.thumbnails;
-  heroSliderEl.classList.toggle("aero-slider--no-pagination", !showPagination);
-
+  heroSliderEl.classList.toggle("aero-slider--no-pagination", config.thumbnails ?? false);
   const thumbsChecked = config.thumbnails ?? false;
   updateThumbnailState(thumbsChecked);
 });
@@ -275,9 +316,7 @@ form.addEventListener("change", (e) => {
   if (target.name === "thumbnails") {
     const show = target.checked;
     updateThumbnailState(show);
-    const config = readConfig();
-    const showPagination = config.pagination && !show;
-    heroSliderEl.classList.toggle("aero-slider--no-pagination", !showPagination);
+    heroSliderEl.classList.toggle("aero-slider--no-pagination", show);
   }
 });
 

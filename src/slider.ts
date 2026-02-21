@@ -12,10 +12,12 @@ import {
   DEFAULTS,
   LAYOUT_DEFAULTS,
   RESIZE_DEBOUNCE_MS,
+  RESIZE_MAX_WAIT_MS,
   SCROLL_END_DELAY,
   SLIDE_INDEX_ATTR,
   WHEEL_IDLE_MS,
 } from "./constants.ts";
+import { monitorCssVariables } from "./mediaQueryMonitor.ts";
 import { createLoopController } from "./loop.ts";
 import { createDragController } from "./drag.ts";
 import {
@@ -69,8 +71,7 @@ export function createSlider(
   // ── Timers ───────────────────────────────────────────────────────────
   let scrollRafId: number | null = null;
   let scrollEndTimer: ReturnType<typeof setTimeout> | null = null;
-  let resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-  let resizeObserver: ResizeObserver | null = null;
+  let teardownResizeMonitor: (() => void) | null = null;
 
   // ── Core Helpers ─────────────────────────────────────────────────────
   function emit(event: SliderEvent, data: { index: number }): void {
@@ -286,19 +287,21 @@ export function createSlider(
     }, WHEEL_IDLE_MS);
   }
 
-  // ── Resize Observer ──────────────────────────────────────────────────
-  // Re-run update() when the track resizes (e.g. viewport crosses a media
-  // query). Debounced to avoid layout thrashing during active window resize.
-  function setupResizeObserver(): void {
-    resizeObserver?.disconnect();
-    resizeObserver = new ResizeObserver(() => {
-      if (resizeDebounceTimer !== null) clearTimeout(resizeDebounceTimer);
-      resizeDebounceTimer = setTimeout(() => {
-        resizeDebounceTimer = null;
+  // ── Media Query / Resize Monitor ───────────────────────────────────────
+  // Listen to window.resize (only way to catch media query shifts). When
+  // --slides-per-view, --slide-gap, or --slide-aspect change, re-run update().
+  const LAYOUT_VARS = ["--slides-per-view", "--slide-gap", "--slide-aspect"];
+
+  function setupResizeMonitor(): void {
+    teardownResizeMonitor?.();
+    teardownResizeMonitor = monitorCssVariables(
+      container,
+      LAYOUT_VARS,
+      () => {
         if (!state.isDestroyed) update();
-      }, RESIZE_DEBOUNCE_MS);
-    });
-    resizeObserver.observe(track);
+      },
+      { debounceMs: RESIZE_DEBOUNCE_MS, maxWaitMs: RESIZE_MAX_WAIT_MS },
+    );
   }
 
   // ── Public API ───────────────────────────────────────────────────────
@@ -370,16 +373,7 @@ export function createSlider(
     keyboard.setEnabled(true);
     autoplay.setHoverPause(config.autoplay);
 
-    if (prev.navigation !== config.navigation) {
-      navigation.clear();
-      navigation.build();
-    }
-
-    if (
-      prev.pagination !== config.pagination ||
-      prev.slidesPerView !== config.slidesPerView ||
-      prev.loop !== config.loop
-    ) {
+    if (prev.slidesPerView !== config.slidesPerView || prev.loop !== config.loop) {
       pagination.clear();
       pagination.build();
     }
@@ -431,10 +425,8 @@ export function createSlider(
     loop.cancelTeleport();
     state.isProgrammaticScroll = false;
 
-    resizeObserver?.disconnect();
-    resizeObserver = null;
-    if (resizeDebounceTimer !== null) clearTimeout(resizeDebounceTimer);
-    resizeDebounceTimer = null;
+    teardownResizeMonitor?.();
+    teardownResizeMonitor = null;
 
     track.removeEventListener("scroll", onScroll);
     track.removeEventListener("wheel", onWheel);
@@ -476,7 +468,7 @@ export function createSlider(
     track.scrollLeft = 0;
   }
 
-  setupResizeObserver();
+  setupResizeMonitor();
   drag.setEnabled(config.draggable);
   keyboard.setEnabled(true);
   autoplay.setHoverPause(config.autoplay);
