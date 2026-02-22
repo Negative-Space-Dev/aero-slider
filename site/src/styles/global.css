@@ -54,17 +54,17 @@ body {
 }
 
 /* Thumbnail strip (doc site example only) */
+.aero-slider--thumbnails .aero-slider__track > * {
+  scroll-snap-align: center;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
 .aero-slider--thumbnails:focus {
   outline: none;
 }
 .aero-slider--thumbnails:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 2px;
-}
-
-.aero-slider--thumbnails .aero-slider__track > * {
-  opacity: 0.6;
-  transition: opacity 0.2s;
 }
 
 .aero-slider--thumbnails .aero-slider__track > *:focus {

@@ -154,14 +154,15 @@
 
 /* iOS-style windowed pagination */
 .aero-slider__pagination--windowed {
-  width: var(--pagination-width);
-  max-width: 100%;
+  width: calc(var(--pagination-width) + 12px);
+  max-width: calc(100% + 12px);
   margin-left: auto;
   margin-right: auto;
   overflow: hidden;
   justify-content: flex-start;
-  padding-left: 0;
-  padding-right: 0;
+  padding-left: 6px;
+  padding-right: 6px;
+  box-sizing: border-box;
 }
 
 .aero-slider__pagination-track {

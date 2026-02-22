@@ -365,11 +365,14 @@ function logEvent(name: string, data: { index: number; fromIndex?: number }): vo
 function updateThumbnailState(show: boolean): void {
   heroThumbsWrapper.hidden = !show;
   if (show) {
+    const loop = getFormBool("loop");
     if (!heroThumbs) {
-      heroThumbs = createSlider(getRequiredElementById<HTMLElement>("hero-thumbs"));
+      heroThumbs = createSlider(getRequiredElementById<HTMLElement>("hero-thumbs"), { loop });
+    } else {
+      heroThumbs.update({ loop });
     }
     if (syncTeardown) syncTeardown();
-    syncTeardown = syncThumbnails(heroSlider, heroThumbs!);
+    syncTeardown = syncThumbnails(heroSlider, heroThumbs!, { loop });
   } else {
     if (syncTeardown) {
       syncTeardown();

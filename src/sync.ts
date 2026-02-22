@@ -18,26 +18,47 @@ function setActiveThumb(
 
 /**
  * Scrolls the thumbnail track to center the given slide index in the viewport.
+ * In loop mode, picks the instance (original or clone) closest to current scroll
+ * to avoid jumping backward when advancing past the end.
  */
-function centerThumbnail(track: HTMLElement, slides: HTMLElement[], index: number): void {
-  const slide = slides[index];
-  if (!slide) return;
+function centerThumbnail(
+  track: HTMLElement,
+  targetIndex: number,
+  getLogicalIndex: (el: HTMLElement) => number
+): void {
+  const viewportWidth = track.clientWidth;
+  const currentScroll = track.scrollLeft;
 
-  const trackRect = track.getBoundingClientRect();
-  const slideRect = slide.getBoundingClientRect();
+  // Find all elements with the target logical index (original + clones in loop mode)
+  const candidates = Array.from(track.children).filter(
+    (el) => getLogicalIndex(el as HTMLElement) === targetIndex
+  ) as HTMLElement[];
 
-  // Calculate where the slide currently is relative to track's scroll
-  const slideCenter = slide.offsetLeft + slideRect.width / 2;
-  const viewportCenter = trackRect.width / 2;
+  if (candidates.length === 0) return;
 
-  // Calculate target scroll to center this slide
-  const targetScroll = slideCenter - viewportCenter;
+  // Pick the instance whose center-scroll is closest to current scroll
+  let bestScroll = 0;
+  let bestDist = Infinity;
 
-  // Clamp to valid scroll range
-  const maxScroll = track.scrollWidth - track.clientWidth;
-  const clampedScroll = Math.max(0, Math.min(targetScroll, maxScroll));
+  for (const slide of candidates) {
+    const slideCenter = slide.offsetLeft + slide.offsetWidth / 2;
+    const targetScroll = slideCenter - viewportWidth / 2;
+    const maxScroll = track.scrollWidth - viewportWidth;
+    const clamped = Math.max(0, Math.min(targetScroll, maxScroll));
+    const dist = Math.abs(clamped - currentScroll);
 
-  track.scrollTo({ left: clampedScroll, behavior: "smooth" });
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestScroll = clamped;
+    }
+  }
+
+  track.scrollTo({ left: bestScroll, behavior: "smooth" });
+}
+
+export interface SyncThumbnailsOptions {
+  /** Loop mode for the thumbnail slider. Defaults to true for backward compatibility. */
+  loop?: boolean;
 }
 
 /**
@@ -49,15 +70,20 @@ function centerThumbnail(track: HTMLElement, slides: HTMLElement[], index: numbe
  * Both sliders must have the same number of slides. Call the returned function
  * to teardown and remove all listeners.
  */
-export function syncThumbnails(primary: SliderInstance, thumbnail: SliderInstance): () => void {
+export function syncThumbnails(
+  primary: SliderInstance,
+  thumbnail: SliderInstance,
+  options?: SyncThumbnailsOptions
+): () => void {
   const track = thumbnail.element.querySelector<HTMLElement>(".aero-slider__track");
   if (!track) return () => {};
   const trackEl = track;
 
-  /* Enable loop on thumbnail slider so it wraps around, keeping active thumb centered.
-   * Disable drag so clicks register; pointer capture from drag would otherwise
-   * intercept and suppress the click event. */
-  thumbnail.update({ draggable: false, loop: true });
+  /* Set thumbnail loop to match primary (or explicit option). Disable drag so clicks
+   * register; pointer capture from drag would otherwise intercept and suppress
+   * the click event. */
+  const loop = options?.loop ?? true;
+  thumbnail.update({ draggable: false, loop });
 
   /* Get original slides for centerThumbnail and to compute clone layout. */
   const slides = Array.from(trackEl.children).filter((el) =>
@@ -130,13 +156,13 @@ export function syncThumbnails(primary: SliderInstance, thumbnail: SliderInstanc
     thumbUpdateTimer = setTimeout(() => {
       thumbUpdateTimer = null;
       setActiveThumb(trackEl, data.index, getLogicalIndex);
-      thumbnail.goTo(data.index);
+      centerThumbnail(trackEl, data.index, getLogicalIndex);
     }, THUMB_UPDATE_DEBOUNCE_MS);
   };
   primary.on("slideChange", onSlideChange);
 
   setActiveThumb(trackEl, primary.currentIndex, getLogicalIndex);
-  centerThumbnail(trackEl, slides, primary.currentIndex);
+  centerThumbnail(trackEl, primary.currentIndex, getLogicalIndex);
 
   return (): void => {
     if (thumbUpdateTimer !== null) clearTimeout(thumbUpdateTimer);

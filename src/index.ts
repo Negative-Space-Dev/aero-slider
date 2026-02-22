@@ -1,5 +1,6 @@
 export { createSlider } from "./slider.ts";
 export { syncThumbnails } from "./sync.ts";
+export type { SyncThumbnailsOptions } from "./sync.ts";
 export type {
   SliderConfig,
   SliderInstance,
