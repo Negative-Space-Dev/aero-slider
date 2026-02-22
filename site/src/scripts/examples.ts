@@ -53,64 +53,11 @@ function formatOutputValue(name: string, value: string): string {
   return value;
 }
 
-// ── Examples (static) ─────────────────────────────────────────────────
-createSlider(getRequiredElementById<HTMLElement>("multi"));
-createSlider(getRequiredElementById<HTMLElement>("autoplay"), {
-  autoplay: true,
-  autoplayInterval: 3000,
-  loop: true,
-});
-createSlider(getRequiredElementById<HTMLElement>("responsive"));
-
-// Thumbnail sync example
-const thumbMain = createSlider(getRequiredElementById<HTMLElement>("thumbnail-main"));
-const thumbThumbs = createSlider(getRequiredElementById<HTMLElement>("thumbnail-thumbs"));
-syncThumbnails(thumbMain, thumbThumbs);
-
-// Direction examples
-createSlider(getRequiredElementById<HTMLElement>("direction-rtl"), { direction: "rtl" });
-createSlider(getRequiredElementById<HTMLElement>("direction-vertical"), { direction: "ttb" });
-
-// Dynamic slides example
-const dynamicSlider = createSlider(getRequiredElementById<HTMLElement>("dynamic-slides"));
-let dynamicCount = 3;
-const DYNAMIC_COLORS = [
-  "bg-slate-700",
-  "bg-slate-600",
-  "bg-slate-500",
-  "bg-indigo-600",
-  "bg-emerald-600",
-  "bg-amber-600",
-  "bg-rose-600",
-  "bg-violet-600",
-];
-getRequiredElementById("dynamic-add").addEventListener("click", () => {
-  dynamicCount++;
-  const slide = document.createElement("div");
-  slide.className = `rounded-lg ${DYNAMIC_COLORS[(dynamicCount - 1) % DYNAMIC_COLORS.length]} text-white`;
-  slide.innerHTML = `<div class="flex items-center justify-center text-2xl font-bold">${dynamicCount}</div>`;
-  dynamicSlider.add(slide);
-});
-getRequiredElementById("dynamic-remove").addEventListener("click", () => {
-  if (dynamicSlider.slideCount > 1) {
-    dynamicSlider.remove(dynamicSlider.slideCount - 1);
-    dynamicCount = dynamicSlider.slideCount;
-  }
-});
-
-// perMove example
-createSlider(getRequiredElementById<HTMLElement>("per-move"), { perMove: 2, loop: true });
-
-// Pagination & navigation minimal examples
-createSlider(getRequiredElementById<HTMLElement>("pagination-minimal"));
-createSlider(getRequiredElementById<HTMLElement>("nav-minimal"));
-
 // ── Hero interactive slider ───────────────────────────────────────────
 const form = getRequiredElementById<HTMLFormElement>("config-form");
 const logList = getRequiredElementById<HTMLTableSectionElement>("event-log");
 const heroSliderEl = getRequiredElementById<HTMLElement>("hero-slider");
 const heroThumbsWrapper = getRequiredElementById<HTMLElement>("hero-thumbs-wrapper");
-const heroStableContainer = document.getElementById("hero-stable-container");
 
 const outputs: Record<string, HTMLOutputElement> = {
   slidesPerView: getRequiredElementById<HTMLOutputElement>("out-spv"),
@@ -120,6 +67,111 @@ const outputs: Record<string, HTMLOutputElement> = {
   maxDots: getRequiredElementById<HTMLOutputElement>("out-maxDots"),
   perMove: getRequiredElementById<HTMLOutputElement>("out-perMove"),
 };
+
+// ── URL params ↔ form sync ────────────────────────────────────────────
+const PARAM_KEYS = {
+  slideCount: "sc",
+  slidesPerView: "spv",
+  gap: "gap",
+  autoplayInterval: "interval",
+  maxDots: "dots",
+  direction: "dir",
+  perMove: "pm",
+  loop: "loop",
+  pagination: "pag",
+  navigation: "nav",
+  draggable: "drag",
+  autoplay: "auto",
+  thumbnails: "thumbs",
+} as const;
+
+function applyParamsFromUrl(): void {
+  const params = new URLSearchParams(window.location.search);
+  const setRange = (name: string, min: number, max: number) => {
+    const val = params.get(PARAM_KEYS[name as keyof typeof PARAM_KEYS]);
+    if (val == null) return;
+    const n = Number(val);
+    if (!Number.isNaN(n)) {
+      const el = form.elements.namedItem(name) as HTMLInputElement | null;
+      if (el) el.value = String(Math.max(min, Math.min(max, Math.round(n))));
+    }
+  };
+  const setCheckbox = (name: string) => {
+    const val = params.get(PARAM_KEYS[name as keyof typeof PARAM_KEYS]);
+    if (val == null) return;
+    const el = form.elements.namedItem(name) as HTMLInputElement | null;
+    if (el) el.checked = val === "1" || val === "on" || val === "true";
+  };
+  const setSelect = (name: string, valid: string[]) => {
+    const val = params.get(PARAM_KEYS[name as keyof typeof PARAM_KEYS]);
+    if (val == null || !valid.includes(val)) return;
+    const el = form.elements.namedItem(name) as HTMLSelectElement | null;
+    if (el) el.value = val;
+  };
+
+  setRange("slideCount", 3, 20);
+  setRange("slidesPerView", 0, 16);
+  setRange("gap", 0, 32);
+  setRange("autoplayInterval", 1000, 8000);
+  setRange("maxDots", 3, 21);
+  setRange("perMove", 1, 4);
+  setSelect("direction", ["ltr", "rtl", "ttb"]);
+  setCheckbox("loop");
+  setCheckbox("pagination");
+  setCheckbox("navigation");
+  setCheckbox("draggable");
+  setCheckbox("autoplay");
+  setCheckbox("thumbnails");
+}
+
+const DEFAULTS = {
+  slideCount: "5",
+  slidesPerView: "0",
+  gap: "10",
+  autoplayInterval: "4000",
+  maxDots: "10",
+  direction: "ltr",
+  perMove: "1",
+  loop: false,
+  pagination: true,
+  navigation: true,
+  draggable: true,
+  autoplay: false,
+  thumbnails: false,
+};
+
+function syncUrlFromForm(): void {
+  const fd = new FormData(form);
+  const params = new URLSearchParams();
+
+  const setIfNotDefault = (key: string, formName: string) => {
+    const val = fd.get(formName) ?? "";
+    if (val !== DEFAULTS[formName as keyof typeof DEFAULTS]) params.set(key, String(val));
+  };
+  const setCheckboxIfNotDefault = (formName: string, paramKey: string) => {
+    const checked = fd.get(formName) === "on";
+    const def = DEFAULTS[formName as keyof typeof DEFAULTS] as boolean;
+    if (checked !== def) params.set(paramKey, checked ? "1" : "0");
+  };
+
+  setIfNotDefault(PARAM_KEYS.slideCount, "slideCount");
+  setIfNotDefault(PARAM_KEYS.slidesPerView, "slidesPerView");
+  setIfNotDefault(PARAM_KEYS.gap, "gap");
+  setIfNotDefault(PARAM_KEYS.autoplayInterval, "autoplayInterval");
+  setIfNotDefault(PARAM_KEYS.maxDots, "maxDots");
+  setIfNotDefault(PARAM_KEYS.direction, "direction");
+  setIfNotDefault(PARAM_KEYS.perMove, "perMove");
+  setCheckboxIfNotDefault("loop", PARAM_KEYS.loop);
+  setCheckboxIfNotDefault("pagination", PARAM_KEYS.pagination);
+  setCheckboxIfNotDefault("navigation", PARAM_KEYS.navigation);
+  setCheckboxIfNotDefault("draggable", PARAM_KEYS.draggable);
+  setCheckboxIfNotDefault("autoplay", PARAM_KEYS.autoplay);
+  setCheckboxIfNotDefault("thumbnails", PARAM_KEYS.thumbnails);
+
+  const qs = params.toString();
+  const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+  window.history.replaceState(null, "", url);
+}
 
 const SLIDE_GRADIENTS = [
   ["from-indigo-500", "to-purple-600"],
@@ -372,13 +424,6 @@ function initHero(): void {
   rebuildHero();
 }
 
-for (const [name, output] of Object.entries(outputs)) {
-  const input = form.elements.namedItem(name) as HTMLInputElement | null;
-  if (input) {
-    output.textContent = formatOutputValue(name, input.value);
-  }
-}
-
 function updateAutoplayIntervalState(): void {
   const autoplayChecked =
     (form.elements.namedItem("autoplay") as HTMLInputElement)?.checked ?? false;
@@ -405,6 +450,7 @@ form.addEventListener("input", (e) => {
     target.name === "direction"
   ) {
     rebuildHero();
+    syncUrlFromForm();
     return;
   }
 
@@ -414,6 +460,7 @@ form.addEventListener("input", (e) => {
 
   const thumbsChecked = config.thumbnails ?? false;
   updateThumbnailState(thumbsChecked);
+  syncUrlFromForm();
 });
 
 form.addEventListener("change", (e) => {
@@ -421,19 +468,19 @@ form.addEventListener("change", (e) => {
   if (target.name === "thumbnails") {
     updateThumbnailState(target.checked);
   }
+  syncUrlFromForm();
 });
 
+applyParamsFromUrl();
+for (const [name, output] of Object.entries(outputs)) {
+  const input = form.elements.namedItem(name) as HTMLInputElement | null;
+  if (input) {
+    output.textContent = formatOutputValue(name, input.value);
+  }
+}
+document.documentElement.removeAttribute("data-aero-defer-hero");
 initHero();
 updateAutoplayIntervalState();
-
-// Lock the container height to prevent layout shift when changing SPV
-if (heroStableContainer) {
-  // Use requestAnimationFrame to ensure layout is complete
-  requestAnimationFrame(() => {
-    const height = heroSliderEl.offsetHeight;
-    heroStableContainer.style.height = `${height}px`;
-  });
-}
 
 // ── Install Widget ────────────────────────────────────────────────────
 const installCommands: Record<string, string> = {
@@ -536,3 +583,51 @@ if (isTouchDevice && draggableLabel) {
     }, 3000);
   });
 }
+
+// ── Examples (static, deferred so hero paints first) ──────────────────
+requestAnimationFrame(() => {
+  createSlider(getRequiredElementById<HTMLElement>("multi"));
+  createSlider(getRequiredElementById<HTMLElement>("autoplay"), {
+    autoplay: true,
+    autoplayInterval: 3000,
+    loop: true,
+  });
+  createSlider(getRequiredElementById<HTMLElement>("responsive"));
+
+  const thumbMain = createSlider(getRequiredElementById<HTMLElement>("thumbnail-main"));
+  const thumbThumbs = createSlider(getRequiredElementById<HTMLElement>("thumbnail-thumbs"));
+  syncThumbnails(thumbMain, thumbThumbs);
+
+  createSlider(getRequiredElementById<HTMLElement>("direction-rtl"), { direction: "rtl" });
+  createSlider(getRequiredElementById<HTMLElement>("direction-vertical"), { direction: "ttb" });
+
+  const dynamicSlider = createSlider(getRequiredElementById<HTMLElement>("dynamic-slides"));
+  let dynamicCount = 3;
+  const DYNAMIC_COLORS = [
+    "bg-slate-700",
+    "bg-slate-600",
+    "bg-slate-500",
+    "bg-indigo-600",
+    "bg-emerald-600",
+    "bg-amber-600",
+    "bg-rose-600",
+    "bg-violet-600",
+  ];
+  getRequiredElementById("dynamic-add").addEventListener("click", () => {
+    dynamicCount++;
+    const slide = document.createElement("div");
+    slide.className = `rounded-lg ${DYNAMIC_COLORS[(dynamicCount - 1) % DYNAMIC_COLORS.length]} text-white`;
+    slide.innerHTML = `<div class="flex items-center justify-center text-2xl font-bold">${dynamicCount}</div>`;
+    dynamicSlider.add(slide);
+  });
+  getRequiredElementById("dynamic-remove").addEventListener("click", () => {
+    if (dynamicSlider.slideCount > 1) {
+      dynamicSlider.remove(dynamicSlider.slideCount - 1);
+      dynamicCount = dynamicSlider.slideCount;
+    }
+  });
+
+  createSlider(getRequiredElementById<HTMLElement>("per-move"), { perMove: 2, loop: true });
+  createSlider(getRequiredElementById<HTMLElement>("pagination-minimal"));
+  createSlider(getRequiredElementById<HTMLElement>("nav-minimal"));
+});

@@ -72,6 +72,8 @@ export function createSlider(
   let scrollRafId: number | null = null;
   let scrollEndTimer: ReturnType<typeof setTimeout> | null = null;
   let teardownResizeMonitor: (() => void) | null = null;
+  let resizeSnapTimer: ReturnType<typeof setTimeout> | null = null;
+  let resizeRafId: number | null = null;
 
   // ── Core Helpers ─────────────────────────────────────────────────────
   function emit(event: SliderEvent, data: { index: number; fromIndex?: number }): void {
@@ -364,6 +366,56 @@ export function createSlider(
     }, WHEEL_IDLE_MS);
   }
 
+  // ── Resize snap guard ─────────────────────────────────────────────────
+  // The browser's scroll-snap engine re-snaps during layout when snap points
+  // shift (percentage-based slide widths change on window resize), which can
+  // jump to a different slide.  We disable snap immediately and reposition
+  // every animation frame to keep the active slide locked while resizing.
+
+  function repositionForCurrentIndex(): void {
+    recalcSlideMetrics();
+    if (state.loopModeActive) {
+      const w = getSlideSize();
+      if (w > 0) {
+        const realStart = loop.getLoopRealStart();
+        let pos = realStart + state.currentIndex * w;
+        if (isFractionalView()) {
+          const vpSize = getViewportSize();
+          const slideVisual = w - config.gap;
+          pos = realStart + state.currentIndex * w + slideVisual / 2 - vpSize / 2;
+        }
+        setScrollPos(pos);
+      }
+    } else {
+      setScrollPos(getScrollPosForIndex(state.currentIndex));
+    }
+  }
+
+  function onWindowResize(): void {
+    if (state.isDestroyed) return;
+
+    if (resizeSnapTimer === null) {
+      track.style.scrollSnapType = "none";
+      state.isProgrammaticScroll = true;
+    }
+
+    if (resizeRafId === null) {
+      resizeRafId = requestAnimationFrame(() => {
+        resizeRafId = null;
+        if (!state.isDestroyed) repositionForCurrentIndex();
+      });
+    }
+
+    if (resizeSnapTimer !== null) clearTimeout(resizeSnapTimer);
+    resizeSnapTimer = setTimeout(() => {
+      resizeSnapTimer = null;
+      if (state.isDestroyed) return;
+      repositionForCurrentIndex();
+      state.isProgrammaticScroll = false;
+      track.style.scrollSnapType = "";
+    }, RESIZE_DEBOUNCE_MS);
+  }
+
   // ── Media Query / Resize Monitor ───────────────────────────────────────
   const LAYOUT_VARS = ["--slides-per-view", "--slide-gap", "--slide-aspect"];
 
@@ -477,8 +529,11 @@ export function createSlider(
     }
 
     if (prevConfig.loop !== config.loop) {
-      if (isLoopEnabled()) loop.setupLoopTrack(state.currentIndex);
-      else loop.teardownLoopTrack(state.currentIndex);
+      if (isLoopEnabled()) {
+        loop.setupLoopTrack(state.currentIndex);
+      } else {
+        loop.teardownLoopTrack(state.currentIndex);
+      }
     } else if (state.loopModeActive && prevConfig.slidesPerView !== config.slidesPerView) {
       loop.setupLoopTrack(state.currentIndex);
     }
@@ -602,6 +657,15 @@ export function createSlider(
 
     teardownResizeMonitor?.();
     teardownResizeMonitor = null;
+    window.removeEventListener("resize", onWindowResize);
+    if (resizeSnapTimer !== null) {
+      clearTimeout(resizeSnapTimer);
+      resizeSnapTimer = null;
+    }
+    if (resizeRafId !== null) {
+      cancelAnimationFrame(resizeRafId);
+      resizeRafId = null;
+    }
 
     track.removeEventListener("scroll", onScroll);
     track.removeEventListener("wheel", onWheel);
@@ -620,8 +684,10 @@ export function createSlider(
     container.classList.remove(
       "aero-slider--dragging",
       "aero-slider--rtl",
-      "aero-slider--vertical"
+      "aero-slider--vertical",
+      "aero-slider--ready"
     );
+    container.removeAttribute("data-aero-defer-visibility");
     if (host.aeroSlider === api) {
       delete host.aeroSlider;
     }
@@ -630,6 +696,8 @@ export function createSlider(
   }
 
   // ── Initialize ───────────────────────────────────────────────────────
+  container.removeAttribute("data-aero-defer-visibility");
+  applyCssCustomProperties();
   container.classList.add("aero-slider");
   container.setAttribute("aria-roledescription", "carousel");
   track.classList.add("aero-slider__track");
@@ -642,6 +710,7 @@ export function createSlider(
 
   track.addEventListener("scroll", onScroll, { passive: true });
   track.addEventListener("wheel", onWheel, { passive: true });
+  window.addEventListener("resize", onWindowResize);
 
   if (isLoopEnabled()) {
     loop.setupLoopTrack(0);
@@ -684,6 +753,7 @@ export function createSlider(
   };
 
   host.aeroSlider = api;
+  container.classList.add("aero-slider--ready");
   emit("ready", { index: state.currentIndex });
   return api;
 }

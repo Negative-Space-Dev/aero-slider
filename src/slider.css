@@ -11,6 +11,28 @@
   --slide-gap: 0px;
 }
 
+/* Loop spacer: reserves space for prepended clones so the active slide
+   renders in its final centered position before JS initializes.
+   Add data-aero-defer-visibility to the slider in HTML; JS removes
+   the attribute at init, deactivating the spacer once clones are in place. */
+.aero-slider[data-aero-defer-visibility]:not(.aero-slider--ready) .aero-slider__track::before {
+  content: "";
+  flex: 0 0 max(
+    0px,
+    calc(
+      50%
+      - (100% - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1))
+        / (2 * var(--slides-per-view, 1))
+      - var(--slide-gap, 0px)
+    )
+  );
+  scroll-snap-align: none;
+}
+
+.aero-slider[data-aero-defer-visibility]:not(.aero-slider--ready) .aero-slider__track > * {
+  scroll-snap-align: center;
+}
+
 /* Viewport clips the track; pagination sits below in normal flow */
 .aero-slider__viewport {
   position: relative;
@@ -162,16 +184,6 @@
 
 .aero-slider__dot--near-edge {
   transform: scale(0.8);
-}
-
-/* === Thumbnail strip === */
-.aero-slider--thumbnails .aero-slider__track > * {
-  opacity: 0.6;
-  transition: opacity 0.2s;
-}
-
-.aero-slider--thumbnails .aero-slider__track > .aero-slider__thumb--active {
-  opacity: 1;
 }
 
 /* === RTL === */

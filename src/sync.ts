@@ -4,13 +4,15 @@ const THUMB_ACTIVE_CLASS = "aero-slider__thumb--active";
 const THUMB_UPDATE_DEBOUNCE_MS = 50;
 const THUMB_ARRIVAL_STABLE_MS = 200;
 
-function setActiveThumb(track: HTMLElement, index: number): void {
-  // Handle both original slides and loop clones by checking data-aero-slider-index
+function setActiveThumb(
+  track: HTMLElement,
+  index: number,
+  getLogicalIndex: (el: HTMLElement) => number
+): void {
   const allSlides = track.querySelectorAll<HTMLElement>(":scope > *");
   allSlides.forEach((el) => {
-    const slideIndex = el.getAttribute("data-aero-slider-index");
-    const isActive = slideIndex === String(index);
-    el.classList.toggle(THUMB_ACTIVE_CLASS, isActive);
+    const logicalIndex = getLogicalIndex(el);
+    el.classList.toggle(THUMB_ACTIVE_CLASS, logicalIndex === index);
   });
 }
 
@@ -50,14 +52,36 @@ function centerThumbnail(track: HTMLElement, slides: HTMLElement[], index: numbe
 export function syncThumbnails(primary: SliderInstance, thumbnail: SliderInstance): () => void {
   const track = thumbnail.element.querySelector<HTMLElement>(".aero-slider__track");
   if (!track) return () => {};
+  const trackEl = track;
 
   /* Enable loop on thumbnail slider so it wraps around, keeping active thumb centered.
    * Disable drag so clicks register; pointer capture from drag would otherwise
    * intercept and suppress the click event. */
   thumbnail.update({ draggable: false, loop: true });
 
-  const slides = Array.from(track.children) as HTMLElement[];
+  /* Get original slides for centerThumbnail and to compute clone layout. */
+  const slides = Array.from(trackEl.children).filter((el) =>
+    el.hasAttribute("data-aero-slider-index")
+  ) as HTMLElement[];
+  slides.sort(
+    (a, b) =>
+      Number(a.getAttribute("data-aero-slider-index")) -
+      Number(b.getAttribute("data-aero-slider-index"))
+  );
+  const slideCount = slides.length;
+  const firstOriginalIndex = Array.from(trackEl.children).indexOf(slides[0] ?? trackEl);
   const handlers: Array<{ el: HTMLElement; fn: () => void }> = [];
+
+  /** Get logical slide index (0..slideCount-1) for any track child, including loop clones. */
+  function getLogicalIndex(el: HTMLElement): number {
+    const idxAttr = el.getAttribute("data-aero-slider-index");
+    if (idxAttr !== null) return Number(idxAttr);
+    const domIndex = Array.from(trackEl.children).indexOf(el);
+    if (domIndex < firstOriginalIndex) {
+      return domIndex % slideCount;
+    }
+    return (domIndex - firstOriginalIndex - slideCount) % slideCount;
+  }
 
   /* When user clicks a thumbnail, they've already scrolled to see it. Ignore
    * slideChange until the main slider has reached and stabilized on that slide
@@ -65,10 +89,12 @@ export function syncThumbnails(primary: SliderInstance, thumbnail: SliderInstanc
   let thumbClickTarget: number | null = null;
   let arrivalStableTimer: ReturnType<typeof setTimeout> | null = null;
 
-  slides.forEach((slide, i) => {
+  Array.from(trackEl.children).forEach((el) => {
+    const slide = el as HTMLElement;
     const handler = (): void => {
+      const i = getLogicalIndex(slide);
       thumbClickTarget = i;
-      setActiveThumb(track, i);
+      setActiveThumb(trackEl, i, getLogicalIndex);
       primary.goTo(i);
     };
     slide.addEventListener("click", handler);
@@ -103,21 +129,21 @@ export function syncThumbnails(primary: SliderInstance, thumbnail: SliderInstanc
 
     thumbUpdateTimer = setTimeout(() => {
       thumbUpdateTimer = null;
-      setActiveThumb(track, data.index);
+      setActiveThumb(trackEl, data.index, getLogicalIndex);
       thumbnail.goTo(data.index);
     }, THUMB_UPDATE_DEBOUNCE_MS);
   };
   primary.on("slideChange", onSlideChange);
 
-  setActiveThumb(track, primary.currentIndex);
-  centerThumbnail(track, slides, primary.currentIndex);
+  setActiveThumb(trackEl, primary.currentIndex, getLogicalIndex);
+  centerThumbnail(trackEl, slides, primary.currentIndex);
 
   return (): void => {
     if (thumbUpdateTimer !== null) clearTimeout(thumbUpdateTimer);
     if (arrivalStableTimer !== null) clearTimeout(arrivalStableTimer);
     thumbClickTarget = null;
     handlers.forEach(({ el, fn }) => el.removeEventListener("click", fn));
-    slides.forEach((el) => el.classList.remove(THUMB_ACTIVE_CLASS));
+    trackEl.querySelectorAll(`:scope > *`).forEach((el) => el.classList.remove(THUMB_ACTIVE_CLASS));
     primary.off("slideChange", onSlideChange);
   };
 }

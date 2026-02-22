@@ -9,6 +9,7 @@
     "astro": "astro"
   },
   "dependencies": {
+    "aero-slider": "file:..",
     "astro": "^5.17.1"
   },
   "devDependencies": {

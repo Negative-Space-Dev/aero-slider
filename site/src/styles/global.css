@@ -52,6 +52,33 @@ body {
   border-color: #1e293b !important;
   background-color: #e2e8f0 !important;
 }
+
+/* Thumbnail strip (doc site example only) */
+.aero-slider--thumbnails:focus {
+  outline: none;
+}
+.aero-slider--thumbnails:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.aero-slider--thumbnails .aero-slider__track > * {
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.aero-slider--thumbnails .aero-slider__track > *:focus {
+  outline: none;
+}
+.aero-slider--thumbnails .aero-slider__track > *:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.aero-slider--thumbnails .aero-slider__track > .aero-slider__thumb--active {
+  opacity: 1;
+}
+
 .aero-slider--no-pagination .aero-slider__pagination {
   display: none !important;
 }

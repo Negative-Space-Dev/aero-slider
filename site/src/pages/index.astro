@@ -21,6 +21,11 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
 ---
 
 <BaseLayout title="Aero Slider — Lightweight CSS-first Slider">
+  <Fragment slot="head">
+    <script>
+      import '../scripts/examples.ts';
+    </script>
+  </Fragment>
   <!-- ─── Navbar ──────────────────────────────────────────────── -->
   <nav class="relative z-50 bg-transparent">
     <div
@@ -195,10 +200,8 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
       <div class="grid gap-8 lg:grid-cols-[1fr_320px]">
         <!-- Slider Column -->
         <div class="min-w-0">
-          <!-- Stable height container - JS sets height based on SPV=1 -->
-          <div id="hero-stable-container" class="flex items-end">
-            <!-- Main Hero Slider -->
-            <div id="hero-slider" class="aero-slider w-full">
+          <!-- Main Hero Slider -->
+          <div id="hero-slider" class="aero-slider w-full">
             <div class="aero-slider__viewport relative rounded-2xl">
               <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -248,7 +251,6 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
               ></span>
             </div>
           </div>
-          </div><!-- /stable height container -->
 
           <!-- Thumbnail Strip -->
           <div id="hero-thumbs-wrapper" hidden class="mt-4">
@@ -514,6 +516,37 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
               </div>
             </fieldset>
           </form>
+          <!-- Apply URL params to form immediately, before module script loads -->
+          <script is:inline>
+            (function(){
+              var q=location.search;if(!q||q.length<2)return;
+              var p=new URLSearchParams(q),f=document.getElementById('config-form');
+              if(!f)return;
+              var SPV=[1,1.05,1.1,1.15,1.2,1.25,1.3,1.35,1.4,1.45,1.5,1.75,2,2.5,3,4,5];
+              function sR(n,k,lo,hi){var v=p.get(k);if(v==null)return;var x=parseInt(v,10);if(isNaN(x))return;x=Math.max(lo,Math.min(hi,x));f.elements[n].value=x;return x}
+              function sC(n,k){var v=p.get(k);if(v==null)return;f.elements[n].checked=v==='1'||v==='on'||v==='true'}
+              function sS(n,k,ok){var v=p.get(k);if(v==null||ok.indexOf(v)<0)return;f.elements[n].value=v}
+              function out(id,t){var e=document.getElementById(id);if(e)e.textContent=t}
+              sR('slideCount','sc',3,20);
+              var si=sR('slidesPerView','spv',0,16);
+              sR('gap','gap',0,32);
+              sR('autoplayInterval','interval',1000,8000);
+              sR('maxDots','dots',3,21);
+              sR('perMove','pm',1,4);
+              sS('direction','dir',['ltr','rtl','ttb']);
+              sC('loop','loop');sC('pagination','pag');sC('navigation','nav');
+              sC('draggable','drag');sC('autoplay','auto');sC('thumbnails','thumbs');
+              if(si!=null){var spv=SPV[Math.max(0,Math.min(SPV.length-1,si))];out('out-spv',spv.toFixed(2).replace(/\.?0+$/,''))}
+              var g=f.elements['gap'];if(g)out('out-gap',g.value+'px');
+              var iv=f.elements['autoplayInterval'];if(iv)out('out-interval',iv.value+'ms');
+              var sc=f.elements['slideCount'];if(sc)out('out-slideCount',sc.value);
+              var d=f.elements['maxDots'];if(d)out('out-maxDots',parseInt(d.value)>=21?'∞':d.value);
+              var pm=f.elements['perMove'];if(pm)out('out-perMove',pm.value);
+              var ac=f.elements['autoplay'];
+              var ic=document.getElementById('interval-control');
+              if(ac&&ic){ic.classList.toggle('opacity-40',!ac.checked);ic.classList.toggle('pointer-events-none',!ac.checked)}
+            })();
+          </script>
         </aside>
       </div>
     </section>
@@ -1007,77 +1040,128 @@ slider.remove([0, 1]);`}
       <!-- Pagination & Navigation (minimal requirements) -->
       <div id="example-pagination-nav">
         <h3 class="mb-1 text-lg font-semibold text-slate-800">Pagination & Navigation</h3>
-        <p class="mb-4 text-sm text-slate-500">
-          Pagination and navigation are <strong>not configured through JavaScript</strong>. You
-          create the DOM elements yourself; the slider discovers them on init and wires them up
-          automatically. If the elements exist, they work. If they don't, they're simply not used.
-        </p>
-        <div class="space-y-6">
-          <div>
-            <h4 class="mb-2 text-sm font-semibold text-slate-700">Pagination — bare minimum</h4>
-            <p class="mb-3 text-sm text-slate-600">
-              A container with class
-              <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">aero-slider__pagination</code>
-              and <strong>one</strong> dot template with class
-              <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">aero-slider__dot</code>.
-              The slider clones the dot for each slide and manages active state via
-              <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">aero-slider__dot--active</code>.
-            </p>
-            <div id="pagination-minimal" class="aero-slider" style="--slides-per-view: 1;">
-              <div class="aero-slider__viewport relative rounded-lg">
-                <div class="aero-slider__track">
-                  <div class="rounded-lg bg-slate-200 p-6 text-center font-bold">1</div>
-                  <div class="rounded-lg bg-slate-200 p-6 text-center font-bold">2</div>
-                  <div class="rounded-lg bg-slate-200 p-6 text-center font-bold">3</div>
-                </div>
-              </div>
-              <div class="aero-slider__pagination flex justify-center gap-2 mt-3">
-                <span class="aero-slider__dot h-2.5 w-2.5 rounded-full bg-slate-300 transition-all"></span>
-              </div>
-            </div>
-          </div>
-          <div>
-            <h4 class="mb-2 text-sm font-semibold text-slate-700">Navigation — bare minimum</h4>
-            <p class="mb-3 text-sm text-slate-600">
-              Two buttons inside the viewport (before the track): one with
-              <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">aero-slider__nav--prev</code>
-              and one with
-              <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">aero-slider__nav--next</code>.
-              Include <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">aria-label</code> for
-              accessibility. The slider enables/disables them based on loop mode and current index.
-            </p>
-            <div id="nav-minimal" class="aero-slider" style="--slides-per-view: 1;">
-              <div class="aero-slider__viewport relative rounded-lg">
-                <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">‹</button>
-                <button type="button" class="aero-slider__nav--next" aria-label="Next slide">›</button>
-                <div class="aero-slider__track">
-                  <div class="rounded-lg bg-slate-200 p-6 text-center font-bold">1</div>
-                  <div class="rounded-lg bg-slate-200 p-6 text-center font-bold">2</div>
-                  <div class="rounded-lg bg-slate-200 p-6 text-center font-bold">3</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <p class="mb-2 text-xs font-medium text-slate-500">Minimal HTML for both</p>
-            <Code
-              code={`<div class="aero-slider">
+        <div
+          class="mb-6 rounded-lg border-l-4 border-amber-400 bg-amber-50 px-3 py-2.5 text-sm text-slate-700"
+        >
+          <p>
+            <strong>Pagination and navigation are not configured through JavaScript.</strong> You
+            create the DOM elements yourself. If they exist inside the container, the slider
+            discovers and wires them automatically.
+          </p>
+        </div>
+        <div class="space-y-8">
+          <!-- Pagination example -->
+          <div
+            class="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 lg:flex-row lg:items-start lg:gap-6"
+          >
+            <div class="min-w-0 flex-1 lg:flex-[1_1_0%]">
+              <h4 class="mb-2 text-sm font-semibold text-slate-700">Pagination</h4>
+              <p class="mb-4 text-sm text-slate-600">
+                A container with class
+                <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs"
+                  >aero-slider__pagination</code
+                >
+                and <strong>one</strong> dot template with class
+                <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs"
+                  >aero-slider__dot</code
+                >. The slider clones the dot for each slide and manages active state via
+                <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs"
+                  >aero-slider__dot--active</code
+                >.
+              </p>
+              <Code
+                code={`<div class="aero-slider">
   <div class="aero-slider__viewport relative">
-    <!-- Navigation (optional): order doesn't matter relative to track -->
-    <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">‹</button>
-    <button type="button" class="aero-slider__nav--next" aria-label="Next slide">›</button>
     <div class="aero-slider__track">
-      <div>Slide 1</div><div>Slide 2</div><div>Slide 3</div>
+      <div>Slide 1</div>
+      <div>Slide 2</div>
+      <div>Slide 3</div>
     </div>
   </div>
-  <!-- Pagination (optional): one dot as template -->
   <div class="aero-slider__pagination">
     <span class="aero-slider__dot"></span>
   </div>
 </div>`}
-              lang="html"
-              class="!rounded-lg !p-4 text-sm"
-            />
+                lang="html"
+                class="!rounded-lg !p-4 text-sm overflow-x-auto"
+              />
+            </div>
+            <div class="min-w-0 flex-1 lg:flex-[1_1_0%]">
+              <div id="pagination-minimal" class="aero-slider w-full min-w-0" style="--slides-per-view: 1;">
+                <div class="aero-slider__viewport relative rounded-lg overflow-hidden">
+                  <div class="aero-slider__track">
+                    <div class="rounded-lg bg-slate-200 p-4 text-center text-sm font-bold">1</div>
+                    <div class="rounded-lg bg-slate-200 p-4 text-center text-sm font-bold">2</div>
+                    <div class="rounded-lg bg-slate-200 p-4 text-center text-sm font-bold">3</div>
+                  </div>
+                </div>
+                <div class="aero-slider__pagination flex justify-center gap-2 mt-2">
+                  <span class="aero-slider__dot h-2.5 w-2.5 rounded-full bg-slate-300 transition-all"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Navigation example -->
+          <div
+            class="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 lg:flex-row lg:items-start lg:gap-6"
+          >
+            <div class="min-w-0 flex-1 lg:flex-[1_1_0%]">
+              <h4 class="mb-2 text-sm font-semibold text-slate-700">Navigation</h4>
+              <p class="mb-4 text-sm text-slate-600">
+                Two buttons inside the viewport (before the track): one with
+                <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs"
+                  >aero-slider__nav--prev</code
+                >
+                and one with
+                <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs"
+                  >aero-slider__nav--next</code
+                >. Include
+                <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">aria-label</code>
+                for accessibility. The slider enables/disables them based on loop mode and current
+                index.
+              </p>
+              <div
+                class="mb-4 rounded-lg border-l-4 border-sky-400 bg-sky-50 px-3 py-2.5 text-sm text-slate-700"
+              >
+                <p>
+                  Placing the buttons before the track in the DOM improves keyboard
+                  navigation—users reach the prev/next controls before tabbing through slide
+                  content.
+                </p>
+              </div>
+              <Code
+                code={`<div class="aero-slider">
+  <div class="aero-slider__viewport relative">
+    <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">‹</button>
+    <button type="button" class="aero-slider__nav--next" aria-label="Next slide">›</button>
+    <div class="aero-slider__track">
+      <div>Slide 1</div>
+      <div>Slide 2</div>
+      <div>Slide 3</div>
+    </div>
+  </div>
+</div>`}
+                lang="html"
+                class="!rounded-lg !p-4 text-sm overflow-x-auto"
+              />
+            </div>
+            <div class="min-w-0 flex-1 lg:flex-[1_1_0%]">
+              <div id="nav-minimal" class="aero-slider w-full min-w-0" style="--slides-per-view: 1;">
+                <div class="aero-slider__viewport relative rounded-lg overflow-hidden">
+                  <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">
+                    ‹
+                  </button>
+                  <button type="button" class="aero-slider__nav--next" aria-label="Next slide">
+                    ›
+                  </button>
+                  <div class="aero-slider__track">
+                    <div class="rounded-lg bg-slate-200 p-4 text-center text-sm font-bold">1</div>
+                    <div class="rounded-lg bg-slate-200 p-4 text-center text-sm font-bold">2</div>
+                    <div class="rounded-lg bg-slate-200 p-4 text-center text-sm font-bold">3</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1096,21 +1180,13 @@ slider.remove([0, 1]);`}
             createSlider(element, config?)
           </h3>
           <p class="mt-2 text-sm text-slate-600">
-            Creates a new slider instance on the given container element.
+            Creates a new slider instance on the given container element. Pagination and navigation
+            are configured via DOM structure, not JavaScript—see the
+            <a href="#example-pagination-nav" class="font-medium text-slate-700 underline hover:text-slate-900"
+              >Pagination &amp; Navigation example</a
+            >
+            for required HTML.
           </p>
-          <div
-            class="mt-3 flex gap-3 rounded-lg border-l-4 border-amber-400 bg-amber-50 px-3 py-2.5 text-sm text-slate-700"
-          >
-            <p>
-              <strong>Pagination and navigation are not configured through JavaScript.</strong> You
-              create the DOM elements yourself. If they exist inside the container, the slider
-              discovers and wires them automatically. See the
-              <a href="#example-pagination-nav" class="font-medium text-amber-800 underline hover:text-amber-900"
-                >Pagination &amp; Navigation example</a
-              >
-              for the bare minimum HTML required.
-            </p>
-          </div>
           <div class="mt-4 overflow-x-auto rounded-lg">
             <Code
               code={`import { createSlider } from "aero-slider";
@@ -1153,10 +1229,17 @@ const slider = createSlider(document.getElementById("my-slider"), {
                     >0px</td
                   ><td class="py-2">Gap between slides</td></tr
                 >
-                <tr
+                <tr class="border-b border-slate-100"
                   ><td class="py-2 pr-4 font-mono text-xs">--slide-aspect</td><td class="py-2 pr-4"
                     >16 / 9</td
                   ><td class="py-2">Aspect ratio for slides</td></tr
+                >
+                <tr
+                  ><td class="py-2 pr-4 font-mono text-xs">data-aero-defer-visibility</td><td
+                    class="py-2 pr-4">—</td
+                  ><td class="py-2"
+                    >Prevents layout shift with loop + fractional SPV: add to the slider in HTML to reserve space for loop clones via a CSS spacer, keeping the first slide correctly centered before JS initializes</td
+                  ></tr
                 >
               </tbody>
             </table>
@@ -1470,8 +1553,4 @@ const teardown = syncThumbnails(main, thumbs);
       <p>Aero Slider — CSS-first, dependency-free slider for the modern web.</p>
     </div>
   </footer>
-
-  <script>
-    import '../scripts/examples.ts';
-  </script>
 </BaseLayout>
