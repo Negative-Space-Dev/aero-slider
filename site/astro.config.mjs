@@ -6,6 +6,7 @@ import { resolve } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 
 export default defineConfig({
+  site: "https://aeroslider.com",
   output: "static",
   vite: {
     plugins: [tailwindcss()],
