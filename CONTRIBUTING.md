@@ -52,6 +52,9 @@ The documentation site lives in `site/` (Astro + Tailwind):
 
    Prereleases require `--tag` so they don't become the default for `npm install aero-slider`. Users install betas with `npm install aero-slider@beta`.
 
+5. **Mark Latest**
+   - `npm dist-tag add aero-slider@{version} latest`
+
 ### GitHub Release workflow
 
 When you [create a release](https://github.com/Negative-Space-Dev/aero-slider/releases/new) on GitHub and publish it, the **Release** workflow runs automatically:
