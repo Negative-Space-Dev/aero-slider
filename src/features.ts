@@ -1,8 +1,6 @@
 import type { SliderContext } from "./types.ts";
 
 // ── Navigation Arrows ──────────────────────────────────────────────────
-// User provides elements with .aero-slider__nav--prev and .aero-slider__nav--next.
-// If they exist, we wire click handlers and manage disabled state.
 export interface NavigationController {
   build(): void;
   clear(): void;
@@ -16,14 +14,16 @@ export function createNavigation(
 ): NavigationController {
   let prevBtn: HTMLButtonElement | null = null;
   let nextBtn: HTMLButtonElement | null = null;
+  let prevHandler: () => void = prev;
+  let nextHandler: () => void = next;
 
   function clear(): void {
     if (prevBtn) {
-      prevBtn.removeEventListener("click", prev);
+      prevBtn.removeEventListener("click", prevHandler);
       prevBtn = null;
     }
     if (nextBtn) {
-      nextBtn.removeEventListener("click", next);
+      nextBtn.removeEventListener("click", nextHandler);
       nextBtn = null;
     }
   }
@@ -32,22 +32,25 @@ export function createNavigation(
     clear();
     prevBtn = ctx.container.querySelector<HTMLButtonElement>(".aero-slider__nav--prev");
     nextBtn = ctx.container.querySelector<HTMLButtonElement>(".aero-slider__nav--next");
-    if (prevBtn) prevBtn.addEventListener("click", prev);
-    if (nextBtn) nextBtn.addEventListener("click", next);
+    // In RTL, DOM order flips: prev ends up on the right (with ← icon), next on the left (with → icon).
+    // Swap handlers so arrows match direction of travel (→ = go right/prev, ← = go left/next).
+    const isRtl = ctx.config.direction === "rtl";
+    prevHandler = isRtl ? next : prev;
+    nextHandler = isRtl ? prev : next;
+    if (prevBtn) prevBtn.addEventListener("click", prevHandler);
+    if (nextBtn) nextBtn.addEventListener("click", nextHandler);
     refresh();
   }
 
   function refresh(): void {
     const maxIndex = ctx.getMaxIndex();
     const hasMultiplePages = maxIndex > 0;
-    if (prevBtn) {
-      prevBtn.disabled =
-        !hasMultiplePages || (!ctx.isLoopEnabled() && ctx.state.currentIndex === 0);
-    }
-    if (nextBtn) {
-      nextBtn.disabled =
-        !hasMultiplePages || (!ctx.isLoopEnabled() && ctx.state.currentIndex >= maxIndex);
-    }
+    const isRtl = ctx.config.direction === "rtl";
+    // In RTL we swapped handlers: prevBtn→next, nextBtn→prev. Swap disabled logic to match.
+    const prevDisabled = !hasMultiplePages || (!ctx.isLoopEnabled() && ctx.state.currentIndex === 0);
+    const nextDisabled = !hasMultiplePages || (!ctx.isLoopEnabled() && ctx.state.currentIndex >= maxIndex);
+    if (prevBtn) prevBtn.disabled = isRtl ? nextDisabled : prevDisabled;
+    if (nextBtn) nextBtn.disabled = isRtl ? prevDisabled : nextDisabled;
   }
 
   return { build, clear, refresh };
@@ -283,12 +286,17 @@ export function createKeyboard(
   let active = false;
 
   function onKeydown(e: KeyboardEvent): void {
-    if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      prev();
-    } else if (e.key === "ArrowRight") {
-      e.preventDefault();
-      next();
+    const dir = ctx.config.direction;
+
+    if (dir === "ttb") {
+      if (e.key === "ArrowUp") { e.preventDefault(); prev(); }
+      else if (e.key === "ArrowDown") { e.preventDefault(); next(); }
+    } else if (dir === "rtl") {
+      if (e.key === "ArrowRight") { e.preventDefault(); prev(); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); next(); }
+    } else {
+      if (e.key === "ArrowLeft") { e.preventDefault(); prev(); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); next(); }
     }
   }
 
@@ -396,4 +404,3 @@ export function createAutoplay(
 
   return { start, pause, setHoverPause };
 }
-

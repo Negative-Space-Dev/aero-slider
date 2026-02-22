@@ -5,6 +5,9 @@ export interface SliderConfig {
   draggable?: boolean;
   /** Maximum number of pagination dots to show. Beyond this, edge indicators are used. */
   maxDots?: number;
+  noDrag?: string;
+  perMove?: number;
+  direction?: "ltr" | "rtl" | "ttb";
 }
 
 /** Layout options read from CSS custom properties; not passed via JS config. */
@@ -23,6 +26,9 @@ export interface SliderInstance {
   goTo(index: number): void;
   destroy(): void;
   update(config?: SliderConfig): void;
+  refresh(): void;
+  add(slides: HTMLElement | HTMLElement[], index?: number): void;
+  remove(index: number | number[]): void;
   on(event: SliderEvent, callback: SliderEventCallback): void;
   off(event: SliderEvent, callback: SliderEventCallback): void;
   readonly currentIndex: number;
@@ -38,7 +44,13 @@ export type SliderEvent =
   | "dragStart"
   | "dragEnd"
   | "autoplayStart"
-  | "autoplayStop";
+  | "autoplayStop"
+  | "ready"
+  | "destroy"
+  | "resize"
+  | "resized"
+  | "visible"
+  | "hidden";
 
 /** Event payload. dragEnd includes fromIndex (slide index at drag start). */
 export type SliderEventData = { index: number; fromIndex?: number };
@@ -62,14 +74,19 @@ export interface SliderContext {
   state: SliderState;
   listeners: Map<SliderEvent, Set<SliderEventCallback>>;
   emit(event: SliderEvent, data: SliderEventData): void;
-  getSlideWidth(): number;
+  getSlideSize(): number;
   recalcSlideMetrics(): void;
   normalizeIndex(index: number): number;
   getMaxIndex(): number;
+  getEffectivePerMove(): number;
   isLoopEnabled(): boolean;
   isFractionalView(): boolean;
-  getScrollLeftForIndex(index: number): number;
-  getIndexFromScrollLeft(scrollLeft: number): number;
+  isVertical(): boolean;
+  getScrollPos(): number;
+  setScrollPos(pos: number): void;
+  scrollToPos(pos: number, behavior?: ScrollBehavior): void;
+  getScrollPosForIndex(index: number): number;
+  getIndexFromScrollPos(scrollPos: number): number;
   refreshPagination(): void;
   refreshNavState(): void;
   applySnapAlignment(): void;

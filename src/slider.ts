@@ -15,6 +15,7 @@ import {
   RESIZE_MAX_WAIT_MS,
   SCROLL_END_DELAY,
   SLIDE_INDEX_ATTR,
+  LOOP_CLONE_ATTR,
   WHEEL_IDLE_MS,
 } from "./constants.ts";
 import { monitorCssVariables } from "./mediaQueryMonitor.ts";
@@ -37,8 +38,10 @@ export function createSlider(
   if (!trackEl) throw new Error("aero-slider: missing .aero-slider__track");
   const track: HTMLElement = trackEl;
 
-  const slides = Array.from(track.children) as HTMLElement[];
-  const slideCount = slides.length;
+  let slides = Array.from(track.children).filter(
+    (el) => !el.hasAttribute(LOOP_CLONE_ATTR),
+  ) as HTMLElement[];
+  let slideCount = slides.length;
   if (slideCount === 0) throw new Error("aero-slider: no slides found");
 
   slides.forEach((slide, i) => slide.setAttribute(SLIDE_INDEX_ATTR, String(i)));
@@ -74,8 +77,12 @@ export function createSlider(
   let teardownResizeMonitor: (() => void) | null = null;
 
   // ── Core Helpers ─────────────────────────────────────────────────────
-  function emit(event: SliderEvent, data: { index: number }): void {
+  function emit(event: SliderEvent, data: { index: number; fromIndex?: number }): void {
     listeners.get(event)?.forEach((cb) => cb(data));
+  }
+
+  function isVertical(): boolean {
+    return config.direction === "ttb";
   }
 
   function getMaxIndex(): number {
@@ -91,6 +98,10 @@ export function createSlider(
     return config.loop && getMaxIndex() > 0;
   }
 
+  function getEffectivePerMove(): number {
+    return config.perMove > 0 ? config.perMove : 1;
+  }
+
   function normalizeIndex(index: number): number {
     const maxIndex = getMaxIndex();
     if (!isLoopEnabled()) {
@@ -99,17 +110,54 @@ export function createSlider(
     return ((Math.trunc(index) % slideCount) + slideCount) % slideCount;
   }
 
-  function getSlideWidth(): number {
+  // ── Direction-aware scroll helpers ───────────────────────────────────
+
+  function getScrollPos(): number {
+    if (config.direction === "rtl") return -track.scrollLeft;
+    if (config.direction === "ttb") return track.scrollTop;
+    return track.scrollLeft;
+  }
+
+  function setScrollPos(pos: number): void {
+    if (config.direction === "rtl") {
+      track.scrollLeft = -pos;
+    } else if (config.direction === "ttb") {
+      track.scrollTop = pos;
+    } else {
+      track.scrollLeft = pos;
+    }
+  }
+
+  function scrollToPos(pos: number, behavior: ScrollBehavior = "auto"): void {
+    if (config.direction === "ttb") {
+      track.scrollTo({ top: pos, behavior });
+    } else if (config.direction === "rtl") {
+      track.scrollTo({ left: -pos, behavior });
+    } else {
+      track.scrollTo({ left: pos, behavior });
+    }
+  }
+
+  function getViewportSize(): number {
+    return isVertical() ? track.clientHeight : track.clientWidth;
+  }
+
+  function getTrackScrollSize(): number {
+    return isVertical() ? track.scrollHeight : track.scrollWidth;
+  }
+
+  function getSlideSize(): number {
     if (state.slideWidthPx > 0) return state.slideWidthPx;
     const first = slides[0];
     if (!first) return 0;
-    state.slideWidthPx = first.getBoundingClientRect().width + config.gap;
+    const rect = first.getBoundingClientRect();
+    state.slideWidthPx = (isVertical() ? rect.height : rect.width) + config.gap;
     return state.slideWidthPx;
   }
 
   function recalcSlideMetrics(): void {
     state.slideWidthPx = 0;
-    getSlideWidth();
+    getSlideSize();
   }
 
   function applyCssCustomProperties(): void {
@@ -117,60 +165,47 @@ export function createSlider(
   }
 
   // ── Fractional slidesPerView: alignment helpers ──────────────────────
-  // When slidesPerView is fractional (e.g. 1.5), each slide gets its own
-  // pagination dot and a smart alignment:
-  //   Non-loop mode:
-  //     first  → start (left-aligned, next slide peeks from right)
-  //     middle → center (previous and next slides peek from both sides)
-  //     last   → end (right-aligned, previous slide peeks from left)
-  //   Loop mode:
-  //     all → center (no visible beginning/end, always peek both sides)
 
-  function getScrollLeftForIndex(index: number): number {
-    const w = getSlideWidth();
+  function getScrollPosForIndex(index: number): number {
+    const w = getSlideSize();
     if (w === 0) return 0;
 
     if (!isFractionalView()) {
       return index * w;
     }
 
-    // Fractional view — center the slide in viewport
-    const trackWidth = track.clientWidth;
+    const vpSize = getViewportSize();
     const slideVisual = w - config.gap;
 
     if (state.loopModeActive) {
-      // In loop mode, always center
-      return index * w + slideVisual / 2 - trackWidth / 2;
+      return index * w + slideVisual / 2 - vpSize / 2;
     }
 
-    // Non-loop: start/center/end based on position
     const maxIdx = getMaxIndex();
     if (index <= 0) return 0;
-    if (index >= maxIdx) return track.scrollWidth - track.clientWidth;
-    return index * w + slideVisual / 2 - trackWidth / 2;
+    if (index >= maxIdx) return getTrackScrollSize() - getViewportSize();
+    return index * w + slideVisual / 2 - vpSize / 2;
   }
 
-  function getIndexFromScrollLeft(scrollLeft: number): number {
-    const w = getSlideWidth();
+  function getIndexFromScrollPos(scrollPos: number): number {
+    const w = getSlideSize();
     if (w === 0) return state.currentIndex;
 
     const maxIdx = state.loopModeActive ? slideCount - 1 : getMaxIndex();
-    const maxScroll = track.scrollWidth - track.clientWidth;
+    const maxScroll = getTrackScrollSize() - getViewportSize();
 
     if (!isFractionalView()) {
-      const raw = Math.round(scrollLeft / w);
+      const raw = Math.round(scrollPos / w);
       return Math.max(0, Math.min(raw, maxIdx));
     }
 
-    // At scroll boundaries, avoid oscillation from scroll-snap/sub-pixel settling
     if (maxScroll <= 0) return 0;
-    if (scrollLeft <= 1) return 0;
-    if (scrollLeft >= maxScroll - 1) return maxIdx;
+    if (scrollPos <= 1) return 0;
+    if (scrollPos >= maxScroll - 1) return maxIdx;
 
-    // Fractional view — determine index from viewport center
-    const trackWidth = track.clientWidth;
+    const vpSize = getViewportSize();
     const slideVisual = w - config.gap;
-    const viewportCenter = scrollLeft + trackWidth / 2;
+    const viewportCenter = scrollPos + vpSize / 2;
     const raw = Math.round((viewportCenter - slideVisual / 2) / w);
     return Math.max(0, Math.min(raw, maxIdx));
   }
@@ -184,39 +219,81 @@ export function createSlider(
     }
 
     if (state.loopModeActive) {
-      // Loop mode: all slides centered (no visible start/end)
       for (const child of children) child.style.scrollSnapAlign = "center";
       return;
     }
 
-    // Non-loop fractional: center for every slide.
-    // The browser naturally clamps out-of-range snap positions:
-    // slide 0's center snap resolves to scrollLeft=0 (left-aligned), and
-    // the last slide's center snap resolves to scrollWidth-clientWidth
-    // (right-aligned), giving start/center/end visual behaviour without
-    // placing two different snap types (center + end) extremely close
-    // together — which prevented the last slide from being reachable.
     for (const child of children) child.style.scrollSnapAlign = "center";
+  }
+
+  // ── Direction setup ──────────────────────────────────────────────────
+
+  function applyDirection(): void {
+    container.classList.remove("aero-slider--rtl", "aero-slider--vertical");
+    container.removeAttribute("dir");
+
+    if (config.direction === "rtl") {
+      container.setAttribute("dir", "rtl");
+      container.classList.add("aero-slider--rtl");
+    } else if (config.direction === "ttb") {
+      container.classList.add("aero-slider--vertical");
+    }
+  }
+
+  // ── Visible / Hidden tracking ────────────────────────────────────────
+
+  const visibleSlides = new Set<number>();
+
+  function computeVisibleSet(): Set<number> {
+    const result = new Set<number>();
+    const count = Math.ceil(config.slidesPerView);
+    for (let i = 0; i < count; i++) {
+      let idx = state.currentIndex + i;
+      if (state.loopModeActive) {
+        idx = ((idx % slideCount) + slideCount) % slideCount;
+      } else if (idx >= slideCount) {
+        break;
+      }
+      result.add(idx);
+    }
+    return result;
+  }
+
+  function updateVisibility(): void {
+    const newVisible = computeVisibleSet();
+    for (const idx of visibleSlides) {
+      if (!newVisible.has(idx)) emit("hidden", { index: idx });
+    }
+    for (const idx of newVisible) {
+      if (!visibleSlides.has(idx)) emit("visible", { index: idx });
+    }
+    visibleSlides.clear();
+    for (const idx of newVisible) visibleSlides.add(idx);
   }
 
   // ── Context (shared across modules) ──────────────────────────────────
   const ctx: SliderContext = {
     container,
     track,
-    slides,
-    slideCount,
+    get slides() { return slides; },
+    get slideCount() { return slideCount; },
     get config() { return config; },
     state,
     listeners,
     emit,
-    getSlideWidth,
+    getSlideSize,
     recalcSlideMetrics,
     normalizeIndex,
     getMaxIndex,
+    getEffectivePerMove,
     isLoopEnabled,
     isFractionalView,
-    getScrollLeftForIndex,
-    getIndexFromScrollLeft,
+    isVertical,
+    getScrollPos,
+    setScrollPos,
+    scrollToPos,
+    getScrollPosForIndex,
+    getIndexFromScrollPos,
     refreshPagination: () => pagination.refresh(),
     refreshNavState: () => navigation.refresh(),
     applySnapAlignment,
@@ -236,13 +313,14 @@ export function createSlider(
 
     const idx = state.loopModeActive
       ? loop.getLoopIndexFromScroll()
-      : getIndexFromScrollLeft(track.scrollLeft);
+      : getIndexFromScrollPos(getScrollPos());
 
     if (idx !== state.currentIndex) {
       state.currentIndex = idx;
       emit("slideChange", { index: state.currentIndex });
       pagination.refresh();
       navigation.refresh();
+      updateVisibility();
     }
   }
 
@@ -269,10 +347,6 @@ export function createSlider(
   }
 
   // ── Native Wheel/Trackpad Scroll ─────────────────────────────────────
-  // Mandatory snap fights continuous wheel input — the browser snaps to a
-  // slide mid-gesture, freezing the scroll. Disable snap for the duration
-  // of active wheel input and re-enable once the user has clearly stopped.
-  // 300ms covers even slow mouse wheel detent gaps (~200ms).
   let wheelTimer: ReturnType<typeof setTimeout> | null = null;
 
   function onWheel(): void {
@@ -288,8 +362,6 @@ export function createSlider(
   }
 
   // ── Media Query / Resize Monitor ───────────────────────────────────────
-  // Listen to window.resize (only way to catch media query shifts). When
-  // --slides-per-view, --slide-gap, or --slide-aspect change, re-run update().
   const LAYOUT_VARS = ["--slides-per-view", "--slide-gap", "--slide-aspect"];
 
   function setupResizeMonitor(): void {
@@ -298,7 +370,11 @@ export function createSlider(
       container,
       LAYOUT_VARS,
       () => {
-        if (!state.isDestroyed) update();
+        if (!state.isDestroyed) {
+          emit("resize", { index: state.currentIndex });
+          update();
+          emit("resized", { index: state.currentIndex });
+        }
       },
       { debounceMs: RESIZE_DEBOUNCE_MS, maxWaitMs: RESIZE_MAX_WAIT_MS },
     );
@@ -307,18 +383,18 @@ export function createSlider(
   // ── Public API ───────────────────────────────────────────────────────
   function next(): void {
     if (state.isDestroyed) return;
-    goTo(normalizeIndex(state.currentIndex + 1));
+    goTo(normalizeIndex(state.currentIndex + getEffectivePerMove()));
   }
 
   function prev(): void {
     if (state.isDestroyed) return;
-    goTo(normalizeIndex(state.currentIndex - 1));
+    goTo(normalizeIndex(state.currentIndex - getEffectivePerMove()));
   }
 
   function goTo(index: number): void {
     if (state.isDestroyed) return;
     const target = normalizeIndex(index);
-    const w = getSlideWidth();
+    const w = getSlideSize();
     if (w === 0) return;
 
     if (target !== state.currentIndex) {
@@ -326,6 +402,7 @@ export function createSlider(
       emit("slideChange", { index: state.currentIndex });
       pagination.refresh();
       navigation.refresh();
+      updateVisibility();
     }
 
     if (state.loopModeActive) {
@@ -341,31 +418,35 @@ export function createSlider(
         const realStart = loop.getLoopRealStart();
         let targetScroll = realStart + target * w;
         if (isFractionalView()) {
-          const trackWidth = track.clientWidth;
+          const vpSize = getViewportSize();
           const slideVisual = w - config.gap;
-          targetScroll = realStart + target * w + slideVisual / 2 - trackWidth / 2;
+          targetScroll = realStart + target * w + slideVisual / 2 - vpSize / 2;
         }
-        track.scrollTo({ left: targetScroll, behavior: "smooth" });
+        scrollToPos(targetScroll, "smooth");
         loop.scheduleTeleport();
         return;
       }
 
-      track.scrollTo({ left: track.scrollLeft + delta * w, behavior: "smooth" });
+      scrollToPos(getScrollPos() + delta * w, "smooth");
       loop.scheduleTeleport();
       return;
     }
 
     state.isProgrammaticScroll = true;
-    track.scrollTo({ left: getScrollLeftForIndex(target), behavior: "smooth" });
+    scrollToPos(getScrollPosForIndex(target), "smooth");
   }
 
   function update(nextConfig?: SliderConfig): void {
-    const prev = config;
+    const prevConfig = config;
     config = {
       ...config,
       ...readCssLayoutConfig(),
       ...(nextConfig ?? {}),
     };
+
+    if (prevConfig.direction !== config.direction) {
+      applyDirection();
+    }
 
     applyCssCustomProperties();
     recalcSlideMetrics();
@@ -373,24 +454,29 @@ export function createSlider(
     keyboard.setEnabled(true);
     autoplay.setHoverPause(config.autoplay);
 
-    if (prev.slidesPerView !== config.slidesPerView || prev.loop !== config.loop || prev.maxDots !== config.maxDots) {
+    if (
+      prevConfig.slidesPerView !== config.slidesPerView ||
+      prevConfig.loop !== config.loop ||
+      prevConfig.maxDots !== config.maxDots ||
+      prevConfig.perMove !== config.perMove
+    ) {
       pagination.clear();
       pagination.build();
     }
 
     if (
-      prev.autoplay !== config.autoplay ||
-      prev.autoplayInterval !== config.autoplayInterval ||
-      prev.loop !== config.loop
+      prevConfig.autoplay !== config.autoplay ||
+      prevConfig.autoplayInterval !== config.autoplayInterval ||
+      prevConfig.loop !== config.loop
     ) {
       if (config.autoplay) autoplay.start();
       else autoplay.pause();
     }
 
-    if (prev.loop !== config.loop) {
+    if (prevConfig.loop !== config.loop) {
       if (isLoopEnabled()) loop.setupLoopTrack(state.currentIndex);
       else loop.teardownLoopTrack(state.currentIndex);
-    } else if (state.loopModeActive && prev.slidesPerView !== config.slidesPerView) {
+    } else if (state.loopModeActive && prevConfig.slidesPerView !== config.slidesPerView) {
       loop.setupLoopTrack(state.currentIndex);
     }
 
@@ -399,12 +485,97 @@ export function createSlider(
     if (!state.loopModeActive) {
       const normalized = normalizeIndex(state.currentIndex);
       state.currentIndex = normalized;
-      track.scrollTo({ left: getScrollLeftForIndex(normalized), behavior: "auto" });
+      scrollToPos(getScrollPosForIndex(normalized));
     }
 
     syncIndex();
     pagination.refresh();
     navigation.refresh();
+    updateVisibility();
+  }
+
+  function refresh(): void {
+    if (state.isDestroyed) return;
+
+    if (state.loopModeActive) {
+      loop.teardownLoopTrack(state.currentIndex);
+    }
+
+    slides = Array.from(track.children).filter(
+      (el) => !el.hasAttribute(LOOP_CLONE_ATTR),
+    ) as HTMLElement[];
+    slideCount = slides.length;
+    if (slideCount === 0) return;
+
+    slides.forEach((slide, i) => {
+      slide.setAttribute(SLIDE_INDEX_ATTR, String(i));
+      slide.classList.add("aero-slider__slide");
+    });
+
+    applyCssCustomProperties();
+    recalcSlideMetrics();
+
+    if (isLoopEnabled()) {
+      loop.setupLoopTrack(state.currentIndex);
+    }
+
+    applySnapAlignment();
+
+    if (!state.loopModeActive) {
+      const normalized = normalizeIndex(state.currentIndex);
+      state.currentIndex = normalized;
+      scrollToPos(getScrollPosForIndex(normalized));
+    }
+
+    pagination.clear();
+    pagination.build();
+    navigation.build();
+    syncIndex();
+    updateVisibility();
+  }
+
+  function add(newSlides: HTMLElement | HTMLElement[], index?: number): void {
+    if (state.isDestroyed) return;
+    const arr = Array.isArray(newSlides) ? newSlides : [newSlides];
+
+    if (state.loopModeActive) {
+      loop.teardownLoopTrack(state.currentIndex);
+    }
+
+    const realChildren = Array.from(track.children).filter(
+      (el) => !el.hasAttribute(LOOP_CLONE_ATTR),
+    );
+
+    if (index !== undefined && index < realChildren.length) {
+      const ref = realChildren[index] ?? null;
+      for (const slide of arr) track.insertBefore(slide, ref);
+    } else {
+      for (const slide of arr) track.appendChild(slide);
+    }
+
+    refresh();
+  }
+
+  function remove(indices: number | number[]): void {
+    if (state.isDestroyed) return;
+    const arr = Array.isArray(indices) ? indices : [indices];
+
+    if (state.loopModeActive) {
+      loop.teardownLoopTrack(state.currentIndex);
+    }
+
+    const realChildren = Array.from(track.children).filter(
+      (el) => !el.hasAttribute(LOOP_CLONE_ATTR),
+    );
+
+    const sorted = [...arr].sort((a, b) => b - a);
+    for (const idx of sorted) {
+      if (idx >= 0 && idx < realChildren.length) {
+        realChildren[idx]!.remove();
+      }
+    }
+
+    refresh();
   }
 
   function on(event: SliderEvent, callback: SliderEventCallback): void {
@@ -418,6 +589,7 @@ export function createSlider(
 
   function destroy(): void {
     if (state.isDestroyed) return;
+    emit("destroy", { index: state.currentIndex });
     state.isDestroyed = true;
 
     autoplay.pause();
@@ -441,7 +613,8 @@ export function createSlider(
     pagination.clear();
 
     container.removeAttribute("aria-roledescription");
-    container.classList.remove("aero-slider--dragging");
+    container.removeAttribute("dir");
+    container.classList.remove("aero-slider--dragging", "aero-slider--rtl", "aero-slider--vertical");
     if (host.aeroSlider === api) {
       delete host.aeroSlider;
     }
@@ -455,6 +628,7 @@ export function createSlider(
   track.classList.add("aero-slider__track");
   for (const slide of slides) slide.classList.add("aero-slider__slide");
 
+  applyDirection();
   applyCssCustomProperties();
   recalcSlideMetrics();
   applySnapAlignment();
@@ -465,7 +639,7 @@ export function createSlider(
   if (isLoopEnabled()) {
     loop.setupLoopTrack(0);
   } else {
-    track.scrollLeft = 0;
+    setScrollPos(0);
   }
 
   setupResizeMonitor();
@@ -476,6 +650,10 @@ export function createSlider(
   pagination.build();
   if (config.autoplay) autoplay.start();
 
+  const initialVisible = computeVisibleSet();
+  for (const idx of initialVisible) visibleSlides.add(idx);
+  for (const idx of visibleSlides) emit("visible", { index: idx });
+
   const api: SliderInstance = {
     get element() { return container; },
     next,
@@ -483,6 +661,9 @@ export function createSlider(
     goTo,
     destroy,
     update,
+    refresh,
+    add,
+    remove,
     on,
     off,
     get currentIndex() { return state.currentIndex; },
@@ -490,5 +671,6 @@ export function createSlider(
   };
 
   host.aeroSlider = api;
+  emit("ready", { index: state.currentIndex });
   return api;
 }

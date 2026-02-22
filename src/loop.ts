@@ -9,7 +9,7 @@ export interface LoopController {
   getLoopRealStart(): number;
   getLoopRealEnd(): number;
   getLoopIndexFromScroll(): number;
-  instantScrollTo(left: number): void;
+  instantScrollTo(pos: number): void;
   teleportIfNeeded(): void;
   scheduleTeleport(): void;
   setupLoopTrack(anchorIndex: number): void;
@@ -18,26 +18,26 @@ export interface LoopController {
 }
 
 export function createLoopController(ctx: SliderContext): LoopController {
-  const { track, slides, slideCount, state } = ctx;
+  const { track, state } = ctx;
   let teleportTimer: ReturnType<typeof setTimeout> | null = null;
   let cloneSets = MIN_CLONE_SETS;
 
   function calcCloneSets(): number {
     const needed = Math.ceil(ctx.config.slidesPerView) + CLONE_BUFFER;
-    return Math.max(MIN_CLONE_SETS, Math.ceil(needed / slideCount));
+    return Math.max(MIN_CLONE_SETS, Math.ceil(needed / ctx.slideCount));
   }
 
   function getLoopRealStart(): number {
-    return cloneSets * slideCount * state.slideWidthPx;
+    return cloneSets * ctx.slideCount * state.slideWidthPx;
   }
 
   function getLoopRealEnd(): number {
-    return (cloneSets + 1) * slideCount * state.slideWidthPx;
+    return (cloneSets + 1) * ctx.slideCount * state.slideWidthPx;
   }
 
-  function instantScrollTo(left: number): void {
+  function instantScrollTo(pos: number): void {
     track.style.scrollBehavior = "auto";
-    track.scrollLeft = left;
+    ctx.setScrollPos(pos);
     requestAnimationFrame(() => {
       track.style.scrollBehavior = "";
     });
@@ -48,11 +48,11 @@ export function createLoopController(ctx: SliderContext): LoopController {
     const w = state.slideWidthPx;
     if (w === 0) return;
 
-    const sectionWidth = slideCount * w;
+    const sectionWidth = ctx.slideCount * w;
     const realStart = getLoopRealStart();
     const realEnd = getLoopRealEnd();
-    let pos = track.scrollLeft;
-    
+    let pos = ctx.getScrollPos();
+
     // Tolerance (px) to prevent sub-pixel oscillation near boundaries.
     // Without this, scroll positions like 5470.5 vs realStart 5472.0 can
     // cause rapid teleport flickering due to browser sub-pixel rounding.
@@ -84,21 +84,19 @@ export function createLoopController(ctx: SliderContext): LoopController {
     const w = state.slideWidthPx;
     if (w === 0) return state.currentIndex;
 
-    let result: number;
+    const vpSize = ctx.isVertical() ? track.clientHeight : track.clientWidth;
+
     if (ctx.isFractionalView()) {
-      const trackWidth = track.clientWidth;
       const slideVisual = w - ctx.config.gap;
-      const viewportCenter = track.scrollLeft + trackWidth / 2;
+      const viewportCenter = ctx.getScrollPos() + vpSize / 2;
       const realStart = getLoopRealStart();
       const raw = Math.round((viewportCenter - realStart - slideVisual / 2) / w);
-      result = ((raw % slideCount) + slideCount) % slideCount;
-    } else {
-      const offset = track.scrollLeft - getLoopRealStart();
-      const raw = Math.round(offset / w);
-      result = ((raw % slideCount) + slideCount) % slideCount;
+      return ((raw % ctx.slideCount) + ctx.slideCount) % ctx.slideCount;
     }
-    
-    return result;
+
+    const offset = ctx.getScrollPos() - getLoopRealStart();
+    const raw = Math.round(offset / w);
+    return ((raw % ctx.slideCount) + ctx.slideCount) % ctx.slideCount;
   }
 
   function setupLoopTrack(anchorIndex: number): void {
@@ -109,6 +107,8 @@ export function createLoopController(ctx: SliderContext): LoopController {
 
     cloneSets = calcCloneSets();
     track.querySelectorAll(`[${LOOP_CLONE_ATTR}]`).forEach((c) => c.remove());
+
+    const { slides, slideCount } = ctx;
 
     for (let s = 0; s < cloneSets; s++) {
       for (let i = slideCount - 1; i >= 0; i--) {
@@ -136,13 +136,13 @@ export function createLoopController(ctx: SliderContext): LoopController {
     state.currentIndex = idx;
 
     const w = state.slideWidthPx;
-    const realStart = cloneSets * slideCount * w;
+    const realStart = cloneSets * ctx.slideCount * w;
     let scrollPos = realStart + idx * w;
 
     if (ctx.isFractionalView()) {
-      const trackWidth = track.clientWidth;
+      const vpSize = ctx.isVertical() ? track.clientHeight : track.clientWidth;
       const slideVisual = w - ctx.config.gap;
-      scrollPos = realStart + idx * w + slideVisual / 2 - trackWidth / 2;
+      scrollPos = realStart + idx * w + slideVisual / 2 - vpSize / 2;
     }
 
     instantScrollTo(scrollPos);
@@ -154,7 +154,7 @@ export function createLoopController(ctx: SliderContext): LoopController {
     state.loopModeActive = false;
     ctx.recalcSlideMetrics();
     state.currentIndex = Math.max(0, Math.min(anchorIndex, ctx.getMaxIndex()));
-    instantScrollTo(ctx.getScrollLeftForIndex(state.currentIndex));
+    instantScrollTo(ctx.getScrollPosForIndex(state.currentIndex));
   }
 
   return {

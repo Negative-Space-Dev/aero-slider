@@ -14,29 +14,39 @@ export function createDragController(
   pauseAutoplay: () => void,
   startAutoplay: () => void,
 ): DragController {
-  const { container, track, slideCount, state } = ctx;
+  const { container, track, state } = ctx;
   let listenersActive = false;
+
+  function getDragCoord(e: PointerEvent): number {
+    if (ctx.isVertical()) return e.clientY;
+    return e.clientX;
+  }
+
+  function getDragSign(): number {
+    return ctx.config.direction === "rtl" ? -1 : 1;
+  }
 
   function onPointerDown(e: PointerEvent): void {
     if (e.button !== 0) return;
-    /* On touch devices, let native scroll handle horizontal panning; avoid
-     * intercepting touch with custom drag which feels broken on mobile Safari. */
     if (e.pointerType === "touch") return;
+
+    if (ctx.config.noDrag && (e.target as Element).closest(ctx.config.noDrag)) return;
 
     track.setPointerCapture(e.pointerId);
     state.isDragging = true;
 
-    const startX = e.clientX;
-    const startScroll = track.scrollLeft;
-    let pendingScrollLeft = startScroll;
+    const sign = getDragSign();
+    const startCoord = getDragCoord(e);
+    const startScroll = ctx.getScrollPos();
+    let pendingScroll = startScroll;
     let moveRafId: number | null = null;
     let velocity = 0;
-    let lastX = startX;
+    let lastCoord = startCoord;
     let lastTime = performance.now();
 
     function flushDragScroll(): void {
       moveRafId = null;
-      track.scrollLeft = pendingScrollLeft;
+      ctx.setScrollPos(pendingScroll);
     }
 
     track.style.scrollBehavior = "auto";
@@ -49,7 +59,8 @@ export function createDragController(
     function onPointerMove(ev: PointerEvent): void {
       if (!state.isDragging) return;
       ev.preventDefault();
-      pendingScrollLeft = startScroll + (startX - ev.clientX);
+      const coord = getDragCoord(ev);
+      pendingScroll = startScroll + (startCoord - coord) * sign;
       if (moveRafId === null) {
         moveRafId = requestAnimationFrame(flushDragScroll);
       }
@@ -58,14 +69,14 @@ export function createDragController(
       const dt = now - lastTime;
       if (dt > 0) {
         if (dt < 100) {
-          const instantVelocity = (lastX - ev.clientX) / dt;
+          const instantVelocity = ((lastCoord - coord) * sign) / dt;
           velocity =
             VELOCITY_SMOOTHING * instantVelocity +
             (1 - VELOCITY_SMOOTHING) * velocity;
         } else {
           velocity *= 0.5;
         }
-        lastX = ev.clientX;
+        lastCoord = coord;
         lastTime = now;
       }
     }
@@ -78,7 +89,7 @@ export function createDragController(
       if (moveRafId !== null) {
         cancelAnimationFrame(moveRafId);
         moveRafId = null;
-        track.scrollLeft = pendingScrollLeft;
+        ctx.setScrollPos(pendingScroll);
       }
 
       const timeSinceLastMove = performance.now() - lastTime;
@@ -86,7 +97,7 @@ export function createDragController(
         velocity *= Math.max(0, 1 - timeSinceLastMove / 200);
       }
 
-      const w = ctx.getSlideWidth();
+      const w = ctx.getSlideSize();
       track.style.scrollBehavior = "";
 
       if (w > 0) {
@@ -94,26 +105,26 @@ export function createDragController(
           loop.teleportIfNeeded();
 
           const realStart = loop.getLoopRealStart();
+          const scrollPos = ctx.getScrollPos();
+          const vpSize = ctx.isVertical() ? track.clientHeight : track.clientWidth;
           let rawIdx: number;
           let targetScroll: number;
 
           if (ctx.isFractionalView()) {
-            // Fractional view: use viewport center for index calculation
-            const trackWidth = track.clientWidth;
             const slideVisual = w - ctx.config.gap;
             const projectedCenter =
-              track.scrollLeft + velocity * MOMENTUM_FACTOR + trackWidth / 2;
+              scrollPos + velocity * MOMENTUM_FACTOR + vpSize / 2;
             rawIdx = Math.round((projectedCenter - realStart - slideVisual / 2) / w);
-            targetScroll = realStart + rawIdx * w + slideVisual / 2 - trackWidth / 2;
+            targetScroll = realStart + rawIdx * w + slideVisual / 2 - vpSize / 2;
           } else {
-            const offset = track.scrollLeft - realStart;
+            const offset = scrollPos - realStart;
             const projected = offset + velocity * MOMENTUM_FACTOR;
             rawIdx = Math.round(projected / w);
             targetScroll = realStart + rawIdx * w;
           }
 
           state.isProgrammaticScroll = true;
-          track.scrollTo({ left: targetScroll, behavior: "smooth" });
+          ctx.scrollToPos(targetScroll, "smooth");
           loop.scheduleTeleport();
 
           const normalizedTarget = ctx.normalizeIndex(rawIdx);
@@ -124,8 +135,8 @@ export function createDragController(
             ctx.refreshNavState();
           }
         } else {
-          const projected = track.scrollLeft + velocity * MOMENTUM_FACTOR;
-          const target = ctx.getIndexFromScrollLeft(projected);
+          const projected = ctx.getScrollPos() + velocity * MOMENTUM_FACTOR;
+          const target = ctx.getIndexFromScrollPos(projected);
           goTo(target);
         }
       }

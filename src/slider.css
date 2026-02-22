@@ -22,7 +22,6 @@
 }
 
 /* === Track === */
-/* Height is driven by slides (each has aspect-ratio); no JS aspect calculation needed. */
 .aero-slider__track {
   min-height: 0;
   display: flex;
@@ -35,7 +34,6 @@
   scroll-snap-type: x mandatory;
   touch-action: manipulation;
   overscroll-behavior-x: contain;
-  /* Prevent browser scroll anchoring from fighting clone prepend/removal */
   overflow-anchor: none;
   gap: var(--slide-gap, 0px);
   cursor: grab;
@@ -48,7 +46,6 @@
   display: none;
 }
 
-/* Hide focus ring on click; show only for keyboard navigation */
 .aero-slider__track:focus {
   outline: none;
 }
@@ -108,15 +105,12 @@
 }
 
 /* === Navigation === */
-/* User provides .aero-slider__nav--prev and .aero-slider__nav--next. Style with Tailwind. */
 .aero-slider__nav--prev,
 .aero-slider__nav--next {
   touch-action: manipulation;
 }
 
 /* === Pagination === */
-/* User provides .aero-slider__pagination with one .aero-slider__dot template.
-   We clone the dot for each slide. Sits in normal flow below the viewport. */
 .aero-slider__pagination {
   display: flex;
   flex-wrap: nowrap;
@@ -170,7 +164,7 @@
   transform: scale(0.8);
 }
 
-/* === Thumbnail strip active indicator (syncThumbnails adds aero-slider__thumb--active) */
+/* === Thumbnail strip === */
 .aero-slider--thumbnails .aero-slider__track > * {
   opacity: 0.6;
   transition: opacity 0.2s;
@@ -178,4 +172,39 @@
 
 .aero-slider--thumbnails .aero-slider__track > .aero-slider__thumb--active {
   opacity: 1;
+}
+
+/* === RTL === */
+.aero-slider--rtl .aero-slider__track {
+  direction: rtl;
+}
+
+/* === Vertical (ttb) === */
+/* Viewport height derives from width via --slide-aspect (same as horizontal). */
+.aero-slider--vertical .aero-slider__viewport {
+  aspect-ratio: var(--slide-aspect, 5 / 3);
+  overflow: hidden;
+}
+
+.aero-slider--vertical .aero-slider__track {
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior-x: initial;
+  overscroll-behavior-y: contain;
+  min-width: initial;
+  height: 100%;
+  min-height: 100%;
+}
+
+.aero-slider--vertical .aero-slider__slide,
+.aero-slider--vertical .aero-slider__track > * {
+  flex: 0 0
+    calc(
+      (100% - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) /
+        var(--slides-per-view, 1)
+    );
+  aspect-ratio: initial;
+  width: 100%;
 }
