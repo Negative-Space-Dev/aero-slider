@@ -12,7 +12,7 @@ export function createDragController(
   loop: LoopController,
   goTo: (index: number) => void,
   pauseAutoplay: () => void,
-  startAutoplay: () => void,
+  startAutoplay: () => void
 ): DragController {
   const { container, track, state } = ctx;
   let listenersActive = false;
@@ -70,9 +70,7 @@ export function createDragController(
       if (dt > 0) {
         if (dt < 100) {
           const instantVelocity = ((lastCoord - coord) * sign) / dt;
-          velocity =
-            VELOCITY_SMOOTHING * instantVelocity +
-            (1 - VELOCITY_SMOOTHING) * velocity;
+          velocity = VELOCITY_SMOOTHING * instantVelocity + (1 - VELOCITY_SMOOTHING) * velocity;
         } else {
           velocity *= 0.5;
         }
@@ -112,8 +110,7 @@ export function createDragController(
 
           if (ctx.isFractionalView()) {
             const slideVisual = w - ctx.config.gap;
-            const projectedCenter =
-              scrollPos + velocity * MOMENTUM_FACTOR + vpSize / 2;
+            const projectedCenter = scrollPos + velocity * MOMENTUM_FACTOR + vpSize / 2;
             rawIdx = Math.round((projectedCenter - realStart - slideVisual / 2) / w);
             targetScroll = realStart + rawIdx * w + slideVisual / 2 - vpSize / 2;
           } else {

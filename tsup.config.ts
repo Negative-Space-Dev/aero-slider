@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/index.ts"],
+  entry: { "aero-slider": "src/index.ts" },
   format: ["esm"],
   dts: true,
   clean: true,
@@ -13,6 +13,6 @@ export default defineConfig({
   },
   async onSuccess() {
     const { cpSync } = await import("node:fs");
-    cpSync("src/slider.css", "dist/slider.css");
+    cpSync("src/slider.css", "dist/aero-slider.css");
   },
 });

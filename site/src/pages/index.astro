@@ -87,11 +87,11 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
         >
           CSS-first slider for the modern web
         </h1>
-        <div class="mt-8 mb-10 overflow-hidden relative flex flex-col gap-3 md:gap-4 [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)] -mx-4 sm:mx-0 [--marquee-gap:0.75rem] md:[--marquee-gap:1rem]">
+        <div class="mt-8 mb-10 overflow-hidden relative flex flex-col gap-3 md:gap-4 py-3 [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)] -mx-4 sm:mx-0 [--marquee-gap:0.75rem] md:[--marquee-gap:1rem]">
           <!-- Row 1: Left to right -->
           <div class="flex w-max animate-marquee hover:pause gap-3 md:gap-4">
             <!-- First set -->
-            <div class="flex shrink-0 gap-3 md:gap-4 px-1.5 md:px-2">
+            <div class="flex shrink-0 gap-3 md:gap-4">
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><SparklesIcon class="size-4 shrink-0 text-slate-500" /> CSS-First Architecture</span>
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><ZapIcon class="size-4 shrink-0 text-slate-500" /> ~6.5 KB gzipped</span>
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><BoxIcon class="size-4 shrink-0 text-slate-500" /> Zero Dependencies</span>
@@ -102,7 +102,7 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><InfinityIcon class="size-4 shrink-0 text-slate-500" /> Infinite Looping</span>
             </div>
             <!-- Duplicated set -->
-            <div class="flex shrink-0 gap-3 md:gap-4 px-1.5 md:px-2" aria-hidden="true">
+            <div class="flex shrink-0 gap-3 md:gap-4" aria-hidden="true">
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><SparklesIcon class="size-4 shrink-0 text-slate-500" /> CSS-First Architecture</span>
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><ZapIcon class="size-4 shrink-0 text-slate-500" /> ~6.5 KB gzipped</span>
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><BoxIcon class="size-4 shrink-0 text-slate-500" /> Zero Dependencies</span>
@@ -113,7 +113,7 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><InfinityIcon class="size-4 shrink-0 text-slate-500" /> Infinite Looping</span>
             </div>
             <!-- Third set for seamless fill and loop -->
-            <div class="flex shrink-0 gap-3 md:gap-4 px-1.5 md:px-2" aria-hidden="true">
+            <div class="flex shrink-0 gap-3 md:gap-4" aria-hidden="true">
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><SparklesIcon class="size-4 shrink-0 text-slate-500" /> CSS-First Architecture</span>
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><ZapIcon class="size-4 shrink-0 text-slate-500" /> ~6.5 KB gzipped</span>
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><BoxIcon class="size-4 shrink-0 text-slate-500" /> Zero Dependencies</span>
@@ -128,7 +128,7 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
           <!-- Row 2: Right to left -->
           <div class="flex w-max animate-marquee-reverse hover:pause gap-3 md:gap-4">
             <!-- First set -->
-            <div class="flex shrink-0 gap-3 md:gap-4 px-1.5 md:px-2">
+            <div class="flex shrink-0 gap-3 md:gap-4">
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><PlayIcon class="size-4 shrink-0 text-slate-500" /> Smooth Autoplay</span>
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ColumnsIcon class="size-4 shrink-0 text-slate-500" /> Multi-Slide Views</span>
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><RulerIcon class="size-4 shrink-0 text-slate-500" /> Responsive API</span>
@@ -139,7 +139,7 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><KeyboardIcon class="size-4 shrink-0 text-slate-500" /> Keyboard Nav</span>
             </div>
             <!-- Duplicated set -->
-            <div class="flex shrink-0 gap-3 md:gap-4 px-1.5 md:px-2" aria-hidden="true">
+            <div class="flex shrink-0 gap-3 md:gap-4" aria-hidden="true">
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><PlayIcon class="size-4 shrink-0 text-slate-500" /> Smooth Autoplay</span>
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ColumnsIcon class="size-4 shrink-0 text-slate-500" /> Multi-Slide Views</span>
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><RulerIcon class="size-4 shrink-0 text-slate-500" /> Responsive API</span>
@@ -150,7 +150,7 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><KeyboardIcon class="size-4 shrink-0 text-slate-500" /> Keyboard Nav</span>
             </div>
             <!-- Third set for seamless fill and loop -->
-            <div class="flex shrink-0 gap-3 md:gap-4 px-1.5 md:px-2" aria-hidden="true">
+            <div class="flex shrink-0 gap-3 md:gap-4" aria-hidden="true">
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><PlayIcon class="size-4 shrink-0 text-slate-500" /> Smooth Autoplay</span>
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ColumnsIcon class="size-4 shrink-0 text-slate-500" /> Multi-Slide Views</span>
               <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><RulerIcon class="size-4 shrink-0 text-slate-500" /> Responsive API</span>

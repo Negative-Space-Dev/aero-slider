@@ -59,8 +59,7 @@
 .aero-slider__track > * {
   flex: 0 0
     calc(
-      (100% - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) /
-        var(--slides-per-view, 1)
+      (100% - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) / var(--slides-per-view, 1)
     );
   flex-shrink: 0;
   flex-grow: 0;
@@ -92,7 +91,6 @@
   backface-visibility: hidden;
   pointer-events: none;
 }
-
 
 /* === Dragging State === */
 .aero-slider--dragging {
@@ -127,7 +125,9 @@
   touch-action: manipulation;
   cursor: pointer;
   flex-shrink: 0;
-  transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+  transition:
+    transform 0.2s ease-out,
+    opacity 0.2s ease-out;
 }
 
 /* iOS-style windowed pagination */
@@ -202,8 +202,7 @@
 .aero-slider--vertical .aero-slider__track > * {
   flex: 0 0
     calc(
-      (100% - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) /
-        var(--slides-per-view, 1)
+      (100% - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) / var(--slides-per-view, 1)
     );
   aspect-ratio: initial;
   width: 100%;

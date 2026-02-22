@@ -21,16 +21,11 @@ import {
 import { monitorCssVariables } from "./mediaQueryMonitor.ts";
 import { createLoopController } from "./loop.ts";
 import { createDragController } from "./drag.ts";
-import {
-  createNavigation,
-  createPagination,
-  createKeyboard,
-  createAutoplay,
-} from "./features.ts";
+import { createNavigation, createPagination, createKeyboard, createAutoplay } from "./features.ts";
 
 export function createSlider(
   container: HTMLElement,
-  userConfig: SliderConfig = {},
+  userConfig: SliderConfig = {}
 ): SliderInstance {
   const host = container as AeroSliderElement;
   // ── Setup ────────────────────────────────────────────────────────────
@@ -39,7 +34,7 @@ export function createSlider(
   const track: HTMLElement = trackEl;
 
   let slides = Array.from(track.children).filter(
-    (el) => !el.hasAttribute(LOOP_CLONE_ATTR),
+    (el) => !el.hasAttribute(LOOP_CLONE_ATTR)
   ) as HTMLElement[];
   let slideCount = slides.length;
   if (slideCount === 0) throw new Error("aero-slider: no slides found");
@@ -48,7 +43,9 @@ export function createSlider(
 
   function readCssLayoutConfig(): { slidesPerView: number; gap: number; aspectRatio: string } {
     const s = getComputedStyle(container);
-    const slidesPerView = parseFloat(s.getPropertyValue("--slides-per-view")?.trim() || "") || LAYOUT_DEFAULTS.slidesPerView;
+    const slidesPerView =
+      parseFloat(s.getPropertyValue("--slides-per-view")?.trim() || "") ||
+      LAYOUT_DEFAULTS.slidesPerView;
     const gapStr = s.getPropertyValue("--slide-gap")?.trim() || "0px";
     const gap = parseFloat(gapStr) || LAYOUT_DEFAULTS.gap;
     const aspectRatio = s.getPropertyValue("--slide-aspect")?.trim() || LAYOUT_DEFAULTS.aspectRatio;
@@ -275,9 +272,15 @@ export function createSlider(
   const ctx: SliderContext = {
     container,
     track,
-    get slides() { return slides; },
-    get slideCount() { return slideCount; },
-    get config() { return config; },
+    get slides() {
+      return slides;
+    },
+    get slideCount() {
+      return slideCount;
+    },
+    get config() {
+      return config;
+    },
     state,
     listeners,
     emit,
@@ -376,7 +379,7 @@ export function createSlider(
           emit("resized", { index: state.currentIndex });
         }
       },
-      { debounceMs: RESIZE_DEBOUNCE_MS, maxWaitMs: RESIZE_MAX_WAIT_MS },
+      { debounceMs: RESIZE_DEBOUNCE_MS, maxWaitMs: RESIZE_MAX_WAIT_MS }
     );
   }
 
@@ -502,7 +505,7 @@ export function createSlider(
     }
 
     slides = Array.from(track.children).filter(
-      (el) => !el.hasAttribute(LOOP_CLONE_ATTR),
+      (el) => !el.hasAttribute(LOOP_CLONE_ATTR)
     ) as HTMLElement[];
     slideCount = slides.length;
     if (slideCount === 0) return;
@@ -543,7 +546,7 @@ export function createSlider(
     }
 
     const realChildren = Array.from(track.children).filter(
-      (el) => !el.hasAttribute(LOOP_CLONE_ATTR),
+      (el) => !el.hasAttribute(LOOP_CLONE_ATTR)
     );
 
     if (index !== undefined && index < realChildren.length) {
@@ -565,7 +568,7 @@ export function createSlider(
     }
 
     const realChildren = Array.from(track.children).filter(
-      (el) => !el.hasAttribute(LOOP_CLONE_ATTR),
+      (el) => !el.hasAttribute(LOOP_CLONE_ATTR)
     );
 
     const sorted = [...arr].sort((a, b) => b - a);
@@ -614,7 +617,11 @@ export function createSlider(
 
     container.removeAttribute("aria-roledescription");
     container.removeAttribute("dir");
-    container.classList.remove("aero-slider--dragging", "aero-slider--rtl", "aero-slider--vertical");
+    container.classList.remove(
+      "aero-slider--dragging",
+      "aero-slider--rtl",
+      "aero-slider--vertical"
+    );
     if (host.aeroSlider === api) {
       delete host.aeroSlider;
     }
@@ -655,7 +662,9 @@ export function createSlider(
   for (const idx of visibleSlides) emit("visible", { index: idx });
 
   const api: SliderInstance = {
-    get element() { return container; },
+    get element() {
+      return container;
+    },
     next,
     prev,
     goTo,
@@ -666,8 +675,12 @@ export function createSlider(
     remove,
     on,
     off,
-    get currentIndex() { return state.currentIndex; },
-    get slideCount() { return slideCount; },
+    get currentIndex() {
+      return state.currentIndex;
+    },
+    get slideCount() {
+      return slideCount;
+    },
   };
 
   host.aeroSlider = api;

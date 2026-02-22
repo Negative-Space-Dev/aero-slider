@@ -1,0 +1,7 @@
+dist
+node_modules
+.git
+*.min.js
+bun.lock
+site/node_modules
+site/.astro

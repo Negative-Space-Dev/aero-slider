@@ -20,21 +20,21 @@ function setActiveThumb(track: HTMLElement, index: number): void {
 function centerThumbnail(track: HTMLElement, slides: HTMLElement[], index: number): void {
   const slide = slides[index];
   if (!slide) return;
-  
+
   const trackRect = track.getBoundingClientRect();
   const slideRect = slide.getBoundingClientRect();
-  
+
   // Calculate where the slide currently is relative to track's scroll
   const slideCenter = slide.offsetLeft + slideRect.width / 2;
   const viewportCenter = trackRect.width / 2;
-  
+
   // Calculate target scroll to center this slide
   const targetScroll = slideCenter - viewportCenter;
-  
+
   // Clamp to valid scroll range
   const maxScroll = track.scrollWidth - track.clientWidth;
   const clampedScroll = Math.max(0, Math.min(targetScroll, maxScroll));
-  
+
   track.scrollTo({ left: clampedScroll, behavior: "smooth" });
 }
 
@@ -47,10 +47,7 @@ function centerThumbnail(track: HTMLElement, slides: HTMLElement[], index: numbe
  * Both sliders must have the same number of slides. Call the returned function
  * to teardown and remove all listeners.
  */
-export function syncThumbnails(
-  primary: SliderInstance,
-  thumbnail: SliderInstance,
-): () => void {
+export function syncThumbnails(primary: SliderInstance, thumbnail: SliderInstance): () => void {
   const track = thumbnail.element.querySelector<HTMLElement>(".aero-slider__track");
   if (!track) return () => {};
 
@@ -99,11 +96,11 @@ export function syncThumbnails(
       }
       return;
     }
-    
+
     if (thumbUpdateTimer !== null) {
       clearTimeout(thumbUpdateTimer);
     }
-    
+
     thumbUpdateTimer = setTimeout(() => {
       thumbUpdateTimer = null;
       setActiveThumb(track, data.index);

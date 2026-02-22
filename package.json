@@ -1,30 +1,39 @@
 {
   "name": "aero-slider",
-  "version": "1.0.0",
+  "version": "1.0.0-beta.0",
   "description": "A lightweight, CSS-first slider library for the modern web",
   "type": "module",
-  "workspaces": ["site"],
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "workspaces": [
+    "site"
+  ],
+  "main": "./dist/aero-slider.js",
+  "module": "./dist/aero-slider.js",
+  "types": "./dist/aero-slider.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
+      "types": "./dist/aero-slider.d.ts",
+      "import": "./dist/aero-slider.js",
+      "default": "./dist/aero-slider.js"
     },
-    "./slider.css": "./dist/slider.css"
+    "./slider.css": "./dist/aero-slider.css"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "cd site && bun run dev",
     "site:dev": "cd site && bun run dev",
     "site:build": "cd site && bun run build",
-    "prepare": "bun run build"
+    "prepare": "bun run build",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "pack": "bun pm pack"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "prettier": "^3.4.2",
     "tsup": "^8.5.1",
     "typescript": "^5"
   },

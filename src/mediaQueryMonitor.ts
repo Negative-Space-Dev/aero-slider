@@ -13,7 +13,7 @@ export function monitorCssVariables(
   element: HTMLElement,
   variableNames: string[],
   onChange: () => void,
-  options: { debounceMs?: number; maxWaitMs?: number } = {},
+  options: { debounceMs?: number; maxWaitMs?: number } = {}
 ): () => void {
   const debounceMs = options.debounceMs ?? 100;
   const maxWaitMs = options.maxWaitMs ?? 250;
@@ -24,9 +24,7 @@ export function monitorCssVariables(
 
   function getState(): string {
     const styles = getComputedStyle(element);
-    return variableNames
-      .map((name) => styles.getPropertyValue(name).trim())
-      .join("\0");
+    return variableNames.map((name) => styles.getPropertyValue(name).trim()).join("\0");
   }
 
   function flush(): void {

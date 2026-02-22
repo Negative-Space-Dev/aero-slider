@@ -2,10 +2,7 @@ import { createSlider, syncThumbnails } from "aero-slider";
 import type { SliderConfig, SliderInstance } from "aero-slider";
 
 // Discrete steps for slidesPerView with exponential curve
-const SPV_STEPS = [
-  1, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.5,
-  1.75, 2, 2.5, 3, 4, 5,
-];
+const SPV_STEPS = [1, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.5, 1.75, 2, 2.5, 3, 4, 5];
 
 function spvIndexToValue(index: number): number {
   return SPV_STEPS[Math.max(0, Math.min(SPV_STEPS.length - 1, index))];
@@ -78,8 +75,14 @@ createSlider(getRequiredElementById<HTMLElement>("direction-vertical"), { direct
 const dynamicSlider = createSlider(getRequiredElementById<HTMLElement>("dynamic-slides"));
 let dynamicCount = 3;
 const DYNAMIC_COLORS = [
-  "bg-slate-700", "bg-slate-600", "bg-slate-500", "bg-indigo-600",
-  "bg-emerald-600", "bg-amber-600", "bg-rose-600", "bg-violet-600",
+  "bg-slate-700",
+  "bg-slate-600",
+  "bg-slate-500",
+  "bg-indigo-600",
+  "bg-emerald-600",
+  "bg-amber-600",
+  "bg-rose-600",
+  "bg-violet-600",
 ];
 getRequiredElementById("dynamic-add").addEventListener("click", () => {
   dynamicCount++;
@@ -272,14 +275,8 @@ function applyLayoutFromFormToContainer(container: HTMLElement): void {
   const gap = Number(fd.get("gap")) || 0;
   const spvIndex = Number(fd.get("slidesPerView")) || 0;
   const spvValue = spvIndexToValue(spvIndex);
-  container.style.setProperty(
-    "--slides-per-view",
-    String(spvValue),
-  );
-  container.style.setProperty(
-    "--slide-gap",
-    `${gap}px`,
-  );
+  container.style.setProperty("--slides-per-view", String(spvValue));
+  container.style.setProperty("--slide-gap", `${gap}px`);
 
   if (container.id === "hero-slider") {
     const slides = container.querySelectorAll(".aero-slider__track > div");
@@ -302,14 +299,12 @@ function logEvent(name: string, data: { index: number; fromIndex?: number }): vo
     eventLogEmpty.classList.add("hidden");
     eventLogTable.classList.remove("hidden");
   }
-  
+
   const row = document.createElement("tr");
   row.className = "group hover:bg-slate-50 transition-colors";
   const time = new Date().toLocaleTimeString();
   const dataStr =
-    data.fromIndex !== undefined
-      ? `${data.fromIndex}→${data.index}`
-      : `index=${data.index}`;
+    data.fromIndex !== undefined ? `${data.fromIndex}→${data.index}` : `index=${data.index}`;
   row.innerHTML = `<td class="truncate px-4 py-2 font-medium text-slate-900">${name}</td><td class="truncate px-4 py-2 text-slate-500">${dataStr}</td><td class="px-4 py-2 text-left tabular-nums text-slate-400">${time}</td>`;
   logList.prepend(row);
   while (logList.children.length > 30) logList.lastElementChild?.remove();
@@ -385,7 +380,8 @@ for (const [name, output] of Object.entries(outputs)) {
 }
 
 function updateAutoplayIntervalState(): void {
-  const autoplayChecked = (form.elements.namedItem("autoplay") as HTMLInputElement)?.checked ?? false;
+  const autoplayChecked =
+    (form.elements.namedItem("autoplay") as HTMLInputElement)?.checked ?? false;
   const intervalControl = document.getElementById("interval-control");
   if (intervalControl) {
     intervalControl.classList.toggle("opacity-40", !autoplayChecked);
@@ -397,7 +393,7 @@ form.addEventListener("input", (e) => {
   const target = e.target as HTMLInputElement;
   const out = outputs[target.name];
   if (out) out.textContent = formatOutputValue(target.name, target.value);
-  
+
   if (target.name === "autoplay") {
     updateAutoplayIntervalState();
   }
@@ -493,8 +489,9 @@ if (eventLogToggle && eventLogContent && eventLogIcon) {
   let isExpanded = true; // Start expanded on all devices
 
   // Set initial icon to minus (expanded state)
-  eventLogIcon.innerHTML = '<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" /></svg>';
-  
+  eventLogIcon.innerHTML =
+    '<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" /></svg>';
+
   // Remove initial hidden classes
   eventLogContent.classList.remove("max-sm:hidden", "max-sm:h-0");
 
@@ -512,8 +509,10 @@ if (eventLogToggle && eventLogContent && eventLogIcon) {
 if (isTouchDevice && draggableLabel) {
   // Create tooltip element
   const tooltip = document.createElement("div");
-  tooltip.className = "fixed z-50 max-w-xs px-3 py-2 text-xs text-white bg-slate-800 rounded-lg shadow-lg opacity-0 pointer-events-none transition-opacity";
-  tooltip.textContent = "Touch devices have native swipe support — this setting is for enabling drag on desktop.";
+  tooltip.className =
+    "fixed z-50 max-w-xs px-3 py-2 text-xs text-white bg-slate-800 rounded-lg shadow-lg opacity-0 pointer-events-none transition-opacity";
+  tooltip.textContent =
+    "Touch devices have native swipe support — this setting is for enabling drag on desktop.";
   document.body.appendChild(tooltip);
 
   let tooltipTimeout: ReturnType<typeof setTimeout> | null = null;
