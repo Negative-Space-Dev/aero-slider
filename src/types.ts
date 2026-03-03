@@ -3,6 +3,8 @@ export interface SliderConfig {
   autoplay?: boolean;
   autoplayInterval?: number;
   draggable?: boolean;
+  /** Keep currentIndex as the centered slide when possible (clamps at ends without loop). */
+  centered?: boolean;
   /** Maximum number of pagination dots to show. Beyond this, edge indicators are used. */
   maxDots?: number;
   noDrag?: string;
@@ -62,6 +64,8 @@ export interface SliderState {
   isDestroyed: boolean;
   loopModeActive: boolean;
   isProgrammaticScroll: boolean;
+  /** Suppress slideChange emit on scroll settle (goTo/drag already emitted). */
+  suppressSettleEmit: boolean;
   slideWidthPx: number;
 }
 

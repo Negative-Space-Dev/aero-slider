@@ -273,7 +273,17 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
               class="aero-slider aero-slider--thumbnails rounded-lg"
               style="--slide-aspect: 16/9; --slides-per-view: 5; --slide-gap: 8px;"
             >
-              <div class="aero-slider__viewport">
+              <div class="aero-slider__viewport relative">
+                <button type="button" class="aero-slider__nav--prev" aria-label="Previous thumbnail">
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="m15 18-6-6 6-6"/>
+                  </svg>
+                </button>
+                <button type="button" class="aero-slider__nav--next" aria-label="Next thumbnail">
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="m9 18 6-6-6-6"/>
+                  </svg>
+                </button>
                 <div class="aero-slider__track">
                   <div
                     class="rounded-md bg-linear-to-br from-indigo-500 to-purple-600 text-white"
@@ -1214,6 +1224,80 @@ const slider = createSlider(document.getElementById("my-slider"), {
               class="!rounded-lg !p-4 text-sm"
             />
           </div>
+          <p class="mt-4 text-sm text-slate-600">
+            <strong>Without a bundler:</strong> Use the global script — see
+            <a href="#aeroslider-global" class="font-medium text-slate-700 underline hover:text-slate-900"
+              >window.AeroSlider</a
+            >.
+          </p>
+        </div>
+
+        <!-- Global script (window.AeroSlider) -->
+        <div class="rounded-xl border border-slate-200 bg-white p-6" id="aeroslider-global">
+          <h3 class="font-mono text-base font-semibold text-slate-900">
+            window.AeroSlider (global script)
+          </h3>
+          <p class="mt-2 text-sm text-slate-600">
+            When using the standalone script (no bundler), the library attaches an
+            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">AeroSlider</code>
+            object to <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">window</code>
+            with two methods: <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">createSlider</code> and
+            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">syncThumbnails</code>.
+            Include the CSS and JS files, then call <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">AeroSlider.createSlider()</code> and optionally
+            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">AeroSlider.syncThumbnails()</code>.
+          </p>
+          <p class="mt-3 text-sm text-slate-600">
+            Use <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">aero-slider.min.js</code> with
+            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">type="module"</code>
+            from <a href="https://unpkg.com/aero-slider/dist/" target="_blank" rel="noopener noreferrer" class="font-medium text-slate-700 underline hover:text-slate-900">unpkg</a>
+            or the <a href="https://github.com/Negative-Space-Dev/aero-slider/releases" target="_blank" rel="noopener noreferrer" class="font-medium text-slate-700 underline hover:text-slate-900">releases</a> page.
+          </p>
+          <div class="mt-4 overflow-x-auto rounded-lg">
+            <Code
+              code={`<link rel="stylesheet" href="https://unpkg.com/aero-slider/dist/aero-slider.min.css" />
+<script type="module" src="https://unpkg.com/aero-slider/dist/aero-slider.min.js"></script>
+<script type="module">
+  // AeroSlider is on window after the module loads
+  const slider = AeroSlider.createSlider(document.getElementById("my-slider"), { loop: true });
+</script>`}
+              lang="html"
+              class="!rounded-lg !p-4 text-sm"
+            />
+          </div>
+          <p class="mt-4 text-sm font-medium text-slate-700">With thumbnails:</p>
+          <div class="mt-2 overflow-x-auto rounded-lg">
+            <Code
+              code={`const main = AeroSlider.createSlider(mainEl);
+const thumbs = AeroSlider.createSlider(thumbsEl);
+const teardown = AeroSlider.syncThumbnails(main, thumbs);
+
+// On unmount: teardown(); main.destroy(); thumbs.destroy();`}
+              lang="javascript"
+              class="!rounded-lg !p-4 text-sm"
+            />
+          </div>
+          <div class="mt-4 overflow-x-auto">
+            <table class="w-full text-sm min-w-[400px]">
+              <thead>
+                <tr class="border-b border-slate-200 text-left text-xs text-slate-500">
+                  <th class="pb-2 pr-4 font-medium">Property</th>
+                  <th class="pb-2 font-medium">Description</th>
+                </tr>
+              </thead>
+              <tbody class="text-slate-700">
+                <tr class="border-b border-slate-100"
+                  ><td class="py-2 pr-4 font-mono text-xs">AeroSlider.createSlider</td><td class="py-2"
+                    >Same as the module <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">createSlider</code> — creates a slider instance</td
+                  ></tr
+                >
+                <tr
+                  ><td class="py-2 pr-4 font-mono text-xs">AeroSlider.syncThumbnails</td><td class="py-2"
+                    >Same as the module <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">syncThumbnails</code> — syncs primary and thumbnail sliders</td
+                  ></tr
+                >
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <!-- CSS Custom Properties -->
@@ -1281,6 +1365,11 @@ const slider = createSlider(document.getElementById("my-slider"), {
                   ><td class="py-2 pr-4 font-mono text-xs">loop</td><td class="py-2 pr-4"
                     >boolean</td
                   ><td class="py-2 pr-4">false</td><td class="py-2">Infinite looping</td></tr
+                >
+                <tr class="border-b border-slate-100"
+                  ><td class="py-2 pr-4 font-mono text-xs">centered</td><td class="py-2 pr-4"
+                    >boolean</td
+                  ><td class="py-2 pr-4">true</td><td class="py-2">Use the selected slide as the centered one (when possible). <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">currentIndex</code> reflects the focused slide; at non-loop ends, clamping applies. Useful for thumbnail strips synced with a main slider.</td></tr
                 >
                 <tr class="border-b border-slate-100"
                   ><td class="py-2 pr-4 font-mono text-xs">draggable</td><td class="py-2 pr-4"
@@ -1437,7 +1526,7 @@ const slider = createSlider(document.getElementById("my-slider"), {
             <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs"
               >aero-slider__thumb--active</code
             >
-            to it. Both sliders must have the same number of slides. Returns a teardown function
+            to it. The function enables <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">centered</code> on the thumbnail slider so the active thumb stays centered when possible. Both sliders must have the same number of slides. Returns a teardown function
             — call it before destroying the sliders.
           </p>
           <div class="mt-4 overflow-x-auto rounded-lg">

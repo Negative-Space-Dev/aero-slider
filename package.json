@@ -1,21 +1,21 @@
 {
   "name": "aero-slider",
-  "version": "1.0.0-beta.2",
+  "version": "1.0.0-beta.3",
   "description": "A lightweight, CSS-first slider library for the modern web",
   "type": "module",
   "workspaces": [
     "site"
   ],
-  "main": "./dist/aero-slider.js",
-  "module": "./dist/aero-slider.js",
+  "main": "./dist/aero-slider.min.js",
+  "module": "./dist/aero-slider.min.js",
   "types": "./dist/aero-slider.d.ts",
   "exports": {
     ".": {
       "types": "./dist/aero-slider.d.ts",
-      "import": "./dist/aero-slider.js",
-      "default": "./dist/aero-slider.js"
+      "import": "./dist/aero-slider.min.js",
+      "default": "./dist/aero-slider.min.js"
     },
-    "./slider.css": "./dist/aero-slider.css"
+    "./slider.css": "./dist/aero-slider.min.css"
   },
   "files": [
     "dist"
@@ -33,6 +33,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "esbuild": "^0.27.3",
     "prettier": "^3.4.2",
     "tsup": "^8.5.1",
     "typescript": "^5"

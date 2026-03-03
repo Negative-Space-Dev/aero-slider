@@ -61,7 +61,7 @@ When you [create a release](https://github.com/Negative-Space-Dev/aero-slider/re
 
 1. **Triggers on** `release: types: [published]` — runs when you publish a release (draft releases do not trigger it).
 2. **Builds** the slider with `bun run build`.
-3. **Creates a zip** containing `aero-slider.js` and `aero-slider.css`.
+3. **Creates a zip** containing `aero-slider.min.js` and `aero-slider.min.css`.
 4. **Uploads** the zip as an asset on the release (e.g. `aero-slider-v1.0.0.zip` for tag `v1.0.0`).
 
 The zip is a standalone distribution for users who prefer downloading over `npm install`.

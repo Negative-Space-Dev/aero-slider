@@ -23,7 +23,7 @@ jobs:
       - name: Prepare release assets
         run: |
           mkdir -p release-artifacts
-          cp dist/aero-slider.js dist/aero-slider.css release-artifacts/
+          cp dist/aero-slider.min.js dist/aero-slider.min.css release-artifacts/
 
       - name: Create zip
         run: |

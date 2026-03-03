@@ -1,5 +1,7 @@
-export { createSlider } from "./slider.ts";
-export { syncThumbnails } from "./sync.ts";
+import { createSlider } from "./slider.ts";
+import { syncThumbnails } from "./sync.ts";
+
+export { createSlider, syncThumbnails };
 export type { SyncThumbnailsOptions } from "./sync.ts";
 export type {
   SliderConfig,
@@ -8,3 +10,13 @@ export type {
   SliderEventData,
   SliderEventCallback,
 } from "./types.ts";
+
+declare global {
+  interface Window {
+    AeroSlider?: { createSlider: typeof createSlider; syncThumbnails: typeof syncThumbnails };
+  }
+}
+
+if (typeof window !== "undefined") {
+  window.AeroSlider = { createSlider, syncThumbnails };
+}

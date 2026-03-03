@@ -1,6 +1,10 @@
 import type { SliderContext } from "./types.ts";
 import type { LoopController } from "./loop.ts";
-import { VELOCITY_SMOOTHING, MOMENTUM_FACTOR } from "./constants.ts";
+import {
+  DRAG_MIN_THRESHOLD,
+  VELOCITY_SMOOTHING,
+  MOMENTUM_FACTOR,
+} from "./constants.ts";
 
 export interface DragController {
   setEnabled(enabled: boolean): void;
@@ -16,6 +20,7 @@ export function createDragController(
 ): DragController {
   const { container, track, state } = ctx;
   let listenersActive = false;
+  let clickPrevented = false;
 
   function getDragCoord(e: PointerEvent): number {
     if (ctx.isVertical()) return e.clientY;
@@ -32,8 +37,7 @@ export function createDragController(
 
     if (ctx.config.noDrag && (e.target as Element).closest(ctx.config.noDrag)) return;
 
-    track.setPointerCapture(e.pointerId);
-    state.isDragging = true;
+    clickPrevented = false;
 
     const sign = getDragSign();
     const startCoord = getDragCoord(e);
@@ -43,23 +47,32 @@ export function createDragController(
     let velocity = 0;
     let lastCoord = startCoord;
     let lastTime = performance.now();
+    let dragging = false;
+    const startIndex = state.currentIndex;
 
     function flushDragScroll(): void {
       moveRafId = null;
       ctx.setScrollPos(pendingScroll);
     }
 
-    track.style.scrollBehavior = "auto";
-    track.style.scrollSnapType = "none";
-    container.classList.add("aero-slider--dragging");
-    const startIndex = state.currentIndex;
-    ctx.emit("dragStart", { index: startIndex });
-    pauseAutoplay();
-
     function onPointerMove(ev: PointerEvent): void {
-      if (!state.isDragging) return;
-      ev.preventDefault();
       const coord = getDragCoord(ev);
+
+      if (!dragging) {
+        if (Math.abs(coord - startCoord) < DRAG_MIN_THRESHOLD) return;
+        dragging = true;
+        clickPrevented = true;
+        track.setPointerCapture(ev.pointerId);
+        state.isDragging = true;
+        state.suppressSettleEmit = false;
+        track.style.scrollBehavior = "auto";
+        track.style.scrollSnapType = "none";
+        container.classList.add("aero-slider--dragging");
+        ctx.emit("dragStart", { index: startIndex });
+        pauseAutoplay();
+      }
+
+      ev.preventDefault();
       pendingScroll = startScroll + (startCoord - coord) * sign;
       if (moveRafId === null) {
         moveRafId = requestAnimationFrame(flushDragScroll);
@@ -80,7 +93,12 @@ export function createDragController(
     }
 
     function onPointerUp(): void {
-      if (!state.isDragging) return;
+      track.removeEventListener("pointermove", onPointerMove);
+      track.removeEventListener("pointerup", onPointerUp);
+      track.removeEventListener("pointercancel", onPointerUp);
+
+      if (!dragging) return;
+
       state.isDragging = false;
       container.classList.remove("aero-slider--dragging");
 
@@ -121,6 +139,7 @@ export function createDragController(
           }
 
           state.isProgrammaticScroll = true;
+          state.suppressSettleEmit = true;
           ctx.scrollToPos(targetScroll, "smooth");
           loop.scheduleTeleport();
 
@@ -139,9 +158,6 @@ export function createDragController(
       }
 
       ctx.emit("dragEnd", { index: state.currentIndex, fromIndex: startIndex });
-      track.removeEventListener("pointermove", onPointerMove);
-      track.removeEventListener("pointerup", onPointerUp);
-      track.removeEventListener("pointercancel", onPointerUp);
 
       if (ctx.config.autoplay) startAutoplay();
     }
@@ -149,6 +165,14 @@ export function createDragController(
     track.addEventListener("pointermove", onPointerMove);
     track.addEventListener("pointerup", onPointerUp);
     track.addEventListener("pointercancel", onPointerUp);
+  }
+
+  function onClick(e: MouseEvent): void {
+    if (clickPrevented) {
+      e.preventDefault();
+      e.stopPropagation();
+      clickPrevented = false;
+    }
   }
 
   function onDragStart(e: Event): void {
@@ -159,10 +183,12 @@ export function createDragController(
     if (enabled === listenersActive) return;
     if (enabled) {
       track.addEventListener("pointerdown", onPointerDown);
+      track.addEventListener("click", onClick, { capture: true });
       track.addEventListener("dragstart", onDragStart);
       listenersActive = true;
     } else {
       track.removeEventListener("pointerdown", onPointerDown);
+      track.removeEventListener("click", onClick, { capture: true });
       track.removeEventListener("dragstart", onDragStart);
       listenersActive = false;
     }

@@ -36,10 +36,18 @@ export function createLoopController(ctx: SliderContext): LoopController {
   }
 
   function instantScrollTo(pos: number): void {
+    state.isProgrammaticScroll = true;
     track.style.scrollBehavior = "auto";
+    track.style.scrollSnapType = "none";
     ctx.setScrollPos(pos);
+    // Double RAF ensures browser has painted the position before re-enabling
+    // scroll-snap. Single RAF only guarantees layout, not paint.
     requestAnimationFrame(() => {
-      track.style.scrollBehavior = "";
+      requestAnimationFrame(() => {
+        track.style.scrollBehavior = "";
+        track.style.scrollSnapType = "";
+        state.isProgrammaticScroll = false;
+      });
     });
   }
 
@@ -129,23 +137,45 @@ export function createLoopController(ctx: SliderContext): LoopController {
     }
 
     state.loopModeActive = true;
-    ctx.recalcSlideMetrics();
     ctx.applySnapAlignment();
 
-    const idx = ctx.normalizeIndex(anchorIndex);
-    state.currentIndex = idx;
+    // Defer scroll until after browser layout completes.
+    requestAnimationFrame(() => {
+      ctx.recalcSlideMetrics();
 
-    const w = state.slideWidthPx;
-    const realStart = cloneSets * ctx.slideCount * w;
-    let scrollPos = realStart + idx * w;
+      const idx = ctx.normalizeIndex(anchorIndex);
+      state.currentIndex = idx;
 
-    if (ctx.isFractionalView()) {
-      const vpSize = ctx.isVertical() ? track.clientHeight : track.clientWidth;
-      const slideVisual = w - ctx.config.gap;
-      scrollPos = realStart + idx * w + slideVisual / 2 - vpSize / 2;
-    }
+      const targetSlide = track.querySelector<HTMLElement>(`[${SLIDE_INDEX_ATTR}="${idx}"]`);
+      if (!targetSlide) return;
 
-    instantScrollTo(scrollPos);
+      // Use scrollIntoView to let the browser handle position calculation.
+      // This avoids layout thrashing from reading offset values and bypasses
+      // any gap unit parsing issues.
+      state.isProgrammaticScroll = true;
+      track.style.scrollBehavior = "auto";
+      track.style.scrollSnapType = "none";
+
+      const alignInline = ctx.isFractionalView() ? "center" : "start";
+      const alignBlock = ctx.isVertical()
+        ? (ctx.isFractionalView() ? "center" : "start")
+        : "nearest";
+
+      targetSlide.scrollIntoView({
+        behavior: "instant",
+        inline: alignInline,
+        block: alignBlock,
+      });
+
+      // Re-enable scroll-snap after browser paints the position.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          track.style.scrollBehavior = "";
+          track.style.scrollSnapType = "";
+          state.isProgrammaticScroll = false;
+        });
+      });
+    });
   }
 
   function teardownLoopTrack(anchorIndex: number): void {

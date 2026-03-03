@@ -41,13 +41,27 @@ export function createSlider(
 
   slides.forEach((slide, i) => slide.setAttribute(SLIDE_INDEX_ATTR, String(i)));
 
+  function parseCSSPixelValue(value: string, fallback: number): number {
+    if (!value || value === "0" || value === "0px") {
+      return fallback;
+    }
+    const temp = document.createElement("div");
+    temp.style.position = "absolute";
+    temp.style.visibility = "hidden";
+    temp.style.width = value;
+    container.appendChild(temp);
+    const pixels = temp.offsetWidth;
+    container.removeChild(temp);
+    return pixels || fallback;
+  }
+
   function readCssLayoutConfig(): { slidesPerView: number; gap: number; aspectRatio: string } {
     const s = getComputedStyle(container);
     const slidesPerView =
       parseFloat(s.getPropertyValue("--slides-per-view")?.trim() || "") ||
       LAYOUT_DEFAULTS.slidesPerView;
     const gapStr = s.getPropertyValue("--slide-gap")?.trim() || "0px";
-    const gap = parseFloat(gapStr) || LAYOUT_DEFAULTS.gap;
+    const gap = parseCSSPixelValue(gapStr, LAYOUT_DEFAULTS.gap);
     const aspectRatio = s.getPropertyValue("--slide-aspect")?.trim() || LAYOUT_DEFAULTS.aspectRatio;
     return { slidesPerView, gap, aspectRatio };
   }
@@ -64,6 +78,7 @@ export function createSlider(
     isDestroyed: false,
     loopModeActive: false,
     isProgrammaticScroll: false,
+    suppressSettleEmit: false,
     slideWidthPx: 0,
   };
   const listeners = new Map<SliderEvent, Set<SliderEventCallback>>();
@@ -85,12 +100,13 @@ export function createSlider(
   }
 
   function getMaxIndex(): number {
-    if (config.slidesPerView % 1 !== 0) return Math.max(0, slideCount - 1);
+    if (isFractionalView()) return Math.max(0, slideCount - 1);
     return Math.max(0, Math.floor(slideCount - config.slidesPerView));
   }
 
   function isFractionalView(): boolean {
-    return config.slidesPerView % 1 !== 0;
+    // "centered" reuses fractional alignment math while keeping integer slidesPerView.
+    return config.centered || config.slidesPerView % 1 !== 0;
   }
 
   function isLoopEnabled(): boolean {
@@ -335,6 +351,12 @@ export function createSlider(
     if (wheelTimer === null) {
       track.style.scrollSnapType = "";
     }
+    if (state.suppressSettleEmit) {
+      state.suppressSettleEmit = false;
+      pagination.refresh();
+      navigation.refresh();
+      return;
+    }
     syncIndex();
   }
 
@@ -356,6 +378,7 @@ export function createSlider(
 
   function onWheel(): void {
     if (state.isDragging) return;
+    state.suppressSettleEmit = false;
 
     track.style.scrollSnapType = "none";
 
@@ -459,6 +482,7 @@ export function createSlider(
       navigation.refresh();
       updateVisibility();
     }
+    state.suppressSettleEmit = true;
 
     if (state.loopModeActive) {
       loop.cancelTeleport();

@@ -7,12 +7,19 @@ export default defineConfig({
   clean: true,
   outDir: "dist",
   minify: true,
+  outExtension() {
+    return { js: ".min.js" };
+  },
   external: [],
   esbuildOptions(options) {
     options.banner = { js: "" };
   },
   async onSuccess() {
-    const { cpSync } = await import("node:fs");
-    cpSync("src/slider.css", "dist/aero-slider.css");
+    const esbuild = await import("esbuild");
+    await esbuild.default.build({
+      entryPoints: ["src/slider.css"],
+      outfile: "dist/aero-slider.min.css",
+      minify: true,
+    });
   },
 });

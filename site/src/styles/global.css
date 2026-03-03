@@ -53,6 +53,18 @@ body {
   background-color: #e2e8f0 !important;
 }
 
+/* Thumbnail strip nav: smaller buttons to fit compact strip */
+.aero-slider--thumbnails .aero-slider__nav--prev,
+.aero-slider--thumbnails .aero-slider__nav--next {
+  @apply size-8;
+}
+.aero-slider--thumbnails .aero-slider__nav--prev {
+  @apply left-1;
+}
+.aero-slider--thumbnails .aero-slider__nav--next {
+  @apply right-1;
+}
+
 /* Thumbnail strip (doc site example only) */
 .aero-slider--thumbnails .aero-slider__track > * {
   scroll-snap-align: center;
