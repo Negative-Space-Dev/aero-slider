@@ -104,11 +104,12 @@ export function syncThumbnails(
 
   /* Primary slideChange: sync thumbnail to follow primary.
    * We trust the primary slider's index as the source of truth. */
-  const onPrimarySlideChange = (data: { index: number }): void => {
-    if (data.index === activeIndex) return;
-    syncFromPrimary(data.index);
+  const onPrimarySlideChange = (e: Event): void => {
+    const { index } = (e as CustomEvent<{ index: number }>).detail;
+    if (index === activeIndex) return;
+    syncFromPrimary(index);
   };
-  primary.on("slideChange", onPrimarySlideChange);
+  primary.element.addEventListener("aero:slideChange", onPrimarySlideChange);
 
   /* NOTE: We intentionally do NOT listen to thumbnail's slideChange event.
    * The thumbnail's scroll-derived index can differ from the clicked index
@@ -120,6 +121,6 @@ export function syncThumbnails(
   return (): void => {
     handlers.forEach(({ el, fn }) => el.removeEventListener("click", fn));
     trackEl.querySelectorAll(`:scope > *`).forEach((el) => el.classList.remove(THUMB_ACTIVE_CLASS));
-    primary.off("slideChange", onPrimarySlideChange);
+    primary.element.removeEventListener("aero:slideChange", onPrimarySlideChange);
   };
 }

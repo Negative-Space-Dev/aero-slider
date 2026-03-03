@@ -355,14 +355,14 @@ export function createAutoplay(ctx: SliderContext, next: () => void): AutoplayCo
       }
       next();
     }, ctx.config.autoplayInterval);
-    ctx.emit("autoplayStart", { index: ctx.state.currentIndex });
+    ctx.emit("autoplayStart", {});
   }
 
   function pause(): void {
     if (timer !== null) {
       clearInterval(timer);
       timer = null;
-      ctx.emit("autoplayStop", { index: ctx.state.currentIndex });
+      ctx.emit("autoplayStop", {});
     }
   }
 

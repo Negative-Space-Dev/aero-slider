@@ -8,7 +8,6 @@ export type {
   SliderInstance,
   SliderEvent,
   SliderEventData,
-  SliderEventCallback,
 } from "./types.ts";
 
 declare global {

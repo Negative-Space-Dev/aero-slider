@@ -345,7 +345,7 @@ function applyLayoutFromFormToContainer(container: HTMLElement): void {
 const eventLogEmpty = document.getElementById("event-log-empty");
 const eventLogTable = document.getElementById("event-log-table");
 
-function logEvent(name: string, data: { index: number; fromIndex?: number }): void {
+function logEvent(name: string, data: { index?: number; fromIndex?: number } | undefined): void {
   // Hide empty state, show table
   if (eventLogEmpty && eventLogTable) {
     eventLogEmpty.classList.add("hidden");
@@ -356,7 +356,11 @@ function logEvent(name: string, data: { index: number; fromIndex?: number }): vo
   row.className = "group hover:bg-slate-50 transition-colors";
   const time = new Date().toLocaleTimeString();
   const dataStr =
-    data.fromIndex !== undefined ? `${data.fromIndex}→${data.index}` : `index=${data.index}`;
+    data?.fromIndex !== undefined && data.index !== undefined
+      ? `${data.fromIndex}→${data.index}`
+      : data?.index !== undefined
+        ? `index=${data.index}`
+        : "{}";
   row.innerHTML = `<td class="truncate px-4 py-2 font-medium text-slate-900">${name}</td><td class="truncate px-4 py-2 text-slate-500">${dataStr}</td><td class="px-4 py-2 text-left tabular-nums text-slate-400">${time}</td>`;
   logList.prepend(row);
   while (logList.children.length > 30) logList.lastElementChild?.remove();
@@ -381,6 +385,8 @@ function updateThumbnailState(show: boolean): void {
   }
 }
 
+let heroEventController: AbortController | null = null;
+
 function rebuildHero(): void {
   if (syncTeardown) {
     syncTeardown();
@@ -393,6 +399,8 @@ function rebuildHero(): void {
   if (heroSlider) {
     heroSlider.destroy();
   }
+  heroEventController?.abort();
+  heroEventController = new AbortController();
 
   const config = readConfig();
   const targetCount = config.slideCount ?? 5;
@@ -403,12 +411,12 @@ function rebuildHero(): void {
   heroSlider = createSlider(heroSliderEl, config);
 
   const events = [
+    "ready",
     "slideChange",
     "dragStart",
     "dragEnd",
     "autoplayStart",
     "autoplayStop",
-    "ready",
     "destroy",
     "resize",
     "resized",
@@ -417,7 +425,11 @@ function rebuildHero(): void {
   ] as const;
 
   for (const event of events) {
-    heroSlider.on(event, (d) => logEvent(event, d));
+    heroSliderEl.addEventListener(
+      `aero:${event}`,
+      (e) => logEvent(event, (e as CustomEvent<{ index?: number; fromIndex?: number }>).detail),
+      { signal: heroEventController!.signal }
+    );
   }
 
   updateThumbnailState(config.thumbnails ?? false);

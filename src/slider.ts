@@ -3,7 +3,7 @@ import type {
   SliderConfigFull,
   SliderInstance,
   SliderEvent,
-  SliderEventCallback,
+  SliderEventData,
   SliderContext,
   SliderState,
   AeroSliderElement,
@@ -81,7 +81,6 @@ export function createSlider(
     suppressSettleEmit: false,
     slideWidthPx: 0,
   };
-  const listeners = new Map<SliderEvent, Set<SliderEventCallback>>();
 
   // ── Timers ───────────────────────────────────────────────────────────
   let scrollRafId: number | null = null;
@@ -91,8 +90,8 @@ export function createSlider(
   let resizeRafId: number | null = null;
 
   // ── Core Helpers ─────────────────────────────────────────────────────
-  function emit(event: SliderEvent, data: { index: number; fromIndex?: number }): void {
-    listeners.get(event)?.forEach((cb) => cb(data));
+  function emit<E extends SliderEvent>(event: E, data: SliderEventData<E>): void {
+    container.dispatchEvent(new CustomEvent(`aero:${event}`, { detail: data, bubbles: true }));
   }
 
   function isVertical(): boolean {
@@ -300,7 +299,6 @@ export function createSlider(
       return config;
     },
     state,
-    listeners,
     emit,
     getSlideSize,
     recalcSlideMetrics,
@@ -449,9 +447,9 @@ export function createSlider(
       LAYOUT_VARS,
       () => {
         if (!state.isDestroyed) {
-          emit("resize", { index: state.currentIndex });
+          emit("resize", {});
           update();
-          emit("resized", { index: state.currentIndex });
+          emit("resized", {});
         }
       },
       { debounceMs: RESIZE_DEBOUNCE_MS, maxWaitMs: RESIZE_MAX_WAIT_MS }
@@ -660,18 +658,9 @@ export function createSlider(
     refresh();
   }
 
-  function on(event: SliderEvent, callback: SliderEventCallback): void {
-    if (!listeners.has(event)) listeners.set(event, new Set());
-    listeners.get(event)!.add(callback);
-  }
-
-  function off(event: SliderEvent, callback: SliderEventCallback): void {
-    listeners.get(event)?.delete(callback);
-  }
-
   function destroy(): void {
     if (state.isDestroyed) return;
-    emit("destroy", { index: state.currentIndex });
+    emit("destroy", {});
     state.isDestroyed = true;
 
     autoplay.pause();
@@ -715,8 +704,6 @@ export function createSlider(
     if (host.aeroSlider === api) {
       delete host.aeroSlider;
     }
-
-    listeners.clear();
   }
 
   // ── Initialize ───────────────────────────────────────────────────────
@@ -766,8 +753,6 @@ export function createSlider(
     refresh,
     add,
     remove,
-    on,
-    off,
     get currentIndex() {
       return state.currentIndex;
     },
@@ -778,6 +763,6 @@ export function createSlider(
 
   host.aeroSlider = api;
   container.classList.add("aero-slider--ready");
-  emit("ready", { index: state.currentIndex });
+  emit("ready", {});
   return api;
 }

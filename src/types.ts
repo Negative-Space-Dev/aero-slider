@@ -31,8 +31,6 @@ export interface SliderInstance {
   refresh(): void;
   add(slides: HTMLElement | HTMLElement[], index?: number): void;
   remove(index: number | number[]): void;
-  on(event: SliderEvent, callback: SliderEventCallback): void;
-  off(event: SliderEvent, callback: SliderEventCallback): void;
   readonly currentIndex: number;
   readonly slideCount: number;
 }
@@ -42,21 +40,33 @@ export interface AeroSliderElement extends HTMLElement {
 }
 
 export type SliderEvent =
+  | "ready"
   | "slideChange"
   | "dragStart"
   | "dragEnd"
   | "autoplayStart"
   | "autoplayStop"
-  | "ready"
   | "destroy"
   | "resize"
   | "resized"
   | "visible"
   | "hidden";
 
-/** Event payload. dragEnd includes fromIndex (slide index at drag start). */
-export type SliderEventData = { index: number; fromIndex?: number };
-export type SliderEventCallback = (data: SliderEventData) => void;
+export interface SliderEventMap {
+  ready: {};
+  slideChange: { index: number };
+  dragStart: { index: number };
+  dragEnd: { index: number; fromIndex: number };
+  autoplayStart: {};
+  autoplayStop: {};
+  destroy: {};
+  resize: {};
+  resized: {};
+  visible: { index: number };
+  hidden: { index: number };
+}
+
+export type SliderEventData<E extends SliderEvent = SliderEvent> = SliderEventMap[E];
 
 export interface SliderState {
   currentIndex: number;
@@ -76,8 +86,7 @@ export interface SliderContext {
   slideCount: number;
   config: SliderConfigFull;
   state: SliderState;
-  listeners: Map<SliderEvent, Set<SliderEventCallback>>;
-  emit(event: SliderEvent, data: SliderEventData): void;
+  emit<E extends SliderEvent>(event: E, data: SliderEventData<E>): void;
   getSlideSize(): number;
   recalcSlideMetrics(): void;
   normalizeIndex(index: number): number;
