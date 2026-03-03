@@ -146,26 +146,24 @@ export function createLoopController(ctx: SliderContext): LoopController {
       const idx = ctx.normalizeIndex(anchorIndex);
       state.currentIndex = idx;
 
-      const targetSlide = track.querySelector<HTMLElement>(`[${SLIDE_INDEX_ATTR}="${idx}"]`);
-      if (!targetSlide) return;
+      const w = state.slideWidthPx;
+      if (w === 0) return;
 
-      // Use scrollIntoView to let the browser handle position calculation.
-      // This avoids layout thrashing from reading offset values and bypasses
-      // any gap unit parsing issues.
+      // Calculate scroll position directly to avoid scrollIntoView's
+      // side effect of scrolling ancestor containers (including the page).
+      const realStart = getLoopRealStart();
+      let pos = realStart + idx * w;
+
+      if (ctx.isFractionalView()) {
+        const vpSize = ctx.isVertical() ? track.clientHeight : track.clientWidth;
+        const slideVisual = w - ctx.config.gap;
+        pos = realStart + idx * w + slideVisual / 2 - vpSize / 2;
+      }
+
       state.isProgrammaticScroll = true;
       track.style.scrollBehavior = "auto";
       track.style.scrollSnapType = "none";
-
-      const alignInline = ctx.isFractionalView() ? "center" : "start";
-      const alignBlock = ctx.isVertical()
-        ? (ctx.isFractionalView() ? "center" : "start")
-        : "nearest";
-
-      targetSlide.scrollIntoView({
-        behavior: "instant",
-        inline: alignInline,
-        block: alignBlock,
-      });
+      ctx.setScrollPos(pos);
 
       // Re-enable scroll-snap after browser paints the position.
       requestAnimationFrame(() => {
