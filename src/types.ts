@@ -1,10 +1,12 @@
+export type SliderAlignment = "left" | "center" | "right";
+
 export interface SliderConfig {
   loop?: boolean;
   autoplay?: boolean;
   autoplayInterval?: number;
   draggable?: boolean;
-  /** Keep currentIndex as the centered slide when possible (clamps at ends without loop). */
-  centered?: boolean;
+  /** Align the active slide to the left, center, or right when possible. */
+  alignment?: SliderAlignment;
   /** Maximum number of pagination dots to show. Beyond this, edge indicators are used. */
   maxDots?: number;
   noDrag?: string;
@@ -95,6 +97,7 @@ export interface SliderContext {
   isLoopEnabled(): boolean;
   isFractionalView(): boolean;
   isVertical(): boolean;
+  getAlignmentOffset(): number;
   getScrollPos(): number;
   setScrollPos(pos: number): void;
   scrollToPos(pos: number, behavior?: ScrollBehavior): void;

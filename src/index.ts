@@ -4,6 +4,7 @@ import { syncThumbnails } from "./sync.ts";
 export { createSlider, syncThumbnails };
 export type { SyncThumbnailsOptions } from "./sync.ts";
 export type {
+  SliderAlignment,
   SliderConfig,
   SliderInstance,
   SliderEvent,

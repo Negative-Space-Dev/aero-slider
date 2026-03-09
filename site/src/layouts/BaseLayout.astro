@@ -57,7 +57,7 @@ const {
     </style>
     <slot name="head" />
   </head>
-  <body class="bg-slate-50 text-slate-900 selection:bg-indigo-100 selection:text-indigo-900">
+  <body class="bg-slate-50 text-slate-950 selection:bg-indigo-100 selection:text-indigo-900 overflow-x-hidden">
     <!-- Critical: inject hero slider CSS from URL params before first paint -->
     <script is:inline>
       (function(){
@@ -76,19 +76,26 @@ const {
         if (!isNaN(gap) && gap >= 0 && gap <= 32) {
           parts.push('--slide-gap:' + gap + 'px');
         }
+        var align = p.get('align');
+        if (align !== 'left' && align !== 'right' && align !== 'center') {
+          align = 'center';
+        }
         var loop = p.get('loop') === '1' || p.get('loop') === 'on' || p.get('loop') === 'true';
-        var isFractional = spvVal > 0 && spvVal % 1 !== 0;
         if (parts.length) {
           var s = document.createElement('style');
           s.id = 'config-inline';
           s.textContent = '#hero-slider{' + parts.join(';') + '}';
           document.head.appendChild(s);
         }
-        if (loop && isFractional) {
+        if (loop && align !== 'left') {
           document.documentElement.setAttribute('data-aero-defer-hero', '');
+          var offset = align === 'right'
+            ? 'calc(100% - (100% - var(--slide-gap,0px) * (var(--slides-per-view,1) - 1)) / var(--slides-per-view,1))'
+            : 'calc(50% - (100% - var(--slide-gap,0px) * (var(--slides-per-view,1) - 1)) / (2 * var(--slides-per-view,1)))';
+          var snap = align === 'right' ? 'end' : 'center';
           var s2 = document.createElement('style');
           s2.id = 'config-inline-defer';
-          s2.textContent = '[data-aero-defer-hero] #hero-slider .aero-slider__track::before{content:"";flex:0 0 max(0px,calc(50% - (100% - var(--slide-gap,0px) * (var(--slides-per-view,1) - 1)) / (2 * var(--slides-per-view,1)) - var(--slide-gap,0px)));scroll-snap-align:none}[data-aero-defer-hero] #hero-slider .aero-slider__track>*{scroll-snap-align:center}';
+          s2.textContent = '[data-aero-defer-hero] #hero-slider .aero-slider__track::before{content:"";flex:0 0 max(0px,calc(' + offset + ' - var(--slide-gap,0px)));scroll-snap-align:none}[data-aero-defer-hero] #hero-slider .aero-slider__track>*{scroll-snap-align:' + snap + '}';
           document.head.appendChild(s2);
         }
       })();

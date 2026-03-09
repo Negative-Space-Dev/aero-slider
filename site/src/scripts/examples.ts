@@ -75,6 +75,7 @@ const PARAM_KEYS = {
   gap: "gap",
   autoplayInterval: "interval",
   maxDots: "dots",
+  alignment: "align",
   direction: "dir",
   perMove: "pm",
   loop: "loop",
@@ -115,6 +116,7 @@ function applyParamsFromUrl(): void {
   setRange("autoplayInterval", 1000, 8000);
   setRange("maxDots", 3, 21);
   setRange("perMove", 1, 4);
+  setSelect("alignment", ["left", "center", "right"]);
   setSelect("direction", ["ltr", "rtl", "ttb"]);
   setCheckbox("loop");
   setCheckbox("pagination");
@@ -130,6 +132,7 @@ const DEFAULTS = {
   gap: "10",
   autoplayInterval: "4000",
   maxDots: "10",
+  alignment: "center",
   direction: "ltr",
   perMove: "1",
   loop: false,
@@ -159,6 +162,7 @@ function syncUrlFromForm(): void {
   setIfNotDefault(PARAM_KEYS.gap, "gap");
   setIfNotDefault(PARAM_KEYS.autoplayInterval, "autoplayInterval");
   setIfNotDefault(PARAM_KEYS.maxDots, "maxDots");
+  setIfNotDefault(PARAM_KEYS.alignment, "alignment");
   setIfNotDefault(PARAM_KEYS.direction, "direction");
   setIfNotDefault(PARAM_KEYS.perMove, "perMove");
   setCheckboxIfNotDefault("loop", PARAM_KEYS.loop);
@@ -253,12 +257,14 @@ let syncTeardown: (() => void) | null = null;
 function readConfig(): SliderConfig & { thumbnails?: boolean; slideCount?: number } {
   const fd = new FormData(form);
   const maxDotsVal = Number(fd.get("maxDots")) || 10;
+  const alignment = (fd.get("alignment") as string) || "center";
   const direction = (fd.get("direction") as string) || "ltr";
   return {
     autoplay: fd.get("autoplay") === "on",
     autoplayInterval: Number(fd.get("autoplayInterval")) || 4000,
     loop: fd.get("loop") === "on",
     draggable: fd.get("draggable") === "on",
+    alignment: alignment as SliderConfig["alignment"],
     direction: direction as "ltr" | "rtl" | "ttb",
     perMove: Number(fd.get("perMove")) || 1,
     thumbnails: fd.get("thumbnails") === "on",
@@ -361,7 +367,7 @@ function logEvent(name: string, data: { index?: number; fromIndex?: number } | u
       : data?.index !== undefined
         ? `index=${data.index}`
         : "{}";
-  row.innerHTML = `<td class="truncate px-4 py-2 font-medium text-slate-900">${name}</td><td class="truncate px-4 py-2 text-slate-500">${dataStr}</td><td class="px-4 py-2 text-left tabular-nums text-slate-400">${time}</td>`;
+  row.innerHTML = `<td class="truncate px-4 py-2 font-medium text-slate-900">${name}</td><td class="truncate px-4 py-2 text-slate-600">${dataStr}</td><td class="px-4 py-2 text-left tabular-nums text-slate-400">${time}</td>`;
   logList.prepend(row);
   while (logList.children.length > 30) logList.lastElementChild?.remove();
 }
@@ -371,9 +377,12 @@ function updateThumbnailState(show: boolean): void {
   if (show) {
     const loop = getFormBool("loop");
     if (!heroThumbs) {
-      heroThumbs = createSlider(getRequiredElementById<HTMLElement>("hero-thumbs"), { loop });
+      heroThumbs = createSlider(getRequiredElementById<HTMLElement>("hero-thumbs"), {
+        loop,
+        alignment: "center",
+      });
     } else {
-      heroThumbs.update({ loop });
+      heroThumbs.update({ loop, alignment: "center" });
     }
     if (syncTeardown) syncTeardown();
     syncTeardown = syncThumbnails(heroSlider, heroThumbs!, { loop });
@@ -602,6 +611,22 @@ if (isTouchDevice && draggableLabel) {
 // ── Examples (static, deferred so hero paints first) ──────────────────
 requestAnimationFrame(() => {
   createSlider(getRequiredElementById<HTMLElement>("multi"));
+  const breakoutSlider = createSlider(getRequiredElementById<HTMLElement>("breakout-bleed"), {
+    alignment: "center",
+  });
+  breakoutSlider.goTo(1);
+  createSlider(getRequiredElementById<HTMLElement>("alignment-left"), {
+    alignment: "left",
+    loop: true,
+  });
+  createSlider(getRequiredElementById<HTMLElement>("alignment-center"), {
+    alignment: "center",
+    loop: true,
+  });
+  createSlider(getRequiredElementById<HTMLElement>("alignment-right"), {
+    alignment: "right",
+    loop: true,
+  });
   createSlider(getRequiredElementById<HTMLElement>("autoplay"), {
     autoplay: true,
     autoplayInterval: 3000,
@@ -610,7 +635,9 @@ requestAnimationFrame(() => {
   createSlider(getRequiredElementById<HTMLElement>("responsive"));
 
   const thumbMain = createSlider(getRequiredElementById<HTMLElement>("thumbnail-main"));
-  const thumbThumbs = createSlider(getRequiredElementById<HTMLElement>("thumbnail-thumbs"));
+  const thumbThumbs = createSlider(getRequiredElementById<HTMLElement>("thumbnail-thumbs"), {
+    alignment: "center",
+  });
   syncThumbnails(thumbMain, thumbThumbs);
 
   createSlider(getRequiredElementById<HTMLElement>("direction-rtl"), { direction: "rtl" });

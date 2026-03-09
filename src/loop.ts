@@ -91,18 +91,7 @@ export function createLoopController(ctx: SliderContext): LoopController {
   function getLoopIndexFromScroll(): number {
     const w = state.slideWidthPx;
     if (w === 0) return state.currentIndex;
-
-    const vpSize = ctx.isVertical() ? track.clientHeight : track.clientWidth;
-
-    if (ctx.isFractionalView()) {
-      const slideVisual = w - ctx.config.gap;
-      const viewportCenter = ctx.getScrollPos() + vpSize / 2;
-      const realStart = getLoopRealStart();
-      const raw = Math.round((viewportCenter - realStart - slideVisual / 2) / w);
-      return ((raw % ctx.slideCount) + ctx.slideCount) % ctx.slideCount;
-    }
-
-    const offset = ctx.getScrollPos() - getLoopRealStart();
+    const offset = ctx.getScrollPos() - getLoopRealStart() + ctx.getAlignmentOffset();
     const raw = Math.round(offset / w);
     return ((raw % ctx.slideCount) + ctx.slideCount) % ctx.slideCount;
   }
@@ -152,13 +141,7 @@ export function createLoopController(ctx: SliderContext): LoopController {
       // Calculate scroll position directly to avoid scrollIntoView's
       // side effect of scrolling ancestor containers (including the page).
       const realStart = getLoopRealStart();
-      let pos = realStart + idx * w;
-
-      if (ctx.isFractionalView()) {
-        const vpSize = ctx.isVertical() ? track.clientHeight : track.clientWidth;
-        const slideVisual = w - ctx.config.gap;
-        pos = realStart + idx * w + slideVisual / 2 - vpSize / 2;
-      }
+      const pos = realStart + idx * w - ctx.getAlignmentOffset();
 
       state.isProgrammaticScroll = true;
       track.style.scrollBehavior = "auto";

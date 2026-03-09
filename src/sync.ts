@@ -39,7 +39,7 @@ export function syncThumbnails(
 
   /* Disable drag on thumbnails so clicks register reliably (pointer capture from
    * drag would otherwise intercept and suppress click events). Loop defaults to
-   * true for backward compatibility. We intentionally do NOT force centered mode
+   * true for backward compatibility. We intentionally do NOT force any alignment
    * here—the thumbnail slider's scroll position should not affect navigation;
    * only explicit clicks control which slide is active. */
   const loop = options?.loop ?? true;

@@ -9,28 +9,56 @@
   --slide-aspect: 5 / 3;
   --slides-per-view: 1;
   --slide-gap: 0px;
+  --aero-layout-width: 100%;
+  --aero-edge-inset: 0px;
 }
 
 /* Loop spacer: reserves space for prepended clones so the active slide
-   renders in its final centered position before JS initializes.
+   renders in its final aligned position before JS initializes.
    Add data-aero-defer-visibility to the slider in HTML; JS removes
-   the attribute at init, deactivating the spacer once clones are in place. */
+   the attribute at init, deactivating the spacer once clones are in place.
+   Set data-aero-alignment in HTML when using left/right pre-init alignment;
+   center is assumed by default. */
+.aero-slider[data-aero-defer-visibility]:not(.aero-slider--ready) {
+  --aero-defer-offset: calc(
+    var(--aero-layout-width, 100%) / 2 -
+      (var(--aero-layout-width, 100%) - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) /
+      (2 * var(--slides-per-view, 1))
+  );
+}
+
+.aero-slider[data-aero-defer-visibility]:not(.aero-slider--ready)[data-aero-alignment="left"] {
+  --aero-defer-offset: 0px;
+}
+
+.aero-slider[data-aero-defer-visibility]:not(.aero-slider--ready)[data-aero-alignment="right"] {
+  --aero-defer-offset: calc(
+    var(--aero-layout-width, 100%) -
+      (var(--aero-layout-width, 100%) - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) /
+      var(--slides-per-view, 1)
+  );
+}
+
 .aero-slider[data-aero-defer-visibility]:not(.aero-slider--ready) .aero-slider__track::before {
   content: "";
-  flex: 0 0 max(
-    0px,
-    calc(
-      50%
-      - (100% - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1))
-        / (2 * var(--slides-per-view, 1))
-      - var(--slide-gap, 0px)
-    )
-  );
+  flex: 0 0 max(0px, calc(var(--aero-defer-offset, 0px) - var(--slide-gap, 0px)));
   scroll-snap-align: none;
 }
 
 .aero-slider[data-aero-defer-visibility]:not(.aero-slider--ready) .aero-slider__track > * {
   scroll-snap-align: center;
+}
+
+.aero-slider[data-aero-defer-visibility]:not(.aero-slider--ready)[data-aero-alignment="left"]
+  .aero-slider__track
+  > * {
+  scroll-snap-align: start;
+}
+
+.aero-slider[data-aero-defer-visibility]:not(.aero-slider--ready)[data-aero-alignment="right"]
+  .aero-slider__track
+  > * {
+  scroll-snap-align: end;
 }
 
 /* Viewport clips the track; pagination sits below in normal flow */
@@ -41,6 +69,11 @@
   min-height: 0;
   overflow: hidden;
   contain: paint;
+}
+
+.aero-slider--breakout .aero-slider__viewport {
+  overflow: visible;
+  contain: layout style;
 }
 
 /* === Track === */
@@ -70,6 +103,16 @@
   display: none;
 }
 
+.aero-slider--breakout.aero-slider--ready .aero-slider__track::before,
+.aero-slider--breakout.aero-slider--ready .aero-slider__track::after,
+.aero-slider--breakout:not([data-aero-defer-visibility]) .aero-slider__track::before,
+.aero-slider--breakout:not([data-aero-defer-visibility]) .aero-slider__track::after {
+  content: "";
+  flex: 0 0 max(0px, calc(var(--aero-edge-inset, 0px) - var(--slide-gap, 0px)));
+  scroll-snap-align: none;
+  pointer-events: none;
+}
+
 .aero-slider__track:focus {
   outline: none;
 }
@@ -83,7 +126,8 @@
 .aero-slider__track > * {
   flex: 0 0
     calc(
-      (100% - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) / var(--slides-per-view, 1)
+      (var(--aero-layout-width, 100%) - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) /
+        var(--slides-per-view, 1)
     );
   flex-shrink: 0;
   flex-grow: 0;
@@ -96,8 +140,6 @@
   min-height: 0;
   contain: layout style paint;
   overflow: hidden;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 100%;
 }
 
 .aero-slider__slide > *,
@@ -208,8 +250,10 @@
 .aero-slider--vertical .aero-slider__track > * {
   flex: 0 0
     calc(
-      (100% - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) / var(--slides-per-view, 1)
+      (100% - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) /
+        var(--slides-per-view, 1)
     );
   aspect-ratio: initial;
   width: 100%;
+  min-height: 0;
 }

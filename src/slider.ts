@@ -98,14 +98,55 @@ export function createSlider(
     return config.direction === "ttb";
   }
 
+  let rtlScrollBehavior: "negative" | "reverse" | "default" | null = null;
+
+  function detectRtlScrollBehavior(): "negative" | "reverse" | "default" {
+    if (rtlScrollBehavior !== null) return rtlScrollBehavior;
+
+    const outer = document.createElement("div");
+    const inner = document.createElement("div");
+
+    outer.dir = "rtl";
+    outer.style.width = "4px";
+    outer.style.height = "1px";
+    outer.style.position = "absolute";
+    outer.style.top = "-9999px";
+    outer.style.overflow = "scroll";
+    outer.style.visibility = "hidden";
+    inner.style.width = "8px";
+    inner.style.height = "1px";
+
+    outer.appendChild(inner);
+    document.body.appendChild(outer);
+
+    let behavior: "negative" | "reverse" | "default" = "reverse";
+    if (outer.scrollLeft > 0) {
+      behavior = "default";
+    } else {
+      outer.scrollLeft = 1;
+      if (outer.scrollLeft === 0) {
+        behavior = "negative";
+      }
+    }
+
+    document.body.removeChild(outer);
+    rtlScrollBehavior = behavior;
+    return behavior;
+  }
+
+  function getRtlMaxScroll(): number {
+    return Math.max(0, track.scrollWidth - track.clientWidth);
+  }
+
   function getMaxIndex(): number {
-    if (isFractionalView()) return Math.max(0, slideCount - 1);
+    if (config.alignment !== "left" || isFractionalView()) {
+      return Math.max(0, slideCount - 1);
+    }
     return Math.max(0, Math.floor(slideCount - config.slidesPerView));
   }
 
   function isFractionalView(): boolean {
-    // "centered" reuses fractional alignment math while keeping integer slidesPerView.
-    return config.centered || config.slidesPerView % 1 !== 0;
+    return config.slidesPerView % 1 !== 0;
   }
 
   function isLoopEnabled(): boolean {
@@ -127,14 +168,35 @@ export function createSlider(
   // ── Direction-aware scroll helpers ───────────────────────────────────
 
   function getScrollPos(): number {
-    if (config.direction === "rtl") return -track.scrollLeft;
+    if (config.direction === "rtl") {
+      const maxScroll = getRtlMaxScroll();
+      switch (detectRtlScrollBehavior()) {
+        case "default":
+          return maxScroll - track.scrollLeft;
+        case "negative":
+          return -track.scrollLeft;
+        default:
+          return track.scrollLeft;
+      }
+    }
     if (config.direction === "ttb") return track.scrollTop;
     return track.scrollLeft;
   }
 
   function setScrollPos(pos: number): void {
     if (config.direction === "rtl") {
-      track.scrollLeft = -pos;
+      const maxScroll = getRtlMaxScroll();
+      switch (detectRtlScrollBehavior()) {
+        case "default":
+          track.scrollLeft = maxScroll - pos;
+          break;
+        case "negative":
+          track.scrollLeft = -pos;
+          break;
+        default:
+          track.scrollLeft = pos;
+          break;
+      }
     } else if (config.direction === "ttb") {
       track.scrollTop = pos;
     } else {
@@ -146,7 +208,14 @@ export function createSlider(
     if (config.direction === "ttb") {
       track.scrollTo({ top: pos, behavior });
     } else if (config.direction === "rtl") {
-      track.scrollTo({ left: -pos, behavior });
+      const maxScroll = getRtlMaxScroll();
+      const left =
+        detectRtlScrollBehavior() === "default"
+          ? maxScroll - pos
+          : detectRtlScrollBehavior() === "negative"
+            ? -pos
+            : pos;
+      track.scrollTo({ left, behavior });
     } else {
       track.scrollTo({ left: pos, behavior });
     }
@@ -158,6 +227,28 @@ export function createSlider(
 
   function getTrackScrollSize(): number {
     return isVertical() ? track.scrollHeight : track.scrollWidth;
+  }
+
+  function getLayoutSize(): number {
+    const w = getSlideSize();
+    if (w <= 0) return getViewportSize();
+    const slideVisual = w - config.gap;
+    const derived = slideVisual * config.slidesPerView + config.gap * (config.slidesPerView - 1);
+    return derived > 0 ? derived : getViewportSize();
+  }
+
+  function getAlignmentOffset(): number {
+    const w = getSlideSize();
+    if (w === 0 || config.alignment === "left") return 0;
+
+    const vpSize = getLayoutSize();
+    const slideVisual = w - config.gap;
+
+    if (config.alignment === "center") {
+      return (vpSize - slideVisual) / 2;
+    }
+
+    return vpSize - slideVisual;
   }
 
   function getSlideSize(): number {
@@ -178,27 +269,20 @@ export function createSlider(
     Object.assign(config, readCssLayoutConfig());
   }
 
-  // ── Fractional slidesPerView: alignment helpers ──────────────────────
+  // ── Alignment helpers ────────────────────────────────────────────────
 
   function getScrollPosForIndex(index: number): number {
     const w = getSlideSize();
     if (w === 0) return 0;
-
-    if (!isFractionalView()) {
-      return index * w;
-    }
-
-    const vpSize = getViewportSize();
-    const slideVisual = w - config.gap;
+    const maxScroll = getTrackScrollSize() - getViewportSize();
+    const target = index * w - getAlignmentOffset();
 
     if (state.loopModeActive) {
-      return index * w + slideVisual / 2 - vpSize / 2;
+      return target;
     }
 
-    const maxIdx = getMaxIndex();
-    if (index <= 0) return 0;
-    if (index >= maxIdx) return getTrackScrollSize() - getViewportSize();
-    return index * w + slideVisual / 2 - vpSize / 2;
+    if (maxScroll <= 0) return 0;
+    return Math.max(0, Math.min(target, maxScroll));
   }
 
   function getIndexFromScrollPos(scrollPos: number): number {
@@ -207,37 +291,26 @@ export function createSlider(
 
     const maxIdx = state.loopModeActive ? slideCount - 1 : getMaxIndex();
     const maxScroll = getTrackScrollSize() - getViewportSize();
+    if (maxScroll <= 0) return 0;
 
-    if (!isFractionalView()) {
-      const raw = Math.round(scrollPos / w);
-      return Math.max(0, Math.min(raw, maxIdx));
+    if (!state.loopModeActive) {
+      if (scrollPos <= 1) return 0;
+      if (scrollPos >= maxScroll - 1) return maxIdx;
     }
 
-    if (maxScroll <= 0) return 0;
-    if (scrollPos <= 1) return 0;
-    if (scrollPos >= maxScroll - 1) return maxIdx;
-
-    const vpSize = getViewportSize();
-    const slideVisual = w - config.gap;
-    const viewportCenter = scrollPos + vpSize / 2;
-    const raw = Math.round((viewportCenter - slideVisual / 2) / w);
+    const raw = Math.round((scrollPos + getAlignmentOffset()) / w);
     return Math.max(0, Math.min(raw, maxIdx));
   }
 
   function applySnapAlignment(): void {
     const children = Array.from(track.children) as HTMLElement[];
+    const snapAlign =
+      config.alignment === "center" ? "center" : config.alignment === "right" ? "end" : "";
+    for (const child of children) child.style.scrollSnapAlign = snapAlign;
+  }
 
-    if (!isFractionalView()) {
-      for (const child of children) child.style.scrollSnapAlign = "";
-      return;
-    }
-
-    if (state.loopModeActive) {
-      for (const child of children) child.style.scrollSnapAlign = "center";
-      return;
-    }
-
-    for (const child of children) child.style.scrollSnapAlign = "center";
+  function applyAlignmentAttribute(): void {
+    container.setAttribute("data-aero-alignment", config.alignment);
   }
 
   // ── Direction setup ──────────────────────────────────────────────────
@@ -308,6 +381,7 @@ export function createSlider(
     isLoopEnabled,
     isFractionalView,
     isVertical,
+    getAlignmentOffset,
     getScrollPos,
     setScrollPos,
     scrollToPos,
@@ -399,12 +473,7 @@ export function createSlider(
       const w = getSlideSize();
       if (w > 0) {
         const realStart = loop.getLoopRealStart();
-        let pos = realStart + state.currentIndex * w;
-        if (isFractionalView()) {
-          const vpSize = getViewportSize();
-          const slideVisual = w - config.gap;
-          pos = realStart + state.currentIndex * w + slideVisual / 2 - vpSize / 2;
-        }
+        const pos = realStart + state.currentIndex * w - getAlignmentOffset();
         setScrollPos(pos);
       }
     } else {
@@ -438,7 +507,7 @@ export function createSlider(
   }
 
   // ── Media Query / Resize Monitor ───────────────────────────────────────
-  const LAYOUT_VARS = ["--slides-per-view", "--slide-gap", "--slide-aspect"];
+  const LAYOUT_VARS = ["--slides-per-view", "--slide-gap", "--slide-aspect", "--aero-layout-width"];
 
   function setupResizeMonitor(): void {
     teardownResizeMonitor?.();
@@ -493,12 +562,7 @@ export function createSlider(
 
       if (delta === 0) {
         const realStart = loop.getLoopRealStart();
-        let targetScroll = realStart + target * w;
-        if (isFractionalView()) {
-          const vpSize = getViewportSize();
-          const slideVisual = w - config.gap;
-          targetScroll = realStart + target * w + slideVisual / 2 - vpSize / 2;
-        }
+        const targetScroll = realStart + target * w - getAlignmentOffset();
         scrollToPos(targetScroll, "smooth");
         loop.scheduleTeleport();
         return;
@@ -535,7 +599,8 @@ export function createSlider(
       prevConfig.slidesPerView !== config.slidesPerView ||
       prevConfig.loop !== config.loop ||
       prevConfig.maxDots !== config.maxDots ||
-      prevConfig.perMove !== config.perMove
+      prevConfig.perMove !== config.perMove ||
+      prevConfig.alignment !== config.alignment
     ) {
       pagination.clear();
       pagination.build();
@@ -560,6 +625,7 @@ export function createSlider(
       loop.setupLoopTrack(state.currentIndex);
     }
 
+    applyAlignmentAttribute();
     applySnapAlignment();
 
     if (!state.loopModeActive) {
@@ -599,6 +665,7 @@ export function createSlider(
       loop.setupLoopTrack(state.currentIndex);
     }
 
+    applyAlignmentAttribute();
     applySnapAlignment();
 
     if (!state.loopModeActive) {
@@ -717,6 +784,7 @@ export function createSlider(
   applyDirection();
   applyCssCustomProperties();
   recalcSlideMetrics();
+  applyAlignmentAttribute();
   applySnapAlignment();
 
   track.addEventListener("scroll", onScroll, { passive: true });

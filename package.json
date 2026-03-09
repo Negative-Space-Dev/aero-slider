@@ -1,6 +1,6 @@
 {
   "name": "aero-slider",
-  "version": "1.0.0-beta.5",
+  "version": "1.0.0-beta.6",
   "description": "A lightweight, CSS-first slider library for the modern web",
   "type": "module",
   "workspaces": [

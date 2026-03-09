@@ -4,6 +4,7 @@
 html {
   touch-action: manipulation;
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -67,7 +68,6 @@ body {
 
 /* Thumbnail strip (doc site example only) */
 .aero-slider--thumbnails .aero-slider__track > * {
-  scroll-snap-align: center;
   opacity: 0.6;
   transition: opacity 0.2s;
 }
@@ -100,7 +100,64 @@ body {
   --slides-per-view: 1;
   --slide-gap: 8px;
 }
+
+/* Docs-only breakout demo utilities */
+:root {
+  --docs-page-gutter: 1rem;
+}
+
 @media (min-width: 640px) {
+  :root {
+    --docs-page-gutter: 1.5rem;
+  }
+}
+
+.docs-breakout-clip {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+}
+
+.aero-slider--viewport-breakout-demo {
+  --slides-per-view: 1.12;
+  --slide-gap: 12px;
+  --aero-edge-inset: var(--docs-page-gutter);
+  --aero-layout-width: min(72rem, calc(100vw - var(--docs-page-gutter) * 2));
+}
+
+.aero-slider--viewport-breakout-demo .aero-slider__pagination {
+  position: relative;
+  z-index: 1;
+}
+
+.docs-breakout-guide {
+  position: relative;
+}
+
+.docs-breakout-guide::before,
+.docs-breakout-guide::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  border-left: 1px dashed rgb(148 163 184 / 0.7);
+  pointer-events: none;
+}
+
+.docs-breakout-guide::before {
+  left: 0;
+}
+
+.docs-breakout-guide::after {
+  right: 0;
+}
+
+@media (min-width: 640px) {
+  .aero-slider--viewport-breakout-demo {
+    --slides-per-view: 1.35;
+    --slide-gap: 18px;
+  }
+
   .aero-slider--responsive {
     --slides-per-view: 2;
     --slide-gap: 12px;

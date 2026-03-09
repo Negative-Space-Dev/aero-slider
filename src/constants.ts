@@ -5,7 +5,7 @@ export const DEFAULTS: Required<SliderConfig> = {
   autoplay: false,
   autoplayInterval: 5000,
   draggable: true,
-  centered: true,
+  alignment: "center",
   maxDots: 0, // 0 means unlimited
   noDrag: "",
   perMove: 0,
