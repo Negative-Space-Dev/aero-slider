@@ -79,6 +79,10 @@ export interface SliderState {
   /** Suppress slideChange emit on scroll settle (goTo/drag already emitted). */
   suppressSettleEmit: boolean;
   slideWidthPx: number;
+  /** Cached track viewport size; invalidated on layout recalc. */
+  viewportSizePx: number;
+  /** Cached track scroll size; invalidated on layout recalc. */
+  trackScrollSizePx: number;
 }
 
 export interface SliderContext {
@@ -98,6 +102,9 @@ export interface SliderContext {
   isFractionalView(): boolean;
   isVertical(): boolean;
   getAlignmentOffset(): number;
+  getLayoutSize(): number;
+  getViewportSize(): number;
+  shouldUseJsSnap(): boolean;
   getScrollPos(): number;
   setScrollPos(pos: number): void;
   scrollToPos(pos: number, behavior?: ScrollBehavior): void;

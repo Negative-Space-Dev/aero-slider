@@ -37,6 +37,7 @@ export function createLoopController(ctx: SliderContext): LoopController {
 
   function instantScrollTo(pos: number): void {
     state.isProgrammaticScroll = true;
+    state.suppressSettleEmit = true;
     track.style.scrollBehavior = "auto";
     track.style.scrollSnapType = "none";
     ctx.setScrollPos(pos);
@@ -45,7 +46,9 @@ export function createLoopController(ctx: SliderContext): LoopController {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         track.style.scrollBehavior = "";
-        track.style.scrollSnapType = "";
+        if (!ctx.shouldUseJsSnap()) {
+          track.style.scrollSnapType = "";
+        }
         state.isProgrammaticScroll = false;
       });
     });
@@ -53,6 +56,7 @@ export function createLoopController(ctx: SliderContext): LoopController {
 
   function teleportIfNeeded(): void {
     if (!state.loopModeActive) return;
+    if (state.isProgrammaticScroll || state.isDragging) return;
     const w = state.slideWidthPx;
     if (w === 0) return;
 
@@ -144,6 +148,7 @@ export function createLoopController(ctx: SliderContext): LoopController {
       const pos = realStart + idx * w - ctx.getAlignmentOffset();
 
       state.isProgrammaticScroll = true;
+      state.suppressSettleEmit = true;
       track.style.scrollBehavior = "auto";
       track.style.scrollSnapType = "none";
       ctx.setScrollPos(pos);
@@ -152,7 +157,9 @@ export function createLoopController(ctx: SliderContext): LoopController {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           track.style.scrollBehavior = "";
-          track.style.scrollSnapType = "";
+          if (!ctx.shouldUseJsSnap()) {
+            track.style.scrollSnapType = "";
+          }
           state.isProgrammaticScroll = false;
         });
       });

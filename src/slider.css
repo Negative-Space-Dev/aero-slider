@@ -10,7 +10,6 @@
   --slides-per-view: 1;
   --slide-gap: 0px;
   --aero-layout-width: 100%;
-  --aero-edge-inset: 0px;
 }
 
 /* Loop spacer: reserves space for prepended clones so the active slide
@@ -103,12 +102,23 @@
   display: none;
 }
 
+/* Breakout: the track scrolls full-bleed, but slides size off --aero-layout-width
+   (the content column). The leading/trailing spacers reserve the scroll range, and
+   scroll-padding insets the snap area, so the active slide aligns to the centered
+   content column rather than the screen edge. Both derive from the track's own
+   width (100% = content box, scrollbar-correct) and the layout width. */
+.aero-slider--breakout.aero-slider--ready .aero-slider__track,
+.aero-slider--breakout:not([data-aero-defer-visibility]) .aero-slider__track {
+  scroll-padding-inline: max(0px, calc((100% - var(--aero-layout-width, 100%)) / 2));
+}
+
 .aero-slider--breakout.aero-slider--ready .aero-slider__track::before,
 .aero-slider--breakout.aero-slider--ready .aero-slider__track::after,
 .aero-slider--breakout:not([data-aero-defer-visibility]) .aero-slider__track::before,
 .aero-slider--breakout:not([data-aero-defer-visibility]) .aero-slider__track::after {
   content: "";
-  flex: 0 0 max(0px, calc(var(--aero-edge-inset, 0px) - var(--slide-gap, 0px)));
+  flex: 0 0
+    max(0px, calc((100% - var(--aero-layout-width, 100%)) / 2 - var(--slide-gap, 0px)));
   scroll-snap-align: none;
   pointer-events: none;
 }
@@ -119,6 +129,18 @@
 .aero-slider__track:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 2px;
+}
+
+.aero-slider[data-aero-alignment="center"]:not([data-aero-js-snap]) .aero-slider__track > * {
+  scroll-snap-align: center;
+}
+
+.aero-slider[data-aero-alignment="right"]:not([data-aero-js-snap]) .aero-slider__track > * {
+  scroll-snap-align: end;
+}
+
+.aero-slider[data-aero-js-snap] .aero-slider__track > * {
+  scroll-snap-align: none;
 }
 
 /* === Slides === */

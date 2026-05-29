@@ -104,6 +104,8 @@ body {
 /* Docs-only breakout demo utilities */
 :root {
   --docs-page-gutter: 1rem;
+  /* The readable content column the breakout slider aligns its active card to. */
+  --breakout-column: calc(min(72rem, 100vw) - var(--docs-page-gutter) * 2);
 }
 
 @media (min-width: 640px) {
@@ -112,6 +114,7 @@ body {
   }
 }
 
+/* Full-bleed wrapper lets slides reach the screen edges. */
 .docs-breakout-clip {
   width: 100vw;
   margin-left: calc(50% - 50vw);
@@ -120,8 +123,7 @@ body {
 .aero-slider--viewport-breakout-demo {
   --slides-per-view: 1.12;
   --slide-gap: 12px;
-  --aero-edge-inset: var(--docs-page-gutter);
-  --aero-layout-width: min(72rem, calc(100vw - var(--docs-page-gutter) * 2));
+  --aero-layout-width: var(--breakout-column);
 }
 
 .aero-slider--viewport-breakout-demo .aero-slider__pagination {
@@ -129,12 +131,22 @@ body {
   z-index: 1;
 }
 
+/* Guide bleeds full width and centers a column marker on the same reference the
+   slider uses, so the dashed lines land exactly where the active card aligns. */
 .docs-breakout-guide {
-  position: relative;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  display: flex;
+  justify-content: center;
 }
 
-.docs-breakout-guide::before,
-.docs-breakout-guide::after {
+.docs-breakout-guide-column {
+  position: relative;
+  width: var(--breakout-column);
+}
+
+.docs-breakout-guide-column::before,
+.docs-breakout-guide-column::after {
   content: "";
   position: absolute;
   top: 0;
@@ -144,11 +156,11 @@ body {
   pointer-events: none;
 }
 
-.docs-breakout-guide::before {
+.docs-breakout-guide-column::before {
   left: 0;
 }
 
-.docs-breakout-guide::after {
+.docs-breakout-guide-column::after {
   right: 0;
 }
 

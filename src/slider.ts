@@ -22,6 +22,7 @@ import { monitorCssVariables } from "./mediaQueryMonitor.ts";
 import { createLoopController } from "./loop.ts";
 import { createDragController } from "./drag.ts";
 import { createNavigation, createPagination, createKeyboard, createAutoplay } from "./features.ts";
+import { measureSlideStride, resolveCssLength, releaseLayoutProbe } from "./layoutMetrics.ts";
 
 export function createSlider(
   container: HTMLElement,
@@ -41,29 +42,13 @@ export function createSlider(
 
   slides.forEach((slide, i) => slide.setAttribute(SLIDE_INDEX_ATTR, String(i)));
 
-  function parseCSSPixelValue(value: string, fallback: number): number {
-    if (!value || value === "0" || value === "0px") {
-      return fallback;
-    }
-    const temp = document.createElement("div");
-    temp.style.position = "absolute";
-    temp.style.visibility = "hidden";
-    temp.style.width = value;
-    container.appendChild(temp);
-    const pixels = temp.offsetWidth;
-    container.removeChild(temp);
-    return pixels || fallback;
-  }
+  let rtlMaxScrollPx = -1;
 
-  function readCssLayoutConfig(): { slidesPerView: number; gap: number; aspectRatio: string } {
-    const s = getComputedStyle(container);
-    const slidesPerView =
-      parseFloat(s.getPropertyValue("--slides-per-view")?.trim() || "") ||
-      LAYOUT_DEFAULTS.slidesPerView;
-    const gapStr = s.getPropertyValue("--slide-gap")?.trim() || "0px";
-    const gap = parseCSSPixelValue(gapStr, LAYOUT_DEFAULTS.gap);
-    const aspectRatio = s.getPropertyValue("--slide-aspect")?.trim() || LAYOUT_DEFAULTS.aspectRatio;
-    return { slidesPerView, gap, aspectRatio };
+  function invalidateLayoutCache(): void {
+    rtlMaxScrollPx = -1;
+    state.slideWidthPx = 0;
+    state.viewportSizePx = 0;
+    state.trackScrollSizePx = 0;
   }
 
   // ── State ────────────────────────────────────────────────────────────
@@ -80,6 +65,8 @@ export function createSlider(
     isProgrammaticScroll: false,
     suppressSettleEmit: false,
     slideWidthPx: 0,
+    viewportSizePx: 0,
+    trackScrollSizePx: 0,
   };
 
   // ── Timers ───────────────────────────────────────────────────────────
@@ -88,6 +75,7 @@ export function createSlider(
   let teardownResizeMonitor: (() => void) | null = null;
   let resizeSnapTimer: ReturnType<typeof setTimeout> | null = null;
   let resizeRafId: number | null = null;
+  let lastWindowWidth = typeof window !== "undefined" ? window.innerWidth : 0;
 
   // ── Core Helpers ─────────────────────────────────────────────────────
   function emit<E extends SliderEvent>(event: E, data: SliderEventData<E>): void {
@@ -135,7 +123,9 @@ export function createSlider(
   }
 
   function getRtlMaxScroll(): number {
-    return Math.max(0, track.scrollWidth - track.clientWidth);
+    if (rtlMaxScrollPx >= 0) return rtlMaxScrollPx;
+    rtlMaxScrollPx = Math.max(0, getTrackScrollSize() - getViewportSize());
+    return rtlMaxScrollPx;
   }
 
   function getMaxIndex(): number {
@@ -147,6 +137,11 @@ export function createSlider(
 
   function isFractionalView(): boolean {
     return config.slidesPerView % 1 !== 0;
+  }
+
+  /** Center + multi-slide view: native scroll-snap fights JS alignment and causes settle jumps. */
+  function shouldUseJsSnap(): boolean {
+    return config.alignment === "center" && config.slidesPerView > 1;
   }
 
   function isLoopEnabled(): boolean {
@@ -222,10 +217,12 @@ export function createSlider(
   }
 
   function getViewportSize(): number {
+    if (state.viewportSizePx > 0) return state.viewportSizePx;
     return isVertical() ? track.clientHeight : track.clientWidth;
   }
 
   function getTrackScrollSize(): number {
+    if (state.trackScrollSizePx > 0) return state.trackScrollSizePx;
     return isVertical() ? track.scrollHeight : track.scrollWidth;
   }
 
@@ -253,20 +250,40 @@ export function createSlider(
 
   function getSlideSize(): number {
     if (state.slideWidthPx > 0) return state.slideWidthPx;
-    const first = slides[0];
-    if (!first) return 0;
-    const rect = first.getBoundingClientRect();
-    state.slideWidthPx = (isVertical() ? rect.height : rect.width) + config.gap;
-    return state.slideWidthPx;
+    return 0;
   }
 
   function recalcSlideMetrics(): void {
-    state.slideWidthPx = 0;
-    getSlideSize();
-  }
+    invalidateLayoutCache();
 
-  function applyCssCustomProperties(): void {
-    Object.assign(config, readCssLayoutConfig());
+    const styles = getComputedStyle(container);
+    const slidesPerView =
+      parseFloat(styles.getPropertyValue("--slides-per-view")?.trim() || "") ||
+      LAYOUT_DEFAULTS.slidesPerView;
+    const gapStr = styles.getPropertyValue("--slide-gap")?.trim() || "0px";
+    const aspectRatio = styles.getPropertyValue("--slide-aspect")?.trim() || LAYOUT_DEFAULTS.aspectRatio;
+
+    if (isVertical()) {
+      state.viewportSizePx = track.clientHeight;
+      state.trackScrollSizePx = track.scrollHeight;
+    } else {
+      state.viewportSizePx = track.clientWidth;
+      state.trackScrollSizePx = track.scrollWidth;
+    }
+
+    const gap = resolveCssLength(gapStr, container, state.viewportSizePx || LAYOUT_DEFAULTS.gap);
+    config.slidesPerView = slidesPerView;
+    config.gap = gap;
+    config.aspectRatio = aspectRatio;
+
+    state.slideWidthPx = measureSlideStride(
+      container,
+      styles,
+      state.viewportSizePx,
+      slidesPerView,
+      gap,
+      !isVertical()
+    );
   }
 
   // ── Alignment helpers ────────────────────────────────────────────────
@@ -283,6 +300,65 @@ export function createSlider(
 
     if (maxScroll <= 0) return 0;
     return Math.max(0, Math.min(target, maxScroll));
+  }
+
+  function getScrollPosForLoopIndex(index: number): number {
+    const w = getSlideSize();
+    if (w === 0) return 0;
+    return loop.getLoopRealStart() + index * w - getAlignmentOffset();
+  }
+
+  const JS_SNAP_TOLERANCE_PX = 5;
+
+  function snapToNearestIndex(behavior: ScrollBehavior = "smooth"): void {
+    const w = getSlideSize();
+    if (w === 0) return;
+
+    if (state.loopModeActive) {
+      loop.teleportIfNeeded();
+    }
+
+    const scrollPos = getScrollPos();
+    const lockedTarget = state.loopModeActive
+      ? getScrollPosForLoopIndex(state.currentIndex)
+      : getScrollPosForIndex(state.currentIndex);
+
+    if (Math.abs(scrollPos - lockedTarget) <= JS_SNAP_TOLERANCE_PX) {
+      if (Math.abs(scrollPos - lockedTarget) > 0.5) {
+        state.isProgrammaticScroll = true;
+        state.suppressSettleEmit = true;
+        scrollToPos(lockedTarget, "auto");
+      } else if (state.loopModeActive) {
+        loop.teleportIfNeeded();
+      }
+      syncIndex();
+      return;
+    }
+
+    const targetIdx = normalizeIndex(
+      state.loopModeActive
+        ? loop.getLoopIndexFromScroll()
+        : getIndexFromScrollPos(scrollPos)
+    );
+
+    if (state.loopModeActive) {
+      goTo(targetIdx);
+      return;
+    }
+
+    const targetScroll = getScrollPosForIndex(targetIdx);
+
+    if (targetIdx !== state.currentIndex) {
+      state.currentIndex = targetIdx;
+      emit("slideChange", { index: state.currentIndex });
+      pagination.refresh();
+      navigation.refresh();
+      updateVisibility();
+    }
+
+    state.isProgrammaticScroll = true;
+    state.suppressSettleEmit = true;
+    scrollToPos(targetScroll, behavior);
   }
 
   function getIndexFromScrollPos(scrollPos: number): number {
@@ -303,10 +379,15 @@ export function createSlider(
   }
 
   function applySnapAlignment(): void {
-    const children = Array.from(track.children) as HTMLElement[];
-    const snapAlign =
-      config.alignment === "center" ? "center" : config.alignment === "right" ? "end" : "";
-    for (const child of children) child.style.scrollSnapAlign = snapAlign;
+    if (shouldUseJsSnap()) {
+      container.setAttribute("data-aero-js-snap", "");
+      track.style.scrollSnapType = "none";
+      return;
+    }
+    container.removeAttribute("data-aero-js-snap");
+    if (wheelTimer === null) {
+      track.style.scrollSnapType = "";
+    }
   }
 
   function applyAlignmentAttribute(): void {
@@ -382,6 +463,9 @@ export function createSlider(
     isFractionalView,
     isVertical,
     getAlignmentOffset,
+    getLayoutSize,
+    getViewportSize,
+    shouldUseJsSnap,
     getScrollPos,
     setScrollPos,
     scrollToPos,
@@ -420,20 +504,27 @@ export function createSlider(
   function onScrollSettle(): void {
     scrollEndTimer = null;
     state.isProgrammaticScroll = false;
-    if (wheelTimer === null) {
+    if (!shouldUseJsSnap() && wheelTimer === null) {
       track.style.scrollSnapType = "";
     }
     if (state.suppressSettleEmit) {
       state.suppressSettleEmit = false;
+      if (state.loopModeActive) {
+        loop.teleportIfNeeded();
+      }
       pagination.refresh();
       navigation.refresh();
+      syncIndex();
       return;
+    }
+    if (state.loopModeActive) {
+      loop.teleportIfNeeded();
     }
     syncIndex();
   }
 
   function onScroll(): void {
-    if (state.loopModeActive) {
+    if (state.loopModeActive && !state.isProgrammaticScroll && !state.isDragging) {
       loop.scheduleTeleport();
     }
     if (scrollEndTimer !== null) clearTimeout(scrollEndTimer);
@@ -457,7 +548,11 @@ export function createSlider(
     if (wheelTimer !== null) clearTimeout(wheelTimer);
     wheelTimer = setTimeout(() => {
       wheelTimer = null;
-      track.style.scrollSnapType = "";
+      if (shouldUseJsSnap()) {
+        snapToNearestIndex("smooth");
+      } else {
+        track.style.scrollSnapType = "";
+      }
     }, WHEEL_IDLE_MS);
   }
 
@@ -483,6 +578,12 @@ export function createSlider(
 
   function onWindowResize(): void {
     if (state.isDestroyed) return;
+
+    // Slider layout is width-driven (slide widths and the vertical viewport's
+    // aspect-ratio both key off width). Ignore height-only changes so mobile
+    // URL-bar show/hide doesn't keep disabling scroll-snap during scrolling.
+    if (window.innerWidth === lastWindowWidth) return;
+    lastWindowWidth = window.innerWidth;
 
     if (resizeSnapTimer === null) {
       track.style.scrollSnapType = "none";
@@ -549,11 +650,10 @@ export function createSlider(
       navigation.refresh();
       updateVisibility();
     }
-    state.suppressSettleEmit = true;
 
     if (state.loopModeActive) {
       loop.cancelTeleport();
-      state.isProgrammaticScroll = true;
+      loop.teleportIfNeeded();
 
       const actualCurrent = loop.getLoopIndexFromScroll();
       const forward = (target - actualCurrent + slideCount) % slideCount;
@@ -561,35 +661,36 @@ export function createSlider(
       const delta = Math.abs(backward) < forward ? backward : forward;
 
       if (delta === 0) {
-        const realStart = loop.getLoopRealStart();
-        const targetScroll = realStart + target * w - getAlignmentOffset();
-        scrollToPos(targetScroll, "smooth");
-        loop.scheduleTeleport();
+        const targetScroll = getScrollPosForLoopIndex(target);
+        const diff = targetScroll - getScrollPos();
+        if (Math.abs(diff) <= JS_SNAP_TOLERANCE_PX) return;
+        state.suppressSettleEmit = true;
+        state.isProgrammaticScroll = true;
+        scrollToPos(getScrollPos() + diff, "smooth");
         return;
       }
 
+      state.suppressSettleEmit = true;
+      state.isProgrammaticScroll = true;
       scrollToPos(getScrollPos() + delta * w, "smooth");
-      loop.scheduleTeleport();
       return;
     }
 
+    state.suppressSettleEmit = true;
     state.isProgrammaticScroll = true;
     scrollToPos(getScrollPosForIndex(target), "smooth");
   }
 
   function update(nextConfig?: SliderConfig): void {
-    const prevConfig = config;
-    config = {
-      ...config,
-      ...readCssLayoutConfig(),
-      ...(nextConfig ?? {}),
-    };
+    const prevConfig = { ...config };
+    if (nextConfig) {
+      Object.assign(config, nextConfig);
+    }
 
     if (prevConfig.direction !== config.direction) {
       applyDirection();
     }
 
-    applyCssCustomProperties();
     recalcSlideMetrics();
     drag.setEnabled(config.draggable);
     keyboard.setEnabled(true);
@@ -658,7 +759,6 @@ export function createSlider(
       slide.classList.add("aero-slider__slide");
     });
 
-    applyCssCustomProperties();
     recalcSlideMetrics();
 
     if (isLoopEnabled()) {
@@ -768,6 +868,8 @@ export function createSlider(
       "aero-slider--ready"
     );
     container.removeAttribute("data-aero-defer-visibility");
+    container.removeAttribute("data-aero-js-snap");
+    releaseLayoutProbe(container);
     if (host.aeroSlider === api) {
       delete host.aeroSlider;
     }
@@ -775,14 +877,12 @@ export function createSlider(
 
   // ── Initialize ───────────────────────────────────────────────────────
   container.removeAttribute("data-aero-defer-visibility");
-  applyCssCustomProperties();
   container.classList.add("aero-slider");
   container.setAttribute("aria-roledescription", "carousel");
   track.classList.add("aero-slider__track");
   for (const slide of slides) slide.classList.add("aero-slider__slide");
 
   applyDirection();
-  applyCssCustomProperties();
   recalcSlideMetrics();
   applyAlignmentAttribute();
   applySnapAlignment();

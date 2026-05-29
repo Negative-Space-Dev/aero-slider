@@ -612,9 +612,26 @@ if (isTouchDevice && draggableLabel) {
 requestAnimationFrame(() => {
   createSlider(getRequiredElementById<HTMLElement>("multi"));
   const breakoutSlider = createSlider(getRequiredElementById<HTMLElement>("breakout-bleed"), {
-    alignment: "center",
+    alignment: "left",
   });
-  breakoutSlider.goTo(1);
+
+  const breakoutAlign = document.getElementById("breakout-align");
+  if (breakoutAlign) {
+    const alignButtons = breakoutAlign.querySelectorAll<HTMLButtonElement>("button[data-align]");
+    const setActiveAlign = (value: string) => {
+      for (const btn of alignButtons) {
+        btn.toggleAttribute("data-active", btn.dataset.align === value);
+      }
+    };
+    setActiveAlign("left");
+    breakoutAlign.addEventListener("click", (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-align]");
+      const value = btn?.dataset.align as SliderConfig["alignment"] | undefined;
+      if (!value) return;
+      breakoutSlider.update({ alignment: value });
+      setActiveAlign(value);
+    });
+  }
   createSlider(getRequiredElementById<HTMLElement>("alignment-left"), {
     alignment: "left",
     loop: true,

@@ -127,14 +127,13 @@ export function createPagination(
     templateDot.style.transform = "";
     templateDot.style.opacity = "";
 
-    // Force reflow before measuring
-    void templateDot.offsetWidth;
-
-    // Measure dot size using computed style (more reliable for hidden elements)
+    // Measure dot size from computed style; avoid forced reflow unless width is unresolved.
     const computedStyle = getComputedStyle(templateDot);
-    dotSize = parseFloat(computedStyle.width) || 10;
+    const computedWidth = parseFloat(computedStyle.width);
+    dotSize =
+      computedWidth > 0 ? computedWidth : templateDot.getBoundingClientRect().width || 10;
     const containerStyle = getComputedStyle(container);
-    dotGap = parseInt(containerStyle.gap) || 8;
+    dotGap = parseInt(containerStyle.gap, 10) || 8;
 
     container.setAttribute("role", "tablist");
     container.addEventListener("click", onPaginationClick);
