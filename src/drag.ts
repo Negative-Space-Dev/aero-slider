@@ -122,22 +122,14 @@ export function createDragController(
 
           const realStart = loop.getLoopRealStart();
           const scrollPos = ctx.getScrollPos();
-          const slideVisual = w - ctx.config.gap;
           const alignmentOffset = ctx.getAlignmentOffset();
           let rawIdx: number;
           let targetScroll: number;
 
-          if (ctx.shouldUseJsSnap()) {
-            const projectedCenter =
-              scrollPos + velocity * MOMENTUM_FACTOR + ctx.getViewportSize() / 2;
-            rawIdx = Math.round((projectedCenter - realStart - slideVisual / 2) / w);
-            targetScroll = realStart + rawIdx * w - alignmentOffset;
-          } else {
-            const offset = scrollPos - realStart;
-            const projected = offset + velocity * MOMENTUM_FACTOR + alignmentOffset;
-            rawIdx = Math.round(projected / w);
-            targetScroll = realStart + rawIdx * w - alignmentOffset;
-          }
+          const offset = scrollPos - realStart;
+          const projected = offset + velocity * MOMENTUM_FACTOR + alignmentOffset;
+          rawIdx = Math.round(projected / w);
+          targetScroll = realStart + rawIdx * w - alignmentOffset;
 
           state.isProgrammaticScroll = true;
           state.suppressSettleEmit = true;

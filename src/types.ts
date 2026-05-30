@@ -104,7 +104,6 @@ export interface SliderContext {
   getAlignmentOffset(): number;
   getLayoutSize(): number;
   getViewportSize(): number;
-  shouldUseJsSnap(): boolean;
   getScrollPos(): number;
   setScrollPos(pos: number): void;
   scrollToPos(pos: number, behavior?: ScrollBehavior): void;

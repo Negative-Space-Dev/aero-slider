@@ -139,11 +139,6 @@ export function createSlider(
     return config.slidesPerView % 1 !== 0;
   }
 
-  /** Center + multi-slide view: native scroll-snap fights JS alignment and causes settle jumps. */
-  function shouldUseJsSnap(): boolean {
-    return config.alignment === "center" && config.slidesPerView > 1;
-  }
-
   function isLoopEnabled(): boolean {
     return config.loop && getMaxIndex() > 0;
   }
@@ -308,58 +303,7 @@ export function createSlider(
     return loop.getLoopRealStart() + index * w - getAlignmentOffset();
   }
 
-  const JS_SNAP_TOLERANCE_PX = 5;
-
-  function snapToNearestIndex(behavior: ScrollBehavior = "smooth"): void {
-    const w = getSlideSize();
-    if (w === 0) return;
-
-    if (state.loopModeActive) {
-      loop.teleportIfNeeded();
-    }
-
-    const scrollPos = getScrollPos();
-    const lockedTarget = state.loopModeActive
-      ? getScrollPosForLoopIndex(state.currentIndex)
-      : getScrollPosForIndex(state.currentIndex);
-
-    if (Math.abs(scrollPos - lockedTarget) <= JS_SNAP_TOLERANCE_PX) {
-      if (Math.abs(scrollPos - lockedTarget) > 0.5) {
-        state.isProgrammaticScroll = true;
-        state.suppressSettleEmit = true;
-        scrollToPos(lockedTarget, "auto");
-      } else if (state.loopModeActive) {
-        loop.teleportIfNeeded();
-      }
-      syncIndex();
-      return;
-    }
-
-    const targetIdx = normalizeIndex(
-      state.loopModeActive
-        ? loop.getLoopIndexFromScroll()
-        : getIndexFromScrollPos(scrollPos)
-    );
-
-    if (state.loopModeActive) {
-      goTo(targetIdx);
-      return;
-    }
-
-    const targetScroll = getScrollPosForIndex(targetIdx);
-
-    if (targetIdx !== state.currentIndex) {
-      state.currentIndex = targetIdx;
-      emit("slideChange", { index: state.currentIndex });
-      pagination.refresh();
-      navigation.refresh();
-      updateVisibility();
-    }
-
-    state.isProgrammaticScroll = true;
-    state.suppressSettleEmit = true;
-    scrollToPos(targetScroll, behavior);
-  }
+  const SCROLL_TOLERANCE_PX = 5;
 
   function getIndexFromScrollPos(scrollPos: number): number {
     const w = getSlideSize();
@@ -379,12 +323,6 @@ export function createSlider(
   }
 
   function applySnapAlignment(): void {
-    if (shouldUseJsSnap()) {
-      container.setAttribute("data-aero-js-snap", "");
-      track.style.scrollSnapType = "none";
-      return;
-    }
-    container.removeAttribute("data-aero-js-snap");
     if (wheelTimer === null) {
       track.style.scrollSnapType = "";
     }
@@ -465,7 +403,6 @@ export function createSlider(
     getAlignmentOffset,
     getLayoutSize,
     getViewportSize,
-    shouldUseJsSnap,
     getScrollPos,
     setScrollPos,
     scrollToPos,
@@ -504,7 +441,7 @@ export function createSlider(
   function onScrollSettle(): void {
     scrollEndTimer = null;
     state.isProgrammaticScroll = false;
-    if (!shouldUseJsSnap() && wheelTimer === null) {
+    if (wheelTimer === null) {
       track.style.scrollSnapType = "";
     }
     if (state.suppressSettleEmit) {
@@ -548,11 +485,7 @@ export function createSlider(
     if (wheelTimer !== null) clearTimeout(wheelTimer);
     wheelTimer = setTimeout(() => {
       wheelTimer = null;
-      if (shouldUseJsSnap()) {
-        snapToNearestIndex("smooth");
-      } else {
-        track.style.scrollSnapType = "";
-      }
+      track.style.scrollSnapType = "";
     }, WHEEL_IDLE_MS);
   }
 
@@ -603,7 +536,7 @@ export function createSlider(
       if (state.isDestroyed) return;
       repositionForCurrentIndex();
       state.isProgrammaticScroll = false;
-      track.style.scrollSnapType = "";
+      applySnapAlignment();
     }, RESIZE_DEBOUNCE_MS);
   }
 
@@ -663,7 +596,7 @@ export function createSlider(
       if (delta === 0) {
         const targetScroll = getScrollPosForLoopIndex(target);
         const diff = targetScroll - getScrollPos();
-        if (Math.abs(diff) <= JS_SNAP_TOLERANCE_PX) return;
+        if (Math.abs(diff) <= SCROLL_TOLERANCE_PX) return;
         state.suppressSettleEmit = true;
         state.isProgrammaticScroll = true;
         scrollToPos(getScrollPos() + diff, "smooth");
@@ -868,7 +801,6 @@ export function createSlider(
       "aero-slider--ready"
     );
     container.removeAttribute("data-aero-defer-visibility");
-    container.removeAttribute("data-aero-js-snap");
     releaseLayoutProbe(container);
     if (host.aeroSlider === api) {
       delete host.aeroSlider;

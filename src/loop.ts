@@ -46,9 +46,7 @@ export function createLoopController(ctx: SliderContext): LoopController {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         track.style.scrollBehavior = "";
-        if (!ctx.shouldUseJsSnap()) {
-          track.style.scrollSnapType = "";
-        }
+        track.style.scrollSnapType = "";
         state.isProgrammaticScroll = false;
       });
     });
@@ -157,9 +155,7 @@ export function createLoopController(ctx: SliderContext): LoopController {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           track.style.scrollBehavior = "";
-          if (!ctx.shouldUseJsSnap()) {
-            track.style.scrollSnapType = "";
-          }
+          track.style.scrollSnapType = "";
           state.isProgrammaticScroll = false;
         });
       });

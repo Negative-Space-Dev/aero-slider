@@ -131,16 +131,12 @@
   outline-offset: 2px;
 }
 
-.aero-slider[data-aero-alignment="center"]:not([data-aero-js-snap]) .aero-slider__track > * {
+.aero-slider[data-aero-alignment="center"] .aero-slider__track > * {
   scroll-snap-align: center;
 }
 
-.aero-slider[data-aero-alignment="right"]:not([data-aero-js-snap]) .aero-slider__track > * {
+.aero-slider[data-aero-alignment="right"] .aero-slider__track > * {
   scroll-snap-align: end;
-}
-
-.aero-slider[data-aero-js-snap] .aero-slider__track > * {
-  scroll-snap-align: none;
 }
 
 /* === Slides === */
