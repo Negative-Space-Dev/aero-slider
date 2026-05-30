@@ -131,7 +131,7 @@ const DEFAULTS = {
   slidesPerView: "0",
   gap: "10",
   autoplayInterval: "4000",
-  maxDots: "10",
+  maxDots: "9",
   alignment: "center",
   direction: "ltr",
   perMove: "1",
@@ -256,7 +256,7 @@ let syncTeardown: (() => void) | null = null;
 
 function readConfig(): SliderConfig & { thumbnails?: boolean; slideCount?: number } {
   const fd = new FormData(form);
-  const maxDotsVal = Number(fd.get("maxDots")) || 10;
+  const maxDotsVal = Number(fd.get("maxDots")) || 9;
   const alignment = (fd.get("alignment") as string) || "center";
   const direction = (fd.get("direction") as string) || "ltr";
   return {
