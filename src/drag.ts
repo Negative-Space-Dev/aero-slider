@@ -120,22 +120,15 @@ export function createDragController(
         if (state.loopModeActive) {
           loop.teleportIfNeeded();
 
-          const realStart = loop.getLoopRealStart();
-          const scrollPos = ctx.getScrollPos();
-          const alignmentOffset = ctx.getAlignmentOffset();
-          let rawIdx: number;
-          let targetScroll: number;
-
-          const offset = scrollPos - realStart;
-          const projected = offset + velocity * MOMENTUM_FACTOR + alignmentOffset;
-          rawIdx = Math.round(projected / w);
-          targetScroll = realStart + rawIdx * w - alignmentOffset;
+          const projected = ctx.getScrollPos() + velocity * MOMENTUM_FACTOR;
+          const rawIdx = ctx.getIndexFromScrollPos(projected);
+          const normalizedTarget = ctx.normalizeIndex(rawIdx);
+          const targetScroll = ctx.getScrollPosForLoopIndex(normalizedTarget);
 
           state.isProgrammaticScroll = true;
           state.suppressSettleEmit = true;
           ctx.scrollToPos(targetScroll, "smooth");
 
-          const normalizedTarget = ctx.normalizeIndex(rawIdx);
           if (normalizedTarget !== state.currentIndex) {
             state.currentIndex = normalizedTarget;
             ctx.emit("slideChange", { index: state.currentIndex });

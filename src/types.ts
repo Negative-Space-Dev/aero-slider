@@ -108,7 +108,9 @@ export interface SliderContext {
   setScrollPos(pos: number): void;
   scrollToPos(pos: number, behavior?: ScrollBehavior): void;
   getScrollPosForIndex(index: number): number;
+  getScrollPosForLoopIndex(index: number): number;
   getIndexFromScrollPos(scrollPos: number): number;
+  getLogicalIndexForChild(child: HTMLElement): number;
   refreshPagination(): void;
   refreshNavState(): void;
   applySnapAlignment(): void;

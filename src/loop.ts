@@ -91,11 +91,7 @@ export function createLoopController(ctx: SliderContext): LoopController {
   }
 
   function getLoopIndexFromScroll(): number {
-    const w = state.slideWidthPx;
-    if (w === 0) return state.currentIndex;
-    const offset = ctx.getScrollPos() - getLoopRealStart() + ctx.getAlignmentOffset();
-    const raw = Math.round(offset / w);
-    return ((raw % ctx.slideCount) + ctx.slideCount) % ctx.slideCount;
+    return ctx.getIndexFromScrollPos(ctx.getScrollPos());
   }
 
   function setupLoopTrack(anchorIndex: number): void {
@@ -137,13 +133,9 @@ export function createLoopController(ctx: SliderContext): LoopController {
       const idx = ctx.normalizeIndex(anchorIndex);
       state.currentIndex = idx;
 
-      const w = state.slideWidthPx;
-      if (w === 0) return;
+      if (state.slideWidthPx === 0) return;
 
-      // Calculate scroll position directly to avoid scrollIntoView's
-      // side effect of scrolling ancestor containers (including the page).
-      const realStart = getLoopRealStart();
-      const pos = realStart + idx * w - ctx.getAlignmentOffset();
+      const pos = ctx.getScrollPosForLoopIndex(idx);
 
       state.isProgrammaticScroll = true;
       state.suppressSettleEmit = true;

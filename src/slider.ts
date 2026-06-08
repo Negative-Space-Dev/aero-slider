@@ -23,6 +23,7 @@ import { createLoopController } from "./loop.ts";
 import { createDragController } from "./drag.ts";
 import { createNavigation, createPagination, createKeyboard, createAutoplay } from "./features.ts";
 import { measureSlideStride, resolveCssLength, releaseLayoutProbe } from "./layoutMetrics.ts";
+import { measureSnapScrollPos } from "./snapMetrics.ts";
 
 export function createSlider(
   container: HTMLElement,
@@ -233,6 +234,9 @@ export function createSlider(
     const w = getSlideSize();
     if (w === 0 || config.alignment === "left") return 0;
 
+    const measured = measureScrollPosForIndex(0);
+    if (measured !== null) return -measured;
+
     const vpSize = getLayoutSize();
     const slideVisual = w - config.gap;
 
@@ -283,21 +287,77 @@ export function createSlider(
 
   // ── Alignment helpers ────────────────────────────────────────────────
 
+  function getLogicalIndexForChild(child: HTMLElement): number {
+    const idxAttr = child.getAttribute(SLIDE_INDEX_ATTR);
+    if (idxAttr !== null) return Number(idxAttr);
+    if (!child.hasAttribute(LOOP_CLONE_ATTR)) return -1;
+
+    const children = Array.from(track.children);
+    const domIndex = children.indexOf(child);
+    const firstOriginalIndex = children.findIndex((el) => el.hasAttribute(SLIDE_INDEX_ATTR));
+    if (firstOriginalIndex < 0) return -1;
+
+    if (domIndex < firstOriginalIndex) {
+      return domIndex % slideCount;
+    }
+
+    return (domIndex - firstOriginalIndex - slideCount) % slideCount;
+  }
+
+  function findSlideElementForIndex(index: number, nearScrollPos?: number): HTMLElement | null {
+    const normalized = normalizeIndex(index);
+    let best: HTMLElement | null = null;
+    let bestDist = Infinity;
+
+    for (const child of Array.from(track.children) as HTMLElement[]) {
+      const logical = getLogicalIndexForChild(child);
+      if (logical !== normalized) continue;
+
+      if (nearScrollPos === undefined) return child;
+
+      const pos = measureSnapScrollPos(child, track, config.alignment, isVertical());
+      const dist = Math.abs(pos - nearScrollPos);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = child;
+      }
+    }
+
+    return best;
+  }
+
+  function measureScrollPosForIndex(index: number, nearScrollPos?: number): number | null {
+    const slide = findSlideElementForIndex(
+      index,
+      nearScrollPos ?? (state.loopModeActive ? getScrollPos() : undefined)
+    );
+    if (!slide) return null;
+    return measureSnapScrollPos(slide, track, config.alignment, isVertical());
+  }
+
   function getScrollPosForIndex(index: number): number {
+    const measured = measureScrollPosForIndex(index);
+    if (measured !== null) {
+      if (state.loopModeActive) return measured;
+
+      const maxScroll = getTrackScrollSize() - getViewportSize();
+      if (maxScroll <= 0) return 0;
+      return Math.max(0, Math.min(measured, maxScroll));
+    }
+
     const w = getSlideSize();
     if (w === 0) return 0;
     const maxScroll = getTrackScrollSize() - getViewportSize();
     const target = index * w - getAlignmentOffset();
-
-    if (state.loopModeActive) {
-      return target;
-    }
 
     if (maxScroll <= 0) return 0;
     return Math.max(0, Math.min(target, maxScroll));
   }
 
   function getScrollPosForLoopIndex(index: number): number {
+    const measured = measureScrollPosForIndex(index, getScrollPos());
+    if (measured !== null) return measured;
+
     const w = getSlideSize();
     if (w === 0) return 0;
     return loop.getLoopRealStart() + index * w - getAlignmentOffset();
@@ -307,10 +367,9 @@ export function createSlider(
 
   function getIndexFromScrollPos(scrollPos: number): number {
     const w = getSlideSize();
-    if (w === 0) return state.currentIndex;
-
     const maxIdx = state.loopModeActive ? slideCount - 1 : getMaxIndex();
     const maxScroll = getTrackScrollSize() - getViewportSize();
+
     if (maxScroll <= 0) return 0;
 
     if (!state.loopModeActive) {
@@ -318,8 +377,34 @@ export function createSlider(
       if (scrollPos >= maxScroll - 1) return maxIdx;
     }
 
+    let bestIdx = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i <= maxIdx; i++) {
+      const pos = measureScrollPosForIndex(i, scrollPos);
+      if (pos === null) continue;
+      const dist = Math.abs(pos - scrollPos);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestIdx = i;
+      }
+    }
+
+    if (bestDist !== Infinity) return bestIdx;
+
+    if (w === 0) return state.currentIndex;
+
     const raw = Math.round((scrollPos + getAlignmentOffset()) / w);
     return Math.max(0, Math.min(raw, maxIdx));
+  }
+
+  function alignToSnapIndex(index: number): void {
+    const pos = state.loopModeActive
+      ? getScrollPosForLoopIndex(index)
+      : getScrollPosForIndex(index);
+    track.style.scrollBehavior = "auto";
+    track.style.scrollSnapType = "none";
+    setScrollPos(pos);
+    track.style.scrollBehavior = "";
   }
 
   function applySnapAlignment(): void {
@@ -407,7 +492,9 @@ export function createSlider(
     setScrollPos,
     scrollToPos,
     getScrollPosForIndex,
+    getScrollPosForLoopIndex,
     getIndexFromScrollPos,
+    getLogicalIndexForChild,
     refreshPagination: () => pagination.refresh(),
     refreshNavState: () => navigation.refresh(),
     applySnapAlignment,
@@ -441,23 +528,29 @@ export function createSlider(
   function onScrollSettle(): void {
     scrollEndTimer = null;
     state.isProgrammaticScroll = false;
-    if (wheelTimer === null) {
-      track.style.scrollSnapType = "";
-    }
-    if (state.suppressSettleEmit) {
+    const wasProgrammatic = state.suppressSettleEmit;
+
+    if (wasProgrammatic) {
       state.suppressSettleEmit = false;
+      alignToSnapIndex(state.currentIndex);
       if (state.loopModeActive) {
         loop.teleportIfNeeded();
       }
       pagination.refresh();
       navigation.refresh();
       syncIndex();
-      return;
     }
-    if (state.loopModeActive) {
-      loop.teleportIfNeeded();
+
+    if (wheelTimer === null) {
+      track.style.scrollSnapType = "";
     }
-    syncIndex();
+
+    if (!wasProgrammatic) {
+      if (state.loopModeActive) {
+        loop.teleportIfNeeded();
+      }
+      syncIndex();
+    }
   }
 
   function onScroll(): void {
@@ -498,12 +591,7 @@ export function createSlider(
   function repositionForCurrentIndex(): void {
     recalcSlideMetrics();
     if (state.loopModeActive) {
-      const w = getSlideSize();
-      if (w > 0) {
-        const realStart = loop.getLoopRealStart();
-        const pos = realStart + state.currentIndex * w - getAlignmentOffset();
-        setScrollPos(pos);
-      }
+      setScrollPos(getScrollPosForLoopIndex(state.currentIndex));
     } else {
       setScrollPos(getScrollPosForIndex(state.currentIndex));
     }
