@@ -1,5 +1,6 @@
 import type { SliderContext } from "./types.ts";
 import { LOOP_CLONE_ATTR, SLIDE_INDEX_ATTR } from "./constants.ts";
+import { measureSnapScrollPos } from "./snapMetrics.ts";
 
 const TELEPORT_DELAY_MS = 50;
 const CLONE_BUFFER = 2;
@@ -135,7 +136,17 @@ export function createLoopController(ctx: SliderContext): LoopController {
 
       if (state.slideWidthPx === 0) return;
 
-      const pos = ctx.getScrollPosForLoopIndex(idx);
+      // Anchor to the real (non-clone) slide rather than the snap target
+      // nearest the current scroll position. Mid-setup the scroll position is
+      // unreliable: Chrome re-snaps to the tracked snap target after clones
+      // are prepended, but Safari leaves the scroller at its old offset, so a
+      // nearest-match lookup resolves to a leading clone whose snap position
+      // is negative (clamped to 0) — leaving the active slide uncentered on
+      // initial load.
+      const realSlide = ctx.slides[idx];
+      const pos = realSlide
+        ? measureSnapScrollPos(realSlide, track, ctx.config.alignment, ctx.isVertical())
+        : ctx.getScrollPosForLoopIndex(idx);
 
       state.isProgrammaticScroll = true;
       state.suppressSettleEmit = true;

@@ -1,4 +1,13 @@
+import { readFileSync } from "node:fs";
 import { defineConfig } from "tsup";
+
+const pkg = JSON.parse(readFileSync("package.json", "utf8")) as {
+  version: string;
+  repository?: { url?: string };
+};
+
+const repoUrl = pkg.repository?.url?.replace(/\.git$/, "") ?? "";
+const buildBanner = `/*! Aero Slider v${pkg.version} | ${repoUrl} */`;
 
 export default defineConfig({
   entry: { "aero-slider": "src/index.ts" },
@@ -12,7 +21,7 @@ export default defineConfig({
   },
   external: [],
   esbuildOptions(options) {
-    options.banner = { js: "" };
+    options.banner = { js: buildBanner };
   },
   async onSuccess() {
     const esbuild = await import("esbuild");
@@ -20,6 +29,7 @@ export default defineConfig({
       entryPoints: ["src/slider.css"],
       outfile: "dist/aero-slider.min.css",
       minify: true,
+      banner: { css: buildBanner },
     });
   },
 });

@@ -1,7 +1,12 @@
 {
   "name": "aero-slider",
-  "version": "1.0.0-beta.9",
+  "version": "1.0.0-beta.10",
   "description": "A lightweight, CSS-first slider library for the modern web",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Negative-Space-Dev/aero-slider.git"
+  },
+  "homepage": "https://aeroslider.com",
   "type": "module",
   "workspaces": [
     "site"
