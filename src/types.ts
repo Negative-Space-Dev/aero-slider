@@ -5,54 +5,30 @@ export interface SliderConfig {
   autoplay?: boolean;
   autoplayInterval?: number;
   draggable?: boolean;
-  /** Align the active slide to the left, center, or right when possible. */
+  /** Where the active slide rests in the viewport. */
   alignment?: SliderAlignment;
-  /** Maximum number of pagination dots to show. Beyond this, edge indicators are used. */
+  /** Show at most this many pagination dots, scrolling them iOS-style. 0 = unlimited. */
   maxDots?: number;
+  /** Selector for elements inside slides that should not start a mouse drag. */
   noDrag?: string;
+  /** Slides advanced per next()/prev() call. */
   perMove?: number;
   direction?: "ltr" | "rtl" | "ttb";
 }
 
-/** Layout options read from CSS custom properties; not passed via JS config. */
-export interface SliderLayoutConfig {
-  slidesPerView: number;
-  gap: number;
-  aspectRatio: string;
-}
-
-export type SliderConfigFull = Required<SliderConfig> & SliderLayoutConfig;
-
 export interface SliderInstance {
   readonly element: HTMLElement;
+  readonly currentIndex: number;
+  readonly slideCount: number;
   next(): void;
   prev(): void;
   goTo(index: number): void;
-  destroy(): void;
   update(config?: SliderConfig): void;
   refresh(): void;
   add(slides: HTMLElement | HTMLElement[], index?: number): void;
   remove(index: number | number[]): void;
-  readonly currentIndex: number;
-  readonly slideCount: number;
+  destroy(): void;
 }
-
-export interface AeroSliderElement extends HTMLElement {
-  aeroSlider?: SliderInstance;
-}
-
-export type SliderEvent =
-  | "ready"
-  | "slideChange"
-  | "dragStart"
-  | "dragEnd"
-  | "autoplayStart"
-  | "autoplayStop"
-  | "destroy"
-  | "resize"
-  | "resized"
-  | "visible"
-  | "hidden";
 
 export interface SliderEventMap {
   ready: {};
@@ -68,53 +44,8 @@ export interface SliderEventMap {
   hidden: { index: number };
 }
 
+export type SliderEvent = keyof SliderEventMap;
 export type SliderEventData<E extends SliderEvent = SliderEvent> = SliderEventMap[E];
-
-export interface SliderState {
-  currentIndex: number;
-  isDragging: boolean;
-  isDestroyed: boolean;
-  loopModeActive: boolean;
-  isProgrammaticScroll: boolean;
-  /** Suppress slideChange emit on scroll settle (goTo/drag already emitted). */
-  suppressSettleEmit: boolean;
-  slideWidthPx: number;
-  /** Cached track viewport size; invalidated on layout recalc. */
-  viewportSizePx: number;
-  /** Cached track scroll size; invalidated on layout recalc. */
-  trackScrollSizePx: number;
-}
-
-export interface SliderContext {
-  container: HTMLElement;
-  track: HTMLElement;
-  slides: HTMLElement[];
-  slideCount: number;
-  config: SliderConfigFull;
-  state: SliderState;
-  emit<E extends SliderEvent>(event: E, data: SliderEventData<E>): void;
-  getSlideSize(): number;
-  recalcSlideMetrics(): void;
-  normalizeIndex(index: number): number;
-  getMaxIndex(): number;
-  getEffectivePerMove(): number;
-  isLoopEnabled(): boolean;
-  isFractionalView(): boolean;
-  isVertical(): boolean;
-  getAlignmentOffset(): number;
-  getLayoutSize(): number;
-  getViewportSize(): number;
-  getScrollPos(): number;
-  setScrollPos(pos: number): void;
-  scrollToPos(pos: number, behavior?: ScrollBehavior): void;
-  getScrollPosForIndex(index: number): number;
-  getScrollPosForLoopIndex(index: number): number;
-  getIndexFromScrollPos(scrollPos: number): number;
-  getLogicalIndexForChild(child: HTMLElement): number;
-  refreshPagination(): void;
-  refreshNavState(): void;
-  applySnapAlignment(): void;
-}
 
 declare global {
   interface HTMLElement {

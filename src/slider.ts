@@ -1,955 +1,569 @@
-import type {
-  SliderConfig,
-  SliderConfigFull,
-  SliderInstance,
-  SliderEvent,
-  SliderEventData,
-  SliderContext,
-  SliderState,
-  AeroSliderElement,
-} from "./types.ts";
-import {
-  DEFAULTS,
-  LAYOUT_DEFAULTS,
-  RESIZE_DEBOUNCE_MS,
-  RESIZE_MAX_WAIT_MS,
-  SCROLL_END_DELAY,
-  SLIDE_INDEX_ATTR,
-  LOOP_CLONE_ATTR,
-  WHEEL_IDLE_MS,
-} from "./constants.ts";
-import { monitorCssVariables } from "./mediaQueryMonitor.ts";
-import { createLoopController } from "./loop.ts";
-import { createDragController } from "./drag.ts";
-import { createNavigation, createPagination, createKeyboard, createAutoplay } from "./features.ts";
-import { measureSlideStride, resolveCssLength, releaseLayoutProbe } from "./layoutMetrics.ts";
-import { measureSnapScrollPos } from "./snapMetrics.ts";
+import type { SliderConfig, SliderEvent, SliderEventData, SliderInstance } from "./types.ts";
+import { autoplay, keyboard, navigation, pagination } from "./features.ts";
+
+export const SLIDE_INDEX_ATTR = "data-aero-slider-index";
+export const CLONE_ATTR = "data-aero-slider-clone";
+
+const DEFAULTS: Required<SliderConfig> = {
+  loop: false,
+  autoplay: false,
+  autoplayInterval: 5000,
+  draggable: true,
+  alignment: "center",
+  maxDots: 0,
+  noDrag: "",
+  perMove: 1,
+  direction: "ltr",
+};
+
+const DRAG_THRESHOLD_PX = 5;
+const FLICK_VELOCITY = 0.3; // px per ms
+const FLICK_PROJECTION_MS = 250;
+const SETTLE_FALLBACK_MS = 150; // for browsers without the scrollend event
+
+/** What the UI features (nav, dots, keyboard, autoplay) need from the core. */
+export interface SliderCore {
+  container: HTMLElement;
+  track: HTMLElement;
+  config: Required<SliderConfig>;
+  signal: AbortSignal;
+  current(): number;
+  maxIndex(): number;
+  pageCount(): number;
+  loop(): boolean;
+  next(): void;
+  prev(): void;
+  goTo(index: number): void;
+  emit<E extends SliderEvent>(event: E, data: SliderEventData<E>): void;
+}
+
+function requireTrack(container: HTMLElement): HTMLElement {
+  const track = container.querySelector<HTMLElement>(".aero-slider__track");
+  if (!track) throw new Error("aero-slider: missing .aero-slider__track");
+  if (!track.children.length) throw new Error("aero-slider: no slides found");
+  return track;
+}
 
 export function createSlider(
   container: HTMLElement,
   userConfig: SliderConfig = {}
 ): SliderInstance {
-  const host = container as AeroSliderElement;
-  // ── Setup ────────────────────────────────────────────────────────────
-  const trackEl = container.querySelector<HTMLElement>(".aero-slider__track");
-  if (!trackEl) throw new Error("aero-slider: missing .aero-slider__track");
-  const track: HTMLElement = trackEl;
+  const track = requireTrack(container);
 
-  let slides = Array.from(track.children).filter(
-    (el) => !el.hasAttribute(LOOP_CLONE_ATTR)
-  ) as HTMLElement[];
-  let slideCount = slides.length;
-  if (slideCount === 0) throw new Error("aero-slider: no slides found");
+  const config: Required<SliderConfig> = { ...DEFAULTS, ...userConfig };
+  const controller = new AbortController();
+  const { signal } = controller;
 
-  slides.forEach((slide, i) => slide.setAttribute(SLIDE_INDEX_ATTR, String(i)));
+  let slides: HTMLElement[] = [];
+  let slideCount = 0;
+  let current = 0;
+  let destroyed = false;
 
-  let rtlMaxScrollPx = -1;
+  // Layout metrics, refreshed by measure()
+  let slidesPerView = 1;
+  let clonesBefore = 0; // loop clones prepended ahead of the real slides
+  let slideStride = 0; // distance between neighbouring snap positions; 0 until laid out
+  let firstSnapPosition = 0; // snap position of track.children[0]
+  let maxScroll = 0;
+  let paddingStart = 0; // track padding doubles as scroll-padding (see slider.css)
+  let paddingEnd = 0;
 
-  function invalidateLayoutCache(): void {
-    rtlMaxScrollPx = -1;
-    state.slideWidthPx = 0;
-    state.viewportSizePx = 0;
-    state.trackScrollSizePx = 0;
+  // Scroll state
+  let programmaticScroll = false; // a goTo() animation is in flight
+  let scrollTarget = 0; // where that animation is headed
+  let dragging = false;
+  let suppressNextClick = false;
+  let scrollFrame = 0;
+  let settleTimer = 0;
+
+  const isVertical = () => config.direction === "ttb";
+  const isRtl = () => config.direction === "rtl";
+  const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(value, max));
+  const wrap = (index: number) => ((index % slideCount) + slideCount) % slideCount;
+
+  function maxIndex(): number {
+    const pagesByStart = config.alignment === "left" && Number.isInteger(slidesPerView);
+    return Math.max(0, pagesByStart ? slideCount - slidesPerView : slideCount - 1);
+  }
+  const loop = () => config.loop && maxIndex() > 0;
+  const pageCount = () => (loop() ? slideCount : maxIndex() + 1);
+  const cloneCount = () => (loop() ? Math.max(slideCount, Math.ceil(slidesPerView) + 2) : 0);
+
+  function emit<E extends SliderEvent>(event: E, detail: SliderEventData<E>): void {
+    container.dispatchEvent(new CustomEvent(`aero:${event}`, { detail, bubbles: true }));
   }
 
-  // ── State ────────────────────────────────────────────────────────────
-  let config: SliderConfigFull = {
-    ...DEFAULTS,
-    ...userConfig,
-    ...LAYOUT_DEFAULTS,
-  };
-  const state: SliderState = {
-    currentIndex: 0,
-    isDragging: false,
-    isDestroyed: false,
-    loopModeActive: false,
-    isProgrammaticScroll: false,
-    suppressSettleEmit: false,
-    slideWidthPx: 0,
-    viewportSizePx: 0,
-    trackScrollSizePx: 0,
-  };
+  // ── Geometry ─────────────────────────────────────────────────────────
+  // Positions are logical: 0 at the start edge, growing toward the end, in
+  // every direction. RTL maps onto the negative scrollLeft browsers use.
 
-  // ── Timers ───────────────────────────────────────────────────────────
-  let scrollRafId: number | null = null;
-  let scrollEndTimer: ReturnType<typeof setTimeout> | null = null;
-  let teardownResizeMonitor: (() => void) | null = null;
-  let resizeSnapTimer: ReturnType<typeof setTimeout> | null = null;
-  let resizeRafId: number | null = null;
-  let lastWindowWidth = typeof window !== "undefined" ? window.innerWidth : 0;
-
-  // ── Core Helpers ─────────────────────────────────────────────────────
-  function emit<E extends SliderEvent>(event: E, data: SliderEventData<E>): void {
-    container.dispatchEvent(new CustomEvent(`aero:${event}`, { detail: data, bubbles: true }));
+  function scrollPosition(): number {
+    if (isVertical()) return track.scrollTop;
+    return isRtl() ? -track.scrollLeft : track.scrollLeft;
   }
 
-  function isVertical(): boolean {
-    return config.direction === "ttb";
+  function scrollTo(position: number, smooth = false): void {
+    const behavior: ScrollBehavior = smooth ? "smooth" : "instant";
+    if (isVertical()) track.scrollTo({ top: position, behavior });
+    else track.scrollTo({ left: isRtl() ? -position : position, behavior });
   }
 
-  let rtlScrollBehavior: "negative" | "reverse" | "default" | null = null;
-
-  function detectRtlScrollBehavior(): "negative" | "reverse" | "default" {
-    if (rtlScrollBehavior !== null) return rtlScrollBehavior;
-
-    const outer = document.createElement("div");
-    const inner = document.createElement("div");
-
-    outer.dir = "rtl";
-    outer.style.width = "4px";
-    outer.style.height = "1px";
-    outer.style.position = "absolute";
-    outer.style.top = "-9999px";
-    outer.style.overflow = "scroll";
-    outer.style.visibility = "hidden";
-    inner.style.width = "8px";
-    inner.style.height = "1px";
-
-    outer.appendChild(inner);
-    document.body.appendChild(outer);
-
-    let behavior: "negative" | "reverse" | "default" = "reverse";
-    if (outer.scrollLeft > 0) {
-      behavior = "default";
-    } else {
-      outer.scrollLeft = 1;
-      if (outer.scrollLeft === 0) {
-        behavior = "negative";
-      }
-    }
-
-    document.body.removeChild(outer);
-    rtlScrollBehavior = behavior;
-    return behavior;
+  /** Scroll position at which `el` rests on its snap point, honouring alignment and scroll-padding. */
+  function snapPositionOf(el: Element): number {
+    const rect = el.getBoundingClientRect();
+    const trackRect = track.getBoundingClientRect();
+    const [axisStart, axisSize, elStart, elEnd] = isVertical()
+      ? [trackRect.top + track.clientTop, track.clientHeight, rect.top, rect.bottom]
+      : isRtl() // mirror x so "start" is the right edge
+        ? [
+            -(trackRect.left + track.clientLeft + track.clientWidth),
+            track.clientWidth,
+            -rect.right,
+            -rect.left,
+          ]
+        : [trackRect.left + track.clientLeft, track.clientWidth, rect.left, rect.right];
+    const snapportStart = axisStart + paddingStart;
+    const snapportEnd = axisStart + axisSize - paddingEnd;
+    const delta =
+      config.alignment === "left"
+        ? elStart - snapportStart
+        : config.alignment === "right"
+          ? elEnd - snapportEnd
+          : (elStart + elEnd - snapportStart - snapportEnd) / 2;
+    return scrollPosition() + delta;
   }
 
-  function getRtlMaxScroll(): number {
-    if (rtlMaxScrollPx >= 0) return rtlMaxScrollPx;
-    rtlMaxScrollPx = Math.max(0, getTrackScrollSize() - getViewportSize());
-    return rtlMaxScrollPx;
+  function readSlidesPerView(): void {
+    const value = getComputedStyle(container).getPropertyValue("--slides-per-view");
+    slidesPerView = parseFloat(value) || 1;
   }
 
-  function getMaxIndex(): number {
-    if (config.alignment !== "left" || isFractionalView()) {
-      return Math.max(0, slideCount - 1);
-    }
-    return Math.max(0, Math.floor(slideCount - config.slidesPerView));
-  }
-
-  function isFractionalView(): boolean {
-    return config.slidesPerView % 1 !== 0;
-  }
-
-  function isLoopEnabled(): boolean {
-    return config.loop && getMaxIndex() > 0;
-  }
-
-  function getEffectivePerMove(): number {
-    return config.perMove > 0 ? config.perMove : 1;
-  }
-
-  function normalizeIndex(index: number): number {
-    const maxIndex = getMaxIndex();
-    if (!isLoopEnabled()) {
-      return Math.max(0, Math.min(index, maxIndex));
-    }
-    return ((Math.trunc(index) % slideCount) + slideCount) % slideCount;
-  }
-
-  // ── Direction-aware scroll helpers ───────────────────────────────────
-
-  function getScrollPos(): number {
-    if (config.direction === "rtl") {
-      const maxScroll = getRtlMaxScroll();
-      switch (detectRtlScrollBehavior()) {
-        case "default":
-          return maxScroll - track.scrollLeft;
-        case "negative":
-          return -track.scrollLeft;
-        default:
-          return track.scrollLeft;
-      }
-    }
-    if (config.direction === "ttb") return track.scrollTop;
-    return track.scrollLeft;
-  }
-
-  function setScrollPos(pos: number): void {
-    if (config.direction === "rtl") {
-      const maxScroll = getRtlMaxScroll();
-      switch (detectRtlScrollBehavior()) {
-        case "default":
-          track.scrollLeft = maxScroll - pos;
-          break;
-        case "negative":
-          track.scrollLeft = -pos;
-          break;
-        default:
-          track.scrollLeft = pos;
-          break;
-      }
-    } else if (config.direction === "ttb") {
-      track.scrollTop = pos;
-    } else {
-      track.scrollLeft = pos;
-    }
-  }
-
-  function scrollToPos(pos: number, behavior: ScrollBehavior = "auto"): void {
-    if (config.direction === "ttb") {
-      track.scrollTo({ top: pos, behavior });
-    } else if (config.direction === "rtl") {
-      const maxScroll = getRtlMaxScroll();
-      const left =
-        detectRtlScrollBehavior() === "default"
-          ? maxScroll - pos
-          : detectRtlScrollBehavior() === "negative"
-            ? -pos
-            : pos;
-      track.scrollTo({ left, behavior });
-    } else {
-      track.scrollTo({ left: pos, behavior });
-    }
-  }
-
-  function getViewportSize(): number {
-    if (state.viewportSizePx > 0) return state.viewportSizePx;
-    return isVertical() ? track.clientHeight : track.clientWidth;
-  }
-
-  function getTrackScrollSize(): number {
-    if (state.trackScrollSizePx > 0) return state.trackScrollSizePx;
-    return isVertical() ? track.scrollHeight : track.scrollWidth;
-  }
-
-  function getLayoutSize(): number {
-    const w = getSlideSize();
-    if (w <= 0) return getViewportSize();
-    const slideVisual = w - config.gap;
-    const derived = slideVisual * config.slidesPerView + config.gap * (config.slidesPerView - 1);
-    return derived > 0 ? derived : getViewportSize();
-  }
-
-  function getAlignmentOffset(): number {
-    const w = getSlideSize();
-    if (w === 0 || config.alignment === "left") return 0;
-
-    const measured = measureScrollPosForIndex(0);
-    if (measured !== null) return -measured;
-
-    const vpSize = getLayoutSize();
-    const slideVisual = w - config.gap;
-
-    if (config.alignment === "center") {
-      return (vpSize - slideVisual) / 2;
-    }
-
-    return vpSize - slideVisual;
-  }
-
-  function getSlideSize(): number {
-    if (state.slideWidthPx > 0) return state.slideWidthPx;
-    return 0;
-  }
-
-  function recalcSlideMetrics(): void {
-    invalidateLayoutCache();
-
-    const styles = getComputedStyle(container);
-    const slidesPerView =
-      parseFloat(styles.getPropertyValue("--slides-per-view")?.trim() || "") ||
-      LAYOUT_DEFAULTS.slidesPerView;
-    const gapStr = styles.getPropertyValue("--slide-gap")?.trim() || "0px";
-    const aspectRatio = styles.getPropertyValue("--slide-aspect")?.trim() || LAYOUT_DEFAULTS.aspectRatio;
-
+  function measure(): void {
+    const style = getComputedStyle(track);
     if (isVertical()) {
-      state.viewportSizePx = track.clientHeight;
-      state.trackScrollSizePx = track.scrollHeight;
+      paddingStart = parseFloat(style.paddingTop);
+      paddingEnd = parseFloat(style.paddingBottom);
     } else {
-      state.viewportSizePx = track.clientWidth;
-      state.trackScrollSizePx = track.scrollWidth;
+      paddingStart = parseFloat(isRtl() ? style.paddingRight : style.paddingLeft);
+      paddingEnd = parseFloat(isRtl() ? style.paddingLeft : style.paddingRight);
     }
-
-    const gap = resolveCssLength(gapStr, container, state.viewportSizePx || LAYOUT_DEFAULTS.gap);
-    config.slidesPerView = slidesPerView;
-    config.gap = gap;
-    config.aspectRatio = aspectRatio;
-
-    state.slideWidthPx = measureSlideStride(
-      container,
-      styles,
-      state.viewportSizePx,
-      slidesPerView,
-      gap,
-      !isVertical()
-    );
+    const [first, second] = track.children;
+    const axisSize = isVertical() ? track.clientHeight : track.clientWidth;
+    firstSnapPosition = first ? snapPositionOf(first) : 0;
+    slideStride = second ? snapPositionOf(second) - firstSnapPosition : axisSize; // 0 under display: none
+    maxScroll = isVertical()
+      ? track.scrollHeight - track.clientHeight
+      : track.scrollWidth - track.clientWidth;
   }
 
-  // ── Alignment helpers ────────────────────────────────────────────────
+  // ── Indexing ─────────────────────────────────────────────────────────
+  // "DOM index" counts track children including clones; "index" is the
+  // logical slide number the public API speaks in.
 
-  function getLogicalIndexForChild(child: HTMLElement): number {
-    const idxAttr = child.getAttribute(SLIDE_INDEX_ATTR);
-    if (idxAttr !== null) return Number(idxAttr);
-    if (!child.hasAttribute(LOOP_CLONE_ATTR)) return -1;
+  const domIndexAt = (position: number) => Math.round((position - firstSnapPosition) / slideStride);
+  const isRealDomIndex = (domIndex: number) =>
+    domIndex >= clonesBefore && domIndex < clonesBefore + slideCount;
+  const indexOfDom = (domIndex: number) =>
+    loop() ? wrap(domIndex - clonesBefore) : clamp(domIndex, 0, maxIndex());
 
-    const children = Array.from(track.children);
-    const domIndex = children.indexOf(child);
-    const firstOriginalIndex = children.findIndex((el) => el.hasAttribute(SLIDE_INDEX_ATTR));
-    if (firstOriginalIndex < 0) return -1;
-
-    if (domIndex < firstOriginalIndex) {
-      return domIndex % slideCount;
+  function indexAt(position: number): number {
+    if (!loop()) {
+      if (position <= 1) return 0;
+      if (position >= maxScroll - 1) return maxIndex();
     }
-
-    return (domIndex - firstOriginalIndex - slideCount) % slideCount;
+    return indexOfDom(domIndexAt(position));
   }
 
-  function findSlideElementForIndex(index: number, nearScrollPos?: number): HTMLElement | null {
-    const normalized = normalizeIndex(index);
-    let best: HTMLElement | null = null;
-    let bestDist = Infinity;
-
-    for (const child of Array.from(track.children) as HTMLElement[]) {
-      const logical = getLogicalIndexForChild(child);
-      if (logical !== normalized) continue;
-
-      if (nearScrollPos === undefined) return child;
-
-      const pos = measureSnapScrollPos(child, track, config.alignment, isVertical());
-      const dist = Math.abs(pos - nearScrollPos);
-      if (dist < bestDist) {
-        bestDist = dist;
-        best = child;
-      }
-    }
-
-    return best;
+  /** Where the real copy of slide `index` rests. */
+  function restPositionOf(index: number): number {
+    const position = snapPositionOf(track.children[clonesBefore + index]!);
+    return loop() ? position : clamp(position, 0, maxScroll);
   }
 
-  function measureScrollPosForIndex(index: number, nearScrollPos?: number): number | null {
-    const slide = findSlideElementForIndex(
-      index,
-      nearScrollPos ?? (state.loopModeActive ? getScrollPos() : undefined)
-    );
-    if (!slide) return null;
-    return measureSnapScrollPos(slide, track, config.alignment, isVertical());
+  function setCurrent(index: number): void {
+    if (index === current) return;
+    current = index;
+    emit("slideChange", { index });
+    dots.refresh();
+    nav.refresh();
   }
 
-  function getScrollPosForIndex(index: number): number {
-    const measured = measureScrollPosForIndex(index);
-    if (measured !== null) {
-      if (state.loopModeActive) return measured;
+  // ── Loop ─────────────────────────────────────────────────────────────
+  // Clones on both sides give native scrolling room to run past the ends.
+  // Once a scroll settles on a clone we jump to its real twin; the two look
+  // identical so the jump is invisible.
 
-      const maxScroll = getTrackScrollSize() - getViewportSize();
-      if (maxScroll <= 0) return 0;
-      return Math.max(0, Math.min(measured, maxScroll));
-    }
-
-    const w = getSlideSize();
-    if (w === 0) return 0;
-    const maxScroll = getTrackScrollSize() - getViewportSize();
-    const target = index * w - getAlignmentOffset();
-
-    if (maxScroll <= 0) return 0;
-    return Math.max(0, Math.min(target, maxScroll));
+  function shiftToRealCopy(domIndex: number): number {
+    const clone = track.children[domIndex];
+    const real = track.children[clonesBefore + wrap(domIndex - clonesBefore)];
+    return clone && real ? snapPositionOf(real) - snapPositionOf(clone) : 0;
   }
 
-  function getScrollPosForLoopIndex(index: number): number {
-    const measured = measureScrollPosForIndex(index, getScrollPos());
-    if (measured !== null) return measured;
-
-    const w = getSlideSize();
-    if (w === 0) return 0;
-    return loop.getLoopRealStart() + index * w - getAlignmentOffset();
+  function teleportToRealSlides(): void {
+    if (!loop()) return;
+    const domIndex = domIndexAt(scrollPosition());
+    if (!isRealDomIndex(domIndex)) scrollTo(scrollPosition() + shiftToRealCopy(domIndex));
   }
 
-  const SCROLL_TOLERANCE_PX = 5;
-
-  function getIndexFromScrollPos(scrollPos: number): number {
-    const w = getSlideSize();
-    const maxIdx = state.loopModeActive ? slideCount - 1 : getMaxIndex();
-    const maxScroll = getTrackScrollSize() - getViewportSize();
-
-    if (maxScroll <= 0) return 0;
-
-    if (!state.loopModeActive) {
-      if (scrollPos <= 1) return 0;
-      if (scrollPos >= maxScroll - 1) return maxIdx;
+  function cloneOf(slide: HTMLElement): HTMLElement {
+    const clone = slide.cloneNode(true) as HTMLElement;
+    clone.removeAttribute(SLIDE_INDEX_ATTR);
+    clone.setAttribute(CLONE_ATTR, "");
+    clone.setAttribute("aria-hidden", "true");
+    for (const el of [clone, ...clone.querySelectorAll("[id]")]) el.removeAttribute("id");
+    for (const el of clone.querySelectorAll<HTMLElement>(
+      "a, button, input, select, textarea, [tabindex]"
+    )) {
+      el.tabIndex = -1;
     }
-
-    let bestIdx = 0;
-    let bestDist = Infinity;
-    for (let i = 0; i <= maxIdx; i++) {
-      const pos = measureScrollPosForIndex(i, scrollPos);
-      if (pos === null) continue;
-      const dist = Math.abs(pos - scrollPos);
-      if (dist < bestDist) {
-        bestDist = dist;
-        bestIdx = i;
-      }
-    }
-
-    if (bestDist !== Infinity) return bestIdx;
-
-    if (w === 0) return state.currentIndex;
-
-    const raw = Math.round((scrollPos + getAlignmentOffset()) / w);
-    return Math.max(0, Math.min(raw, maxIdx));
+    return clone;
   }
 
-  function alignToSnapIndex(index: number): void {
-    const pos = state.loopModeActive
-      ? getScrollPosForLoopIndex(index)
-      : getScrollPosForIndex(index);
-    track.style.scrollBehavior = "auto";
-    track.style.scrollSnapType = "none";
-    setScrollPos(pos);
-    track.style.scrollBehavior = "";
+  // ── Navigation ───────────────────────────────────────────────────────
+
+  function goTo(index: number): void {
+    if (destroyed || !slideCount) return;
+    const logical = loop() ? wrap(Math.trunc(index)) : clamp(Math.trunc(index), 0, maxIndex());
+    setCurrent(logical);
+    if (!slideStride) return; // no layout yet (display: none); relayout() lands here once shown
+    let target: number;
+    if (loop()) {
+      teleportToRealSlides();
+      const fromDom = domIndexAt(scrollPosition());
+      const forward = wrap(logical - indexOfDom(fromDom));
+      const steps = forward > slideCount / 2 ? forward - slideCount : forward;
+      target = snapPositionOf(track.children[fromDom + steps]!);
+    } else {
+      target = restPositionOf(logical);
+    }
+    if (Math.abs(target - scrollPosition()) < 1) return onSettle();
+    programmaticScroll = true;
+    scrollTarget = target;
+    scrollTo(target, true);
   }
 
-  function applySnapAlignment(): void {
-    if (wheelTimer === null) {
-      track.style.scrollSnapType = "";
-    }
-  }
+  const step = () => Math.max(1, Math.trunc(config.perMove));
+  const next = () => goTo(current + step());
+  const prev = () => goTo(current - step());
 
-  function applyAlignmentAttribute(): void {
-    container.setAttribute("data-aero-alignment", config.alignment);
-  }
-
-  // ── Direction setup ──────────────────────────────────────────────────
-
-  function applyDirection(): void {
-    container.classList.remove("aero-slider--rtl", "aero-slider--vertical");
-    container.removeAttribute("dir");
-
-    if (config.direction === "rtl") {
-      container.setAttribute("dir", "rtl");
-      container.classList.add("aero-slider--rtl");
-    } else if (config.direction === "ttb") {
-      container.classList.add("aero-slider--vertical");
-    }
-  }
-
-  // ── Visible / Hidden tracking ────────────────────────────────────────
-
-  const visibleSlides = new Set<number>();
-
-  function computeVisibleSet(): Set<number> {
-    const result = new Set<number>();
-    const count = Math.ceil(config.slidesPerView);
-    for (let i = 0; i < count; i++) {
-      let idx = state.currentIndex + i;
-      if (state.loopModeActive) {
-        idx = ((idx % slideCount) + slideCount) % slideCount;
-      } else if (idx >= slideCount) {
-        break;
-      }
-      result.add(idx);
-    }
-    return result;
-  }
-
-  function updateVisibility(): void {
-    const newVisible = computeVisibleSet();
-    for (const idx of visibleSlides) {
-      if (!newVisible.has(idx)) emit("hidden", { index: idx });
-    }
-    for (const idx of newVisible) {
-      if (!visibleSlides.has(idx)) emit("visible", { index: idx });
-    }
-    visibleSlides.clear();
-    for (const idx of newVisible) visibleSlides.add(idx);
-  }
-
-  // ── Context (shared across modules) ──────────────────────────────────
-  const ctx: SliderContext = {
-    container,
-    track,
-    get slides() {
-      return slides;
-    },
-    get slideCount() {
-      return slideCount;
-    },
-    get config() {
-      return config;
-    },
-    state,
-    emit,
-    getSlideSize,
-    recalcSlideMetrics,
-    normalizeIndex,
-    getMaxIndex,
-    getEffectivePerMove,
-    isLoopEnabled,
-    isFractionalView,
-    isVertical,
-    getAlignmentOffset,
-    getLayoutSize,
-    getViewportSize,
-    getScrollPos,
-    setScrollPos,
-    scrollToPos,
-    getScrollPosForIndex,
-    getScrollPosForLoopIndex,
-    getIndexFromScrollPos,
-    getLogicalIndexForChild,
-    refreshPagination: () => pagination.refresh(),
-    refreshNavState: () => navigation.refresh(),
-    applySnapAlignment,
-  };
-
-  // ── Feature Controllers ──────────────────────────────────────────────
-  const loop = createLoopController(ctx);
-  const navigation = createNavigation(ctx, next, prev);
-  const pagination = createPagination(ctx, goTo);
-  const keyboard = createKeyboard(ctx, next, prev);
-  const autoplay = createAutoplay(ctx, next);
-  const drag = createDragController(ctx, loop, goTo, autoplay.pause, autoplay.start);
-
-  // ── Scroll Handling ──────────────────────────────────────────────────
-  function syncIndex(): void {
-    if (state.isDragging || state.isProgrammaticScroll) return;
-
-    const idx = state.loopModeActive
-      ? loop.getLoopIndexFromScroll()
-      : getIndexFromScrollPos(getScrollPos());
-
-    if (idx !== state.currentIndex) {
-      state.currentIndex = idx;
-      emit("slideChange", { index: state.currentIndex });
-      pagination.refresh();
-      navigation.refresh();
-      updateVisibility();
-    }
-  }
-
-  function onScrollSettle(): void {
-    scrollEndTimer = null;
-    state.isProgrammaticScroll = false;
-    const wasProgrammatic = state.suppressSettleEmit;
-
-    if (wasProgrammatic) {
-      state.suppressSettleEmit = false;
-      alignToSnapIndex(state.currentIndex);
-      if (state.loopModeActive) {
-        loop.teleportIfNeeded();
-      }
-      pagination.refresh();
-      navigation.refresh();
-      syncIndex();
-    }
-
-    if (wheelTimer === null) {
-      track.style.scrollSnapType = "";
-    }
-
-    if (!wasProgrammatic) {
-      if (state.loopModeActive) {
-        loop.teleportIfNeeded();
-      }
-      syncIndex();
-    }
-  }
+  // ── Scroll tracking ──────────────────────────────────────────────────
 
   function onScroll(): void {
-    if (state.loopModeActive && !state.isProgrammaticScroll && !state.isDragging) {
-      loop.scheduleTeleport();
-    }
-    if (scrollEndTimer !== null) clearTimeout(scrollEndTimer);
-    scrollEndTimer = setTimeout(onScrollSettle, SCROLL_END_DELAY);
-    if (scrollRafId !== null) return;
-    scrollRafId = requestAnimationFrame(() => {
-      scrollRafId = null;
-      syncIndex();
-    });
-  }
-
-  // ── Native Wheel/Trackpad Scroll ─────────────────────────────────────
-  let wheelTimer: ReturnType<typeof setTimeout> | null = null;
-
-  function onWheel(): void {
-    if (state.isDragging) return;
-    state.suppressSettleEmit = false;
-
-    track.style.scrollSnapType = "none";
-
-    if (wheelTimer !== null) clearTimeout(wheelTimer);
-    wheelTimer = setTimeout(() => {
-      wheelTimer = null;
-      track.style.scrollSnapType = "";
-    }, WHEEL_IDLE_MS);
-  }
-
-  // ── Resize snap guard ─────────────────────────────────────────────────
-  // The browser's scroll-snap engine re-snaps during layout when snap points
-  // shift (percentage-based slide widths change on window resize), which can
-  // jump to a different slide.  We disable snap immediately and reposition
-  // every animation frame to keep the active slide locked while resizing.
-
-  function repositionForCurrentIndex(): void {
-    recalcSlideMetrics();
-    if (state.loopModeActive) {
-      setScrollPos(getScrollPosForLoopIndex(state.currentIndex));
-    } else {
-      setScrollPos(getScrollPosForIndex(state.currentIndex));
-    }
-  }
-
-  function onWindowResize(): void {
-    if (state.isDestroyed) return;
-
-    // Slider layout is width-driven (slide widths and the vertical viewport's
-    // aspect-ratio both key off width). Ignore height-only changes so mobile
-    // URL-bar show/hide doesn't keep disabling scroll-snap during scrolling.
-    if (window.innerWidth === lastWindowWidth) return;
-    lastWindowWidth = window.innerWidth;
-
-    if (resizeSnapTimer === null) {
-      track.style.scrollSnapType = "none";
-      state.isProgrammaticScroll = true;
-    }
-
-    if (resizeRafId === null) {
-      resizeRafId = requestAnimationFrame(() => {
-        resizeRafId = null;
-        if (!state.isDestroyed) repositionForCurrentIndex();
+    if (!programmaticScroll && !scrollFrame) {
+      scrollFrame = requestAnimationFrame(() => {
+        scrollFrame = 0;
+        setCurrent(indexAt(scrollPosition()));
       });
     }
-
-    if (resizeSnapTimer !== null) clearTimeout(resizeSnapTimer);
-    resizeSnapTimer = setTimeout(() => {
-      resizeSnapTimer = null;
-      if (state.isDestroyed) return;
-      repositionForCurrentIndex();
-      state.isProgrammaticScroll = false;
-      applySnapAlignment();
-    }, RESIZE_DEBOUNCE_MS);
+    if (!("onscrollend" in track)) {
+      clearTimeout(settleTimer);
+      settleTimer = window.setTimeout(onSettle, SETTLE_FALLBACK_MS);
+    }
   }
 
-  // ── Media Query / Resize Monitor ───────────────────────────────────────
-  const LAYOUT_VARS = ["--slides-per-view", "--slide-gap", "--slide-aspect", "--aero-layout-width"];
+  function onSettle(): void {
+    if (dragging) return;
+    // A scrollend from an instant scroll issued just before goTo() lands mid-animation; wait for ours.
+    if (programmaticScroll && Math.abs(scrollPosition() - scrollTarget) > 1) return;
+    programmaticScroll = false;
+    track.style.scrollSnapType = "";
+    teleportToRealSlides();
+    const position = scrollPosition();
+    const landed = indexAt(position);
+    // A clamped edge can park several indices at one spot; keep the requested one there.
+    const moved = loop() || Math.abs(position - restPositionOf(current)) > 1;
+    if (landed !== current && moved) setCurrent(landed);
+  }
 
-  function setupResizeMonitor(): void {
-    teardownResizeMonitor?.();
-    teardownResizeMonitor = monitorCssVariables(
-      container,
-      LAYOUT_VARS,
-      () => {
-        if (!state.isDestroyed) {
-          emit("resize", {});
-          update();
-          emit("resized", {});
+  // ── Mouse / pen drag ─────────────────────────────────────────────────
+  // Touch scrolls natively. For other pointers we move the scroller by hand
+  // with snapping off, then release into a smooth scroll the way a fling would.
+
+  function onPointerDown(event: PointerEvent): void {
+    suppressNextClick = false;
+    programmaticScroll = false; // a press takes over from any goTo() animation
+    if (!config.draggable || event.button !== 0 || event.pointerType === "touch") return;
+    if (config.noDrag && (event.target as Element).closest(config.noDrag)) return;
+
+    const axis = isVertical() ? "clientY" : "clientX";
+    const direction = isRtl() ? -1 : 1;
+    const startCoord = event[axis];
+    const fromIndex = current;
+    const gesture = new AbortController();
+    let startScroll = scrollPosition();
+    let pending = startScroll;
+    let lastCoord = startCoord;
+    let lastTime = event.timeStamp;
+    let velocity = 0; // px per ms along the logical axis
+    let frame = 0;
+
+    function onMove(move: PointerEvent): void {
+      const coord = move[axis];
+      if (!dragging) {
+        if (Math.abs(coord - startCoord) < DRAG_THRESHOLD_PX) return;
+        dragging = true;
+        suppressNextClick = true;
+        track.setPointerCapture(move.pointerId);
+        track.style.scrollSnapType = "none";
+        container.classList.add("aero-slider--dragging");
+        play.hold("drag");
+        emit("dragStart", { index: fromIndex });
+      }
+      const elapsed = move.timeStamp - lastTime;
+      if (elapsed > 0) {
+        const instant = ((lastCoord - coord) * direction) / elapsed;
+        velocity = elapsed < 100 ? 0.3 * instant + 0.7 * velocity : velocity / 2;
+        lastCoord = coord;
+        lastTime = move.timeStamp;
+      }
+      pending = startScroll + (startCoord - coord) * direction;
+      if (loop()) {
+        const domIndex = domIndexAt(pending);
+        if (!isRealDomIndex(domIndex)) {
+          const shift = shiftToRealCopy(domIndex);
+          pending += shift;
+          startScroll += shift;
         }
-      },
-      { debounceMs: RESIZE_DEBOUNCE_MS, maxWaitMs: RESIZE_MAX_WAIT_MS }
-    );
+      }
+      if (!frame) {
+        frame = requestAnimationFrame(() => {
+          frame = 0;
+          scrollTo(pending);
+        });
+      }
+    }
+
+    function onUp(up: PointerEvent): void {
+      gesture.abort();
+      if (!dragging) return;
+      dragging = false;
+      container.classList.remove("aero-slider--dragging");
+      if (frame) {
+        cancelAnimationFrame(frame);
+        frame = 0;
+        scrollTo(pending);
+      }
+      const idle = up.timeStamp - lastTime;
+      if (idle > 50) velocity *= Math.max(0, 1 - idle / 200);
+
+      // Like native paging: a flick always moves at least one slide its way.
+      let domTarget = domIndexAt(scrollPosition() + velocity * FLICK_PROJECTION_MS);
+      if (Math.abs(velocity) > FLICK_VELOCITY && domTarget === domIndexAt(scrollPosition())) {
+        domTarget += Math.sign(velocity);
+      }
+      goTo(indexOfDom(domTarget));
+      emit("dragEnd", { index: current, fromIndex });
+      play.release("drag");
+    }
+
+    const options = { signal: gesture.signal };
+    track.addEventListener("pointermove", onMove, options);
+    track.addEventListener("pointerup", onUp, options);
+    track.addEventListener("pointercancel", onUp, options);
+    signal.addEventListener("abort", () => gesture.abort(), options);
+  }
+
+  function onClick(event: MouseEvent): void {
+    if (!suppressNextClick) return;
+    suppressNextClick = false;
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  // ── Observers ────────────────────────────────────────────────────────
+
+  let skipInitialResize = false;
+  const resizeObserver = new ResizeObserver(() => {
+    if (skipInitialResize) {
+      skipInitialResize = false;
+      return;
+    }
+    if (destroyed) return;
+    emit("resize", {});
+    relayout();
+    emit("resized", {});
+  });
+
+  let intersectionObserver: IntersectionObserver | undefined;
+  const intersecting = new Map<Element, boolean>();
+  let visibleIndices = new Set<number>();
+
+  function onIntersection(entries: IntersectionObserverEntry[]): void {
+    for (const entry of entries) intersecting.set(entry.target, entry.isIntersecting);
+    const children = Array.from(track.children);
+    const nowVisible = new Set<number>();
+    for (const [el, isIn] of intersecting) {
+      if (isIn) nowVisible.add(indexOfDom(children.indexOf(el)));
+    }
+    for (const index of visibleIndices) if (!nowVisible.has(index)) emit("hidden", { index });
+    for (const index of nowVisible) if (!visibleIndices.has(index)) emit("visible", { index });
+    visibleIndices = nowVisible;
+  }
+
+  function observe(): void {
+    resizeObserver.disconnect();
+    skipInitialResize = true;
+    resizeObserver.observe(track);
+    if (track.firstElementChild) resizeObserver.observe(track.firstElementChild);
+
+    intersectionObserver?.disconnect();
+    intersecting.clear();
+    intersectionObserver = new IntersectionObserver(onIntersection, {
+      root: track,
+      rootMargin: isVertical() ? "-1px 0px" : "0px -1px", // ignore sub-pixel bleed from neighbours
+    });
+    for (const child of track.children) intersectionObserver.observe(child);
+  }
+
+  // ── Layout ───────────────────────────────────────────────────────────
+
+  /** Cheap path for size changes: re-measure and keep the current slide in place. */
+  function relayout(): void {
+    const previousPages = pageCount();
+    readSlidesPerView();
+    if (cloneCount() !== clonesBefore) return rebuild();
+    measure();
+    if (pageCount() !== previousPages) dots.build();
+    current = loop() ? wrap(current) : clamp(current, 0, maxIndex());
+    programmaticScroll = false; // an instant reposition supersedes any goTo() animation
+    scrollTo(restPositionOf(current));
+    nav.refresh();
+  }
+
+  /** Full path: re-read slides from the DOM, rebuild clones and UI. */
+  function rebuild(): void {
+    for (const clone of track.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
+    slides = Array.from(track.children) as HTMLElement[];
+    slideCount = slides.length;
+    if (!slideCount) return;
+    slides.forEach((slide, i) => {
+      slide.classList.add("aero-slider__slide");
+      slide.setAttribute(SLIDE_INDEX_ATTR, String(i));
+    });
+
+    container.classList.toggle("aero-slider--vertical", isVertical());
+    if (isRtl()) container.setAttribute("dir", "rtl");
+    else container.removeAttribute("dir");
+    container.setAttribute("data-aero-alignment", config.alignment);
+
+    readSlidesPerView();
+    clonesBefore = cloneCount();
+    for (let i = 1; i <= clonesBefore; i++) track.prepend(cloneOf(slides[wrap(-i)]!));
+    for (let i = 0; i < clonesBefore; i++) track.append(cloneOf(slides[i % slideCount]!));
+
+    measure();
+    current = loop() ? wrap(current) : clamp(current, 0, maxIndex());
+    programmaticScroll = false; // an instant reposition supersedes any goTo() animation
+    scrollTo(restPositionOf(current));
+    dots.build();
+    nav.refresh();
+    observe();
+    play.stop();
+    if (config.autoplay) play.start();
   }
 
   // ── Public API ───────────────────────────────────────────────────────
-  function next(): void {
-    if (state.isDestroyed) return;
-    goTo(normalizeIndex(state.currentIndex + getEffectivePerMove()));
-  }
 
-  function prev(): void {
-    if (state.isDestroyed) return;
-    goTo(normalizeIndex(state.currentIndex - getEffectivePerMove()));
-  }
-
-  function goTo(index: number): void {
-    if (state.isDestroyed) return;
-    const target = normalizeIndex(index);
-    const w = getSlideSize();
-    if (w === 0) return;
-
-    if (target !== state.currentIndex) {
-      state.currentIndex = target;
-      emit("slideChange", { index: state.currentIndex });
-      pagination.refresh();
-      navigation.refresh();
-      updateVisibility();
-    }
-
-    if (state.loopModeActive) {
-      loop.cancelTeleport();
-      loop.teleportIfNeeded();
-
-      const actualCurrent = loop.getLoopIndexFromScroll();
-      const forward = (target - actualCurrent + slideCount) % slideCount;
-      const backward = forward - slideCount;
-      const delta = Math.abs(backward) < forward ? backward : forward;
-
-      if (delta === 0) {
-        const targetScroll = getScrollPosForLoopIndex(target);
-        const diff = targetScroll - getScrollPos();
-        if (Math.abs(diff) <= SCROLL_TOLERANCE_PX) return;
-        state.suppressSettleEmit = true;
-        state.isProgrammaticScroll = true;
-        scrollToPos(getScrollPos() + diff, "smooth");
-        return;
-      }
-
-      state.suppressSettleEmit = true;
-      state.isProgrammaticScroll = true;
-      scrollToPos(getScrollPos() + delta * w, "smooth");
-      return;
-    }
-
-    state.suppressSettleEmit = true;
-    state.isProgrammaticScroll = true;
-    scrollToPos(getScrollPosForIndex(target), "smooth");
-  }
-
-  function update(nextConfig?: SliderConfig): void {
-    const prevConfig = { ...config };
-    if (nextConfig) {
-      Object.assign(config, nextConfig);
-    }
-
-    if (prevConfig.direction !== config.direction) {
-      applyDirection();
-    }
-
-    recalcSlideMetrics();
-    drag.setEnabled(config.draggable);
-    keyboard.setEnabled(true);
-    autoplay.setHoverPause(config.autoplay);
-
-    if (
-      prevConfig.slidesPerView !== config.slidesPerView ||
-      prevConfig.loop !== config.loop ||
-      prevConfig.maxDots !== config.maxDots ||
-      prevConfig.perMove !== config.perMove ||
-      prevConfig.alignment !== config.alignment
-    ) {
-      pagination.clear();
-      pagination.build();
-    }
-
-    if (
-      prevConfig.autoplay !== config.autoplay ||
-      prevConfig.autoplayInterval !== config.autoplayInterval ||
-      prevConfig.loop !== config.loop
-    ) {
-      if (config.autoplay) autoplay.start();
-      else autoplay.pause();
-    }
-
-    if (prevConfig.loop !== config.loop) {
-      if (isLoopEnabled()) {
-        loop.setupLoopTrack(state.currentIndex);
-      } else {
-        loop.teardownLoopTrack(state.currentIndex);
-      }
-    } else if (state.loopModeActive && prevConfig.slidesPerView !== config.slidesPerView) {
-      loop.setupLoopTrack(state.currentIndex);
-    }
-
-    applyAlignmentAttribute();
-    applySnapAlignment();
-
-    if (!state.loopModeActive) {
-      const normalized = normalizeIndex(state.currentIndex);
-      state.currentIndex = normalized;
-      scrollToPos(getScrollPosForIndex(normalized));
-    }
-
-    syncIndex();
-    pagination.refresh();
-    navigation.refresh();
-    updateVisibility();
+  function update(changes?: SliderConfig): void {
+    if (destroyed) return;
+    Object.assign(config, changes);
+    rebuild();
   }
 
   function refresh(): void {
-    if (state.isDestroyed) return;
-
-    if (state.loopModeActive) {
-      loop.teardownLoopTrack(state.currentIndex);
-    }
-
-    slides = Array.from(track.children).filter(
-      (el) => !el.hasAttribute(LOOP_CLONE_ATTR)
-    ) as HTMLElement[];
-    slideCount = slides.length;
-    if (slideCount === 0) return;
-
-    slides.forEach((slide, i) => {
-      slide.setAttribute(SLIDE_INDEX_ATTR, String(i));
-      slide.classList.add("aero-slider__slide");
-    });
-
-    recalcSlideMetrics();
-
-    if (isLoopEnabled()) {
-      loop.setupLoopTrack(state.currentIndex);
-    }
-
-    applyAlignmentAttribute();
-    applySnapAlignment();
-
-    if (!state.loopModeActive) {
-      const normalized = normalizeIndex(state.currentIndex);
-      state.currentIndex = normalized;
-      scrollToPos(getScrollPosForIndex(normalized));
-    }
-
-    pagination.clear();
-    pagination.build();
-    navigation.build();
-    syncIndex();
-    updateVisibility();
+    if (!destroyed) rebuild();
   }
 
   function add(newSlides: HTMLElement | HTMLElement[], index?: number): void {
-    if (state.isDestroyed) return;
-    const arr = Array.isArray(newSlides) ? newSlides : [newSlides];
-
-    if (state.loopModeActive) {
-      loop.teardownLoopTrack(state.currentIndex);
-    }
-
-    const realChildren = Array.from(track.children).filter(
-      (el) => !el.hasAttribute(LOOP_CLONE_ATTR)
-    );
-
-    if (index !== undefined && index < realChildren.length) {
-      const ref = realChildren[index] ?? null;
-      for (const slide of arr) track.insertBefore(slide, ref);
-    } else {
-      for (const slide of arr) track.appendChild(slide);
-    }
-
-    refresh();
+    if (destroyed) return;
+    const before = index === undefined ? null : (slides[index] ?? null);
+    for (const slide of ([] as HTMLElement[]).concat(newSlides)) track.insertBefore(slide, before);
+    rebuild();
   }
 
   function remove(indices: number | number[]): void {
-    if (state.isDestroyed) return;
-    const arr = Array.isArray(indices) ? indices : [indices];
-
-    if (state.loopModeActive) {
-      loop.teardownLoopTrack(state.currentIndex);
-    }
-
-    const realChildren = Array.from(track.children).filter(
-      (el) => !el.hasAttribute(LOOP_CLONE_ATTR)
-    );
-
-    const sorted = [...arr].sort((a, b) => b - a);
-    for (const idx of sorted) {
-      if (idx >= 0 && idx < realChildren.length) {
-        realChildren[idx]!.remove();
-      }
-    }
-
-    refresh();
+    if (destroyed) return;
+    for (const index of ([] as number[]).concat(indices)) slides[index]?.remove();
+    rebuild();
   }
 
   function destroy(): void {
-    if (state.isDestroyed) return;
+    if (destroyed) return;
     emit("destroy", {});
-    state.isDestroyed = true;
-
-    autoplay.pause();
-    if (state.loopModeActive) loop.teardownLoopTrack(state.currentIndex);
-    loop.cancelTeleport();
-    state.isProgrammaticScroll = false;
-
-    teardownResizeMonitor?.();
-    teardownResizeMonitor = null;
-    window.removeEventListener("resize", onWindowResize);
-    if (resizeSnapTimer !== null) {
-      clearTimeout(resizeSnapTimer);
-      resizeSnapTimer = null;
-    }
-    if (resizeRafId !== null) {
-      cancelAnimationFrame(resizeRafId);
-      resizeRafId = null;
-    }
-
-    track.removeEventListener("scroll", onScroll);
-    track.removeEventListener("wheel", onWheel);
-    if (wheelTimer !== null) clearTimeout(wheelTimer);
-    if (scrollEndTimer !== null) clearTimeout(scrollEndTimer);
-    drag.setEnabled(false);
-    keyboard.setEnabled(false);
-    autoplay.setHoverPause(false);
-
-    if (scrollRafId !== null) cancelAnimationFrame(scrollRafId);
-    navigation.clear();
-    pagination.clear();
-
-    container.removeAttribute("aria-roledescription");
-    container.removeAttribute("dir");
+    destroyed = true;
+    controller.abort(); // removes every listener; features clean up on this signal too
+    resizeObserver.disconnect();
+    intersectionObserver?.disconnect();
+    clearTimeout(settleTimer);
+    cancelAnimationFrame(scrollFrame);
+    for (const clone of track.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
+    track.style.scrollSnapType = "";
     container.classList.remove(
       "aero-slider--dragging",
-      "aero-slider--rtl",
       "aero-slider--vertical",
       "aero-slider--ready"
     );
-    container.removeAttribute("data-aero-defer-visibility");
-    releaseLayoutProbe(container);
-    if (host.aeroSlider === api) {
-      delete host.aeroSlider;
+    for (const attr of ["aria-roledescription", "dir", "data-aero-alignment"]) {
+      container.removeAttribute(attr);
     }
+    if (container.aeroSlider === api) delete container.aeroSlider;
   }
-
-  // ── Initialize ───────────────────────────────────────────────────────
-  container.removeAttribute("data-aero-defer-visibility");
-  container.classList.add("aero-slider");
-  container.setAttribute("aria-roledescription", "carousel");
-  track.classList.add("aero-slider__track");
-  for (const slide of slides) slide.classList.add("aero-slider__slide");
-
-  applyDirection();
-  recalcSlideMetrics();
-  applyAlignmentAttribute();
-  applySnapAlignment();
-
-  track.addEventListener("scroll", onScroll, { passive: true });
-  track.addEventListener("wheel", onWheel, { passive: true });
-  window.addEventListener("resize", onWindowResize);
-
-  if (isLoopEnabled()) {
-    loop.setupLoopTrack(0);
-  } else {
-    setScrollPos(0);
-  }
-
-  setupResizeMonitor();
-  drag.setEnabled(config.draggable);
-  keyboard.setEnabled(true);
-  autoplay.setHoverPause(config.autoplay);
-  navigation.build();
-  pagination.build();
-  if (config.autoplay) autoplay.start();
-
-  const initialVisible = computeVisibleSet();
-  for (const idx of initialVisible) visibleSlides.add(idx);
-  for (const idx of visibleSlides) emit("visible", { index: idx });
 
   const api: SliderInstance = {
     get element() {
       return container;
     },
-    next,
-    prev,
-    goTo,
-    destroy,
-    update,
-    refresh,
-    add,
-    remove,
     get currentIndex() {
-      return state.currentIndex;
+      return current;
     },
     get slideCount() {
       return slideCount;
     },
+    next,
+    prev,
+    goTo,
+    update,
+    refresh,
+    add,
+    remove,
+    destroy,
   };
 
-  host.aeroSlider = api;
+  // ── Init ─────────────────────────────────────────────────────────────
+
+  const core: SliderCore = {
+    container,
+    track,
+    config,
+    signal,
+    current: () => current,
+    maxIndex,
+    pageCount,
+    loop,
+    next,
+    prev,
+    goTo,
+    emit,
+  };
+  const nav = navigation(core);
+  const dots = pagination(core);
+  const play = autoplay(core);
+  keyboard(core);
+
+  container.removeAttribute("data-aero-defer-visibility");
+  container.classList.add("aero-slider");
+  container.setAttribute("aria-roledescription", "carousel");
+  track.classList.add("aero-slider__track");
+
+  track.addEventListener("scroll", onScroll, { passive: true, signal });
+  track.addEventListener("scrollend", onSettle, { signal });
+  track.addEventListener("wheel", () => (programmaticScroll = false), { passive: true, signal });
+  track.addEventListener("pointerdown", onPointerDown, { signal });
+  track.addEventListener("click", onClick, { capture: true, signal });
+  track.addEventListener("dragstart", (e) => config.draggable && e.preventDefault(), { signal });
+
+  rebuild();
+  container.aeroSlider = api;
   container.classList.add("aero-slider--ready");
   emit("ready", {});
   return api;

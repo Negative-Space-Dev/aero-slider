@@ -13,10 +13,10 @@
   ],
   "main": "./dist/aero-slider.min.js",
   "module": "./dist/aero-slider.min.js",
-  "types": "./dist/aero-slider.d.ts",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/aero-slider.d.ts",
+      "types": "./dist/index.d.ts",
       "import": "./dist/aero-slider.min.js",
       "default": "./dist/aero-slider.min.js"
     },
@@ -26,7 +26,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "bun run ./build.ts",
     "dev": "cd site && bun run dev",
     "site:dev": "cd site && bun run dev",
     "site:build": "cd site && bun run build",
@@ -34,16 +34,12 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "test": "bun run build && bun run ./test/smoke.ts",
     "pack": "bun pm pack"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "esbuild": "^0.27.3",
     "prettier": "^3.4.2",
-    "tsup": "^8.5.1",
-    "typescript": "^5"
-  },
-  "peerDependencies": {
     "typescript": "^5"
   }
 }

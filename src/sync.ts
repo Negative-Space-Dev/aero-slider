@@ -1,126 +1,66 @@
 import type { SliderInstance } from "./types.ts";
+import { SLIDE_INDEX_ATTR } from "./slider.ts";
 
-const THUMB_ACTIVE_CLASS = "aero-slider__thumb--active";
-
-function setActiveThumb(
-  track: HTMLElement,
-  index: number,
-  getLogicalIndex: (el: HTMLElement) => number
-): void {
-  const allSlides = track.querySelectorAll<HTMLElement>(":scope > *");
-  allSlides.forEach((el) => {
-    const logicalIndex = getLogicalIndex(el);
-    el.classList.toggle(THUMB_ACTIVE_CLASS, logicalIndex === index);
-  });
-}
+const ACTIVE_CLASS = "aero-slider__thumb--active";
 
 export interface SyncThumbnailsOptions {
-  /** Loop mode for the thumbnail slider. Defaults to true for backward compatibility. */
+  /** Loop the thumbnail strip. Defaults to true. */
   loop?: boolean;
 }
 
 /**
- * Syncs a primary slider with a thumbnail slider. Clicking a thumbnail navigates
- * the primary to that slide. When the primary changes (drag, arrows, etc.), the
- * thumbnail slider scrolls to keep the active thumbnail in view and adds
- * `aero-slider__thumb--active` to the active thumbnail.
- *
- * Both sliders must have the same number of slides. Call the returned function
- * to teardown and remove all listeners.
+ * Links a thumbnail slider to a primary one: clicking a thumbnail navigates the
+ * primary, and the strip follows the primary's active slide. Returns a teardown.
  */
 export function syncThumbnails(
   primary: SliderInstance,
-  thumbnail: SliderInstance,
-  options?: SyncThumbnailsOptions
+  thumbnails: SliderInstance,
+  options: SyncThumbnailsOptions = {}
 ): () => void {
-  const track = thumbnail.element.querySelector<HTMLElement>(".aero-slider__track");
+  const track = thumbnails.element.querySelector<HTMLElement>(".aero-slider__track");
   if (!track) return () => {};
-  const trackEl = track;
+  const controller = new AbortController();
+  const { signal } = controller;
 
-  /* Disable drag on thumbnails so clicks register reliably (pointer capture from
-   * drag would otherwise intercept and suppress click events). Loop defaults to
-   * true for backward compatibility. We intentionally do NOT force any alignment
-   * here—the thumbnail slider's scroll position should not affect navigation;
-   * only explicit clicks control which slide is active. */
-  const loop = options?.loop ?? true;
-  thumbnail.update({ draggable: false, loop });
+  // Drag would swallow clicks, and clicks alone drive the strip.
+  thumbnails.update({ draggable: false, loop: options.loop ?? true });
+  track.style.cursor = "pointer";
 
-  /* Get original slides for getLogicalIndex and clone layout. */
-  const slides = Array.from(trackEl.children).filter((el) =>
-    el.hasAttribute("data-aero-slider-index")
-  ) as HTMLElement[];
-  slides.sort(
-    (a, b) =>
-      Number(a.getAttribute("data-aero-slider-index")) -
-      Number(b.getAttribute("data-aero-slider-index"))
-  );
-  const slideCount = slides.length;
-  const firstOriginalIndex = Array.from(trackEl.children).indexOf(slides[0] ?? trackEl);
-  const handlers: Array<{ el: HTMLElement; fn: () => void }> = [];
-
-  /** Get logical slide index (0..slideCount-1) for any track child, including loop clones. */
-  function getLogicalIndex(el: HTMLElement): number {
-    const idxAttr = el.getAttribute("data-aero-slider-index");
-    if (idxAttr !== null) return Number(idxAttr);
-    const domIndex = Array.from(trackEl.children).indexOf(el);
-    if (domIndex < firstOriginalIndex) {
-      return domIndex % slideCount;
-    }
-    return (domIndex - firstOriginalIndex - slideCount) % slideCount;
-  }
-
-  /** Source of truth for active slide; updates on click or primary slideChange. */
-  let activeIndex = primary.currentIndex;
-
-  function setActive(index: number): void {
-    activeIndex = index;
-    setActiveThumb(trackEl, activeIndex, getLogicalIndex);
-  }
-
-  /** Navigate both sliders to the given index (called on thumbnail click). */
-  function navigate(index: number): void {
-    setActive(index);
-    thumbnail.goTo(index);
-    primary.goTo(index);
-  }
-
-  /** Sync thumbnail to match primary (called on primary slideChange). */
-  function syncFromPrimary(index: number): void {
-    setActive(index);
-    thumbnail.goTo(index);
-  }
-
-  /* Thumbnail click handlers: clicking a thumbnail navigates both sliders. */
-  Array.from(trackEl.children).forEach((el) => {
-    const slide = el as HTMLElement;
-    const handler = (): void => {
-      const i = getLogicalIndex(slide);
-      navigate(i);
-    };
-    slide.addEventListener("click", handler);
-    slide.style.cursor = "pointer";
-    handlers.push({ el: slide, fn: handler });
-  });
-
-  /* Primary slideChange: sync thumbnail to follow primary.
-   * We trust the primary slider's index as the source of truth. */
-  const onPrimarySlideChange = (e: Event): void => {
-    const { index } = (e as CustomEvent<{ index: number }>).detail;
-    if (index === activeIndex) return;
-    syncFromPrimary(index);
+  /** Slide index for any track child, loop clones included. */
+  const indexOf = (child: Element): number => {
+    const own = child.getAttribute(SLIDE_INDEX_ATTR);
+    if (own !== null) return Number(own);
+    const children = Array.from(track.children);
+    const firstReal = children.findIndex((el) => el.hasAttribute(SLIDE_INDEX_ATTR));
+    const count = thumbnails.slideCount;
+    return (((children.indexOf(child) - firstReal) % count) + count) % count;
   };
-  primary.element.addEventListener("aero:slideChange", onPrimarySlideChange);
 
-  /* NOTE: We intentionally do NOT listen to thumbnail's slideChange event.
-   * The thumbnail's scroll-derived index can differ from the clicked index
-   * due to scroll-snap settling, especially with loop mode or when slides
-   * are near the edges. Only explicit clicks should control navigation. */
+  const activate = (index: number): void => {
+    for (const child of track.children)
+      child.classList.toggle(ACTIVE_CLASS, indexOf(child) === index);
+    thumbnails.goTo(index);
+  };
 
-  syncFromPrimary(primary.currentIndex);
+  track.addEventListener(
+    "click",
+    (event) => {
+      let el = event.target as Element | null;
+      while (el && el.parentElement !== track) el = el.parentElement;
+      if (el) primary.goTo(indexOf(el)); // primary's slideChange then activates the thumb
+    },
+    { signal }
+  );
+  primary.element.addEventListener(
+    "aero:slideChange",
+    (event) => activate((event as CustomEvent<{ index: number }>).detail.index),
+    { signal }
+  );
 
-  return (): void => {
-    handlers.forEach(({ el, fn }) => el.removeEventListener("click", fn));
-    trackEl.querySelectorAll(`:scope > *`).forEach((el) => el.classList.remove(THUMB_ACTIVE_CLASS));
-    primary.element.removeEventListener("aero:slideChange", onPrimarySlideChange);
+  activate(primary.currentIndex);
+  return () => {
+    controller.abort();
+    track.style.cursor = "";
+    for (const child of track.children) child.classList.remove(ACTIVE_CLASS);
   };
 }

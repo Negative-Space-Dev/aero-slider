@@ -1,24 +1,22 @@
 /* === Container === */
 .aero-slider {
   position: relative;
-  width: 100%;
-  min-width: 0; /* allow shrinking in flex/grid parents */
-  min-height: 0;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
   --slide-aspect: 5 / 3;
   --slides-per-view: 1;
   --slide-gap: 0px;
   --aero-layout-width: 100%;
 }
 
-/* Loop spacer: reserves space for prepended clones so the active slide
-   renders in its final aligned position before JS initializes.
-   Add data-aero-defer-visibility to the slider in HTML; JS removes
-   the attribute at init, deactivating the spacer once clones are in place.
-   Set data-aero-alignment in HTML when using left/right pre-init alignment;
-   center is assumed by default. */
-.aero-slider[data-aero-defer-visibility]:not(.aero-slider--ready) {
+/* Loop pre-init spacer. Loop mode prepends clones at init, which would shift
+   the first slide. Add data-aero-defer-visibility in HTML to reserve that space
+   up front (JS removes it once clones are in place). Also set
+   data-aero-alignment in HTML if not using the default center. */
+.aero-slider[data-aero-defer-visibility] {
   --aero-defer-offset: calc(
     var(--aero-layout-width, 100%) / 2 -
       (var(--aero-layout-width, 100%) - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) /
@@ -26,11 +24,11 @@
   );
 }
 
-.aero-slider[data-aero-defer-visibility]:not(.aero-slider--ready)[data-aero-alignment="left"] {
+.aero-slider[data-aero-defer-visibility][data-aero-alignment="left"] {
   --aero-defer-offset: 0px;
 }
 
-.aero-slider[data-aero-defer-visibility]:not(.aero-slider--ready)[data-aero-alignment="right"] {
+.aero-slider[data-aero-defer-visibility][data-aero-alignment="right"] {
   --aero-defer-offset: calc(
     var(--aero-layout-width, 100%) -
       (var(--aero-layout-width, 100%) - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) /
@@ -38,29 +36,13 @@
   );
 }
 
-.aero-slider[data-aero-defer-visibility]:not(.aero-slider--ready) .aero-slider__track::before {
+.aero-slider[data-aero-defer-visibility] .aero-slider__track::before {
   content: "";
   flex: 0 0 max(0px, calc(var(--aero-defer-offset, 0px) - var(--slide-gap, 0px)));
   scroll-snap-align: none;
 }
 
-.aero-slider[data-aero-defer-visibility]:not(.aero-slider--ready) .aero-slider__track > * {
-  scroll-snap-align: center;
-}
-
-.aero-slider[data-aero-defer-visibility]:not(.aero-slider--ready)[data-aero-alignment="left"]
-  .aero-slider__track
-  > * {
-  scroll-snap-align: start;
-}
-
-.aero-slider[data-aero-defer-visibility]:not(.aero-slider--ready)[data-aero-alignment="right"]
-  .aero-slider__track
-  > * {
-  scroll-snap-align: end;
-}
-
-/* Viewport clips the track; pagination sits below in normal flow */
+/* === Viewport === */
 .aero-slider__viewport {
   position: relative;
   width: 100%;
@@ -77,116 +59,87 @@
 
 /* === Track === */
 .aero-slider__track {
-  min-height: 0;
   display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
   width: 100%;
   min-width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-snap-type: x mandatory;
-  touch-action: manipulation;
-  overscroll-behavior-x: contain;
-  overflow-anchor: none;
+  min-height: 0;
+  box-sizing: border-box;
   gap: var(--slide-gap, 0px);
+  overflow: auto hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain; /* x only, so vertical wheel scrolling still reaches the page */
+  overflow-anchor: none;
+  touch-action: manipulation;
   cursor: grab;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-
   scrollbar-width: none;
-  -ms-overflow-style: none;
 }
 
 .aero-slider__track::-webkit-scrollbar {
   display: none;
 }
 
-/* Breakout: the track scrolls full-bleed, but slides size off --aero-layout-width
-   (the content column). The leading/trailing spacers reserve the scroll range, and
-   scroll-padding insets the snap area, so the active slide aligns to the centered
-   content column rather than the screen edge. Both derive from the track's own
-   width (100% = content box, scrollbar-correct) and the layout width. */
-.aero-slider--breakout.aero-slider--ready .aero-slider__track,
-.aero-slider--breakout:not([data-aero-defer-visibility]) .aero-slider__track {
-  scroll-padding-inline: max(0px, calc((100% - var(--aero-layout-width, 100%)) / 2));
-}
-
-.aero-slider--breakout.aero-slider--ready .aero-slider__track::before,
-.aero-slider--breakout.aero-slider--ready .aero-slider__track::after,
-.aero-slider--breakout:not([data-aero-defer-visibility]) .aero-slider__track::before,
-.aero-slider--breakout:not([data-aero-defer-visibility]) .aero-slider__track::after {
-  content: "";
-  flex: 0 0
-    max(0px, calc((100% - var(--aero-layout-width, 100%)) / 2 - var(--slide-gap, 0px)));
-  scroll-snap-align: none;
-  pointer-events: none;
-}
-
 .aero-slider__track:focus {
   outline: none;
 }
+
 .aero-slider__track:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 2px;
 }
 
-.aero-slider[data-aero-alignment="center"] .aero-slider__track > * {
-  scroll-snap-align: center;
-}
-
-.aero-slider[data-aero-alignment="right"] .aero-slider__track > * {
-  scroll-snap-align: end;
+/* Breakout: the track spans the full bleed while slides size to
+   --aero-layout-width (the content column). The gutter is track padding, and
+   scroll-padding mirrors it so slides snap to the column. JS reads the padding
+   as the snap inset, so keep the two equal if you override them. */
+.aero-slider--breakout .aero-slider__track {
+  padding-inline: max(0px, calc((100% - var(--aero-layout-width, 100%)) / 2));
+  scroll-padding-inline: max(0px, calc((100% - var(--aero-layout-width, 100%)) / 2));
 }
 
 /* === Slides === */
-.aero-slider__slide,
 .aero-slider__track > * {
   flex: 0 0
     calc(
       (var(--aero-layout-width, 100%) - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) /
         var(--slides-per-view, 1)
     );
-  flex-shrink: 0;
-  flex-grow: 0;
-  scroll-snap-align: start;
-  aspect-ratio: var(--slide-aspect, 16 / 9);
+  aspect-ratio: var(--slide-aspect, 5 / 3);
+  scroll-snap-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
   min-width: 0;
   min-height: 0;
-  contain: layout style paint;
   overflow: hidden;
+  contain: layout style paint;
 }
 
-.aero-slider__slide > *,
+.aero-slider[data-aero-alignment="left"] .aero-slider__track > * {
+  scroll-snap-align: start;
+}
+
+.aero-slider[data-aero-alignment="right"] .aero-slider__track > * {
+  scroll-snap-align: end;
+}
+
 .aero-slider__track > * > * {
   flex: 1;
   min-width: 0;
   min-height: 0;
 }
 
-/* === Dragging State === */
+/* === Dragging === */
 .aero-slider--dragging {
   user-select: none;
 }
 
 .aero-slider--dragging .aero-slider__track {
   cursor: grabbing;
-  scroll-snap-type: none;
-}
-
-/* === Navigation === */
-.aero-slider__nav--prev,
-.aero-slider__nav--next {
-  touch-action: manipulation;
 }
 
 /* === Pagination === */
 .aero-slider__pagination {
   display: flex;
-  flex-wrap: nowrap;
   gap: 8px;
   flex-shrink: 0;
   justify-content: center;
@@ -197,7 +150,6 @@
 }
 
 .aero-slider__dot {
-  touch-action: manipulation;
   cursor: pointer;
   flex-shrink: 0;
   transition:
@@ -205,17 +157,14 @@
     opacity 0.2s ease-out;
 }
 
-/* iOS-style windowed pagination */
+/* Windowed (maxDots) pagination: a fixed-width window over a sliding track */
 .aero-slider__pagination--windowed {
   width: calc(var(--pagination-width) + 12px);
   max-width: calc(100% + 12px);
-  margin-left: auto;
-  margin-right: auto;
+  margin-inline: auto;
   overflow: hidden;
   justify-content: flex-start;
-  padding-left: 6px;
-  padding-right: 6px;
-  box-sizing: border-box;
+  padding-inline: 6px;
 }
 
 .aero-slider__pagination-track {
@@ -226,7 +175,6 @@
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Dot scale states for windowed pagination (CSS-driven, not inline styles) */
 .aero-slider__dot--hidden {
   transform: scale(0.4);
   opacity: 0;
@@ -240,38 +188,33 @@
   transform: scale(0.8);
 }
 
-/* === RTL === */
-.aero-slider--rtl .aero-slider__track {
-  direction: rtl;
+@media (prefers-reduced-motion: reduce) {
+  .aero-slider__dot,
+  .aero-slider__pagination-track {
+    transition: none;
+  }
 }
 
 /* === Vertical (ttb) === */
-/* Viewport height derives from width via --slide-aspect (same as horizontal). */
+/* Viewport height derives from width via --slide-aspect, as for horizontal. */
 .aero-slider--vertical .aero-slider__viewport {
   aspect-ratio: var(--slide-aspect, 5 / 3);
-  overflow: hidden;
 }
 
 .aero-slider--vertical .aero-slider__track {
   flex-direction: column;
-  overflow-x: hidden;
-  overflow-y: auto;
-  scroll-snap-type: y mandatory;
-  overscroll-behavior-x: initial;
-  overscroll-behavior-y: contain;
-  min-width: initial;
   height: 100%;
-  min-height: 100%;
+  min-width: 0;
+  overflow: hidden auto;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior-x: auto;
+  overscroll-behavior-y: contain;
 }
 
-.aero-slider--vertical .aero-slider__slide,
 .aero-slider--vertical .aero-slider__track > * {
-  flex: 0 0
-    calc(
-      (100% - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) /
-        var(--slides-per-view, 1)
-    );
-  aspect-ratio: initial;
+  flex-basis: calc(
+    (100% - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) / var(--slides-per-view, 1)
+  );
+  aspect-ratio: auto;
   width: 100%;
-  min-height: 0;
 }

@@ -1,419 +1,215 @@
-import type { SliderContext } from "./types.ts";
+import type { SliderCore } from "./slider.ts";
 
-// ── Navigation Arrows ──────────────────────────────────────────────────
-export interface NavigationController {
-  build(): void;
-  clear(): void;
-  refresh(): void;
+// ── Prev / next buttons ────────────────────────────────────────────────
+
+export function navigation(core: SliderCore) {
+  const { container, signal } = core;
+  const prevButton = container.querySelector<HTMLButtonElement>(".aero-slider__nav--prev");
+  const nextButton = container.querySelector<HTMLButtonElement>(".aero-slider__nav--next");
+  prevButton?.addEventListener("click", core.prev, { signal });
+  nextButton?.addEventListener("click", core.next, { signal });
+
+  return {
+    refresh(): void {
+      const singlePage = core.maxIndex() === 0;
+      const hasEdges = !core.loop();
+      if (prevButton) prevButton.disabled = singlePage || (hasEdges && core.current() === 0);
+      if (nextButton) {
+        nextButton.disabled = singlePage || (hasEdges && core.current() >= core.maxIndex());
+      }
+    },
+  };
 }
 
-export function createNavigation(
-  ctx: SliderContext,
-  next: () => void,
-  prev: () => void
-): NavigationController {
-  let prevBtn: HTMLButtonElement | null = null;
-  let nextBtn: HTMLButtonElement | null = null;
-  let prevHandler: () => void = prev;
-  let nextHandler: () => void = next;
+// ── Pagination dots ────────────────────────────────────────────────────
+// The markup supplies one .aero-slider__dot as a template; we clone it per
+// page. With maxDots set, the dots sit in a sliding track and only a window
+// of them shows, iOS style.
+
+export function pagination(core: SliderCore) {
+  const box = core.container.querySelector<HTMLElement>(".aero-slider__pagination");
+  const template = box?.querySelector<HTMLElement>(".aero-slider__dot");
+  if (!box || !template) return { build() {}, refresh() {} };
+  return createPagination(core, box, template);
+}
+
+function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElement) {
+  const { config, signal } = core;
+  let dots: HTMLElement[] = [];
+  let windowed = false;
+  let dotTrack: HTMLElement | null = null;
+  let dotPitch = 0; // distance between neighbouring dots; negative in RTL
 
   function clear(): void {
-    if (prevBtn) {
-      prevBtn.removeEventListener("click", prevHandler);
-      prevBtn = null;
-    }
-    if (nextBtn) {
-      nextBtn.removeEventListener("click", nextHandler);
-      nextBtn = null;
-    }
+    for (const dot of dots) if (dot !== template) dot.remove();
+    dotTrack?.remove();
+    dotTrack = null;
+    dots = [];
+    template.style.display = "";
+    box.classList.remove("aero-slider__pagination--windowed");
+    box.style.removeProperty("--pagination-width");
   }
 
   function build(): void {
     clear();
-    prevBtn = ctx.container.querySelector<HTMLButtonElement>(".aero-slider__nav--prev");
-    nextBtn = ctx.container.querySelector<HTMLButtonElement>(".aero-slider__nav--next");
-    // In RTL, DOM order flips: prev ends up on the right (with ← icon), next on the left (with → icon).
-    // Swap handlers so arrows match direction of travel (→ = go right/prev, ← = go left/next).
-    const isRtl = ctx.config.direction === "rtl";
-    prevHandler = isRtl ? next : prev;
-    nextHandler = isRtl ? prev : next;
-    if (prevBtn) prevBtn.addEventListener("click", prevHandler);
-    if (nextBtn) nextBtn.addEventListener("click", nextHandler);
-    refresh();
-  }
-
-  function refresh(): void {
-    const maxIndex = ctx.getMaxIndex();
-    const hasMultiplePages = maxIndex > 0;
-    const isRtl = ctx.config.direction === "rtl";
-    // In RTL we swapped handlers: prevBtn→next, nextBtn→prev. Swap disabled logic to match.
-    const prevDisabled =
-      !hasMultiplePages || (!ctx.isLoopEnabled() && ctx.state.currentIndex === 0);
-    const nextDisabled =
-      !hasMultiplePages || (!ctx.isLoopEnabled() && ctx.state.currentIndex >= maxIndex);
-    if (prevBtn) prevBtn.disabled = isRtl ? nextDisabled : prevDisabled;
-    if (nextBtn) nextBtn.disabled = isRtl ? prevDisabled : nextDisabled;
-  }
-
-  return { build, clear, refresh };
-}
-
-// ── Pagination Dots ────────────────────────────────────────────────────
-// User provides a container with class aero-slider__pagination and one dot
-// with class aero-slider__dot as a template. We clone the dot for each slide
-// and only manage count + active state. When maxDots is set and exceeded,
-// shows a windowed view with edge indicators.
-export interface PaginationController {
-  build(): void;
-  clear(): void;
-  refresh(): void;
-}
-
-export function createPagination(
-  ctx: SliderContext,
-  goTo: (index: number) => void
-): PaginationController {
-  let container: HTMLElement | null = null;
-  let dotsTrack: HTMLElement | null = null;
-  let templateDot: HTMLElement | null = null;
-  let dots: HTMLElement[] = [];
-  let isWindowed = false;
-  let dotSize = 10; // Will be measured from template
-  let dotGap = 8;
-
-  function onPaginationClick(e: Event): void {
-    const dot = (e.target as HTMLElement).closest(".aero-slider__dot");
-    if (!dot || !container) return;
-    const index = dot.getAttribute("data-slide-index");
-    if (index !== null) goTo(Number(index));
-  }
-
-  function clear(): void {
-    if (container) {
-      container.removeEventListener("click", onPaginationClick);
-      // Remove track if we created it
-      dotsTrack?.remove();
-      dotsTrack = null;
-      // Restore template visibility
-      if (templateDot) templateDot.style.display = "";
-      // Remove all dots except the template
-      const all = container.querySelectorAll<HTMLElement>(".aero-slider__dot");
-      for (let i = 1; i < all.length; i++) {
-        all[i]?.remove();
-      }
-      // Remove any old labels
-      container.querySelectorAll(".aero-slider__pagination-label").forEach((el) => el.remove());
-      container = null;
+    const count = core.pageCount();
+    const { maxDots } = config;
+    windowed = maxDots > 0 && count > maxDots;
+    if (windowed) {
+      dotTrack = document.createElement("div");
+      dotTrack.className = "aero-slider__pagination-track";
     }
-    templateDot = null;
-    dots = [];
-    isWindowed = false;
-  }
+    const parent = dotTrack ?? box;
 
-  function getPageCount(): number {
-    return ctx.isLoopEnabled() ? ctx.slideCount : ctx.getMaxIndex() + 1;
-  }
-
-  function build(): void {
-    container = ctx.container.querySelector<HTMLElement>(".aero-slider__pagination");
-    if (!container) return;
-
-    templateDot = container.querySelector<HTMLElement>(".aero-slider__dot");
-    if (!templateDot) return;
-
-    // Ensure template is visible and unscaled for measuring
-    const wasHidden = templateDot.style.display === "none";
-    if (wasHidden) templateDot.style.display = "";
-    templateDot.style.transform = "";
-    templateDot.style.opacity = "";
-
-    // Measure dot size from computed style; avoid forced reflow unless width is unresolved.
-    const computedStyle = getComputedStyle(templateDot);
-    const computedWidth = parseFloat(computedStyle.width);
-    dotSize =
-      computedWidth > 0 ? computedWidth : templateDot.getBoundingClientRect().width || 10;
-    const containerStyle = getComputedStyle(container);
-    dotGap = parseInt(containerStyle.gap, 10) || 8;
-
-    container.setAttribute("role", "tablist");
-    container.addEventListener("click", onPaginationClick);
-
-    const pageCount = getPageCount();
-    const maxDots = ctx.config.maxDots;
-    isWindowed = maxDots > 0 && pageCount > maxDots;
-
-    // Clear existing structure
-    dotsTrack?.remove();
-    const existing = container.querySelectorAll<HTMLElement>(".aero-slider__dot");
-    for (let i = 1; i < existing.length; i++) {
-      existing[i]?.remove();
-    }
-    container.querySelectorAll(".aero-slider__pagination-label").forEach((el) => el.remove());
-
-    if (isWindowed) {
-      // iOS-style: create ALL dots in a sliding track
-      container.classList.add("aero-slider__pagination--windowed");
-
-      // Set container width to show only maxDots
-      const visibleWidth = maxDots * dotSize + (maxDots - 1) * dotGap;
-      container.style.setProperty("--pagination-width", `${visibleWidth}px`);
-
-      // Create inner track for all dots
-      dotsTrack = document.createElement("div");
-      dotsTrack.className = "aero-slider__pagination-track";
-
-      // Hide original template, create clones in track
-      templateDot.style.display = "none";
-
-      // Create all dots as clones
-      for (let i = 0; i < pageCount; i++) {
-        const clone = templateDot.cloneNode(true) as HTMLElement;
-        clone.style.display = "";
-        dotsTrack.appendChild(clone);
-      }
-
-      container.appendChild(dotsTrack);
-    } else {
-      // Standard pagination: one dot per page
-      container.classList.remove("aero-slider__pagination--windowed");
-      container.style.removeProperty("--pagination-width");
-      templateDot.style.display = "";
-      for (let i = 1; i < pageCount; i++) {
-        const clone = templateDot.cloneNode(true) as HTMLElement;
-        container.appendChild(clone);
-      }
-    }
-
-    // Query dots from track if windowed, otherwise from container
-    const dotsParent = isWindowed && dotsTrack ? dotsTrack : container;
-    dots = Array.from(dotsParent.querySelectorAll<HTMLElement>(".aero-slider__dot"));
-    dots.forEach((dot, i) => {
+    for (let i = 0; i < count; i++) {
+      const dot = !windowed && i === 0 ? template : (template.cloneNode(true) as HTMLElement);
       dot.setAttribute("role", "tab");
-      dot.setAttribute("data-slide-index", String(i));
       dot.setAttribute("aria-label", `Go to slide ${i + 1}`);
-    });
+      dot.dataset.slideIndex = String(i);
+      if (dot !== template) parent.append(dot);
+      dots.push(dot);
+    }
+
+    if (dotTrack) {
+      template.style.display = "none";
+      box.classList.add("aero-slider__pagination--windowed");
+      box.append(dotTrack);
+      dotPitch = dots[1]!.offsetLeft - dots[0]!.offsetLeft;
+      const width = (maxDots - 1) * Math.abs(dotPitch) + dots[0]!.offsetWidth;
+      box.style.setProperty("--pagination-width", `${width}px`);
+    }
     refresh();
   }
 
-  /** Determine CSS class for dot based on position in windowed view */
-  function getDotScaleClass(
-    posInWindow: number,
-    maxDots: number,
-    atStart: boolean,
-    atEnd: boolean
-  ): string | null {
-    if (posInWindow < 0 || posInWindow >= maxDots) {
-      return "aero-slider__dot--hidden";
-    }
-
-    const atLeftEdge = posInWindow === 0;
-    const atRightEdge = posInWindow === maxDots - 1;
-    const nearLeftEdge = posInWindow === 1;
-    const nearRightEdge = posInWindow === maxDots - 2;
-
-    // Scale left edge only if not at pagination start
-    if (atLeftEdge && !atStart) return "aero-slider__dot--edge";
-    if (nearLeftEdge && !atStart) return "aero-slider__dot--near-edge";
-    // Scale right edge only if not at pagination end
-    if (atRightEdge && !atEnd) return "aero-slider__dot--edge";
-    if (nearRightEdge && !atEnd) return "aero-slider__dot--near-edge";
-
-    return null;
-  }
-
-  /** Clear all scale modifier classes from a dot */
-  function clearDotScaleClasses(dot: HTMLElement): void {
-    dot.classList.remove(
-      "aero-slider__dot--hidden",
-      "aero-slider__dot--edge",
-      "aero-slider__dot--near-edge"
-    );
-  }
-
   function refresh(): void {
-    const pageCount = getPageCount();
-    const currentIndex = ctx.state.currentIndex;
-    const maxDots = ctx.config.maxDots;
+    const current = core.current();
+    const count = dots.length;
+    const { maxDots } = config;
+    const firstShown = windowed
+      ? Math.max(0, Math.min(current - Math.floor(maxDots / 2), count - maxDots))
+      : 0;
+    const atStart = firstShown === 0;
+    const atEnd = firstShown >= count - maxDots;
+    dotTrack?.style.setProperty("--track-offset", `${-firstShown * dotPitch}px`);
 
-    if (isWindowed && maxDots > 0 && dotsTrack) {
-      // iOS-style: translate track to center active dot
-      const halfWindow = Math.floor(maxDots / 2);
-      const dotUnit = dotSize + dotGap;
+    dots.forEach((dot, i) => {
+      const active = i === current;
+      dot.classList.toggle("aero-slider__dot--active", active);
+      dot.setAttribute("aria-selected", String(active));
+      if (!windowed) return;
 
-      // Calculate offset to center current dot, clamped to edges
-      let targetOffset = currentIndex - halfWindow;
-      targetOffset = Math.max(0, Math.min(targetOffset, pageCount - maxDots));
-
-      // Use CSS custom property for track translation
-      dotsTrack.style.setProperty("--track-offset", `${-targetOffset * dotUnit}px`);
-
-      const atStart = targetOffset === 0;
-      const atEnd = targetOffset >= pageCount - maxDots;
-
-      // Update dot states using CSS classes
-      dots.forEach((dot, i) => {
-        const active = i === currentIndex;
-        dot.classList.toggle("aero-slider__dot--active", active);
-        dot.setAttribute("aria-selected", String(active));
-
-        clearDotScaleClasses(dot);
-        const scaleClass = getDotScaleClass(i - targetOffset, maxDots, atStart, atEnd);
-        if (scaleClass) dot.classList.add(scaleClass);
-      });
-    } else {
-      // Standard refresh - clear any windowed classes
-      dots.forEach((dot, i) => {
-        const active = i === currentIndex;
-        dot.classList.toggle("aero-slider__dot--active", active);
-        dot.setAttribute("aria-selected", String(active));
-        clearDotScaleClasses(dot);
-      });
-    }
+      const slot = i - firstShown;
+      const size =
+        slot < 0 || slot >= maxDots
+          ? "hidden"
+          : (slot === 0 && !atStart) || (slot === maxDots - 1 && !atEnd)
+            ? "edge"
+            : (slot === 1 && !atStart) || (slot === maxDots - 2 && !atEnd)
+              ? "near-edge"
+              : "";
+      dot.classList.remove(
+        "aero-slider__dot--hidden",
+        "aero-slider__dot--edge",
+        "aero-slider__dot--near-edge"
+      );
+      if (size) dot.classList.add(`aero-slider__dot--${size}`);
+    });
   }
 
-  return { build, clear, refresh };
+  box.setAttribute("role", "tablist");
+  box.addEventListener(
+    "click",
+    (event) => {
+      const dot = (event.target as Element).closest<HTMLElement>(".aero-slider__dot");
+      if (dot?.dataset.slideIndex) core.goTo(Number(dot.dataset.slideIndex));
+    },
+    { signal }
+  );
+  signal.addEventListener("abort", clear);
+
+  return { build, refresh };
 }
 
-// ── Keyboard Navigation ────────────────────────────────────────────────
-export interface KeyboardController {
-  setEnabled(enabled: boolean): void;
-}
+// ── Keyboard ───────────────────────────────────────────────────────────
 
-export function createKeyboard(
-  ctx: SliderContext,
-  next: () => void,
-  prev: () => void
-): KeyboardController {
-  let active = false;
-
-  function onKeydown(e: KeyboardEvent): void {
-    const dir = ctx.config.direction;
-
-    if (dir === "ttb") {
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        prev();
-      } else if (e.key === "ArrowDown") {
-        e.preventDefault();
-        next();
-      }
-    } else if (dir === "rtl") {
-      if (e.key === "ArrowRight") {
-        e.preventDefault();
-        prev();
-      } else if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        next();
-      }
-    } else {
-      if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        prev();
-      } else if (e.key === "ArrowRight") {
-        e.preventDefault();
-        next();
-      }
-    }
+export function keyboard(core: SliderCore): void {
+  const { container, signal } = core;
+  if (!container.hasAttribute("tabindex")) {
+    container.tabIndex = 0;
+    signal.addEventListener("abort", () => container.removeAttribute("tabindex"));
   }
-
-  function setEnabled(enabled: boolean): void {
-    if (enabled === active) return;
-    if (enabled) {
-      ctx.container.setAttribute("tabindex", "0");
-      ctx.container.addEventListener("keydown", onKeydown);
-      active = true;
-    } else {
-      ctx.container.removeAttribute("tabindex");
-      ctx.container.removeEventListener("keydown", onKeydown);
-      active = false;
-    }
-  }
-
-  return { setEnabled };
+  container.addEventListener(
+    "keydown",
+    (event) => {
+      if ((event.target as Element).closest("input, textarea, select, [contenteditable]")) return;
+      const { direction } = core.config;
+      const [back, forward] =
+        direction === "ttb"
+          ? ["ArrowUp", "ArrowDown"]
+          : direction === "rtl"
+            ? ["ArrowRight", "ArrowLeft"]
+            : ["ArrowLeft", "ArrowRight"];
+      if (event.key === back) core.prev();
+      else if (event.key === forward) core.next();
+      else return;
+      event.preventDefault();
+    },
+    { signal }
+  );
 }
 
 // ── Autoplay ───────────────────────────────────────────────────────────
-export interface AutoplayController {
-  start(): void;
-  pause(): void;
-  setHoverPause(enabled: boolean): void;
-}
+// Pauses while the pointer is over the slider, while keyboard focus is inside,
+// during a drag, and while the tab is hidden. Never runs under
+// prefers-reduced-motion.
 
-export function createAutoplay(ctx: SliderContext, next: () => void): AutoplayController {
-  let timer: ReturnType<typeof setInterval> | null = null;
-  let hoverListenersActive = false;
-  let touchResumeTimer: ReturnType<typeof setTimeout> | null = null;
+export function autoplay(core: SliderCore) {
+  const { container, config, signal } = core;
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  const holds = new Set<string>();
+  let timer = 0;
 
   function start(): void {
-    if (!ctx.config.autoplay) return;
-    pause();
-    timer = setInterval(() => {
-      if (!ctx.state.loopModeActive && ctx.state.currentIndex >= ctx.getMaxIndex()) {
-        pause();
-        return;
-      }
-      next();
-    }, ctx.config.autoplayInterval);
-    ctx.emit("autoplayStart", {});
+    if (timer || !config.autoplay || holds.size || document.hidden || reducedMotion.matches) return;
+    timer = window.setInterval(advance, config.autoplayInterval);
+    core.emit("autoplayStart", {});
   }
 
-  function pause(): void {
-    if (timer !== null) {
-      clearInterval(timer);
-      timer = null;
-      ctx.emit("autoplayStop", {});
-    }
+  function stop(): void {
+    if (!timer) return;
+    clearInterval(timer);
+    timer = 0;
+    core.emit("autoplayStop", {});
   }
 
-  function onMouseEnter(): void {
-    pause();
+  function advance(): void {
+    const atEnd = !core.loop() && core.current() >= core.maxIndex();
+    if (atEnd) core.goTo(0);
+    else core.next();
   }
 
-  function onMouseLeave(): void {
-    if (ctx.config.autoplay) start();
+  function hold(reason: string): void {
+    holds.add(reason);
+    stop();
   }
 
-  function onTouchStart(): void {
-    // Cancel any pending resume
-    if (touchResumeTimer !== null) {
-      clearTimeout(touchResumeTimer);
-      touchResumeTimer = null;
-    }
-    pause();
+  function release(reason: string): void {
+    holds.delete(reason);
+    start();
   }
 
-  function onTouchEnd(): void {
-    // Resume autoplay after a delay to let scroll settle
-    if (ctx.config.autoplay) {
-      touchResumeTimer = setTimeout(() => {
-        touchResumeTimer = null;
-        if (ctx.config.autoplay) start();
-      }, 1000); // 1 second delay after touch ends
-    }
-  }
+  const listen = (target: EventTarget, type: string, handler: (event: Event) => void) =>
+    target.addEventListener(type, handler, { passive: true, signal });
+  listen(container, "pointerenter", () => hold("pointer"));
+  listen(container, "pointerleave", () => release("pointer"));
+  listen(container, "focusin", (event) => {
+    if ((event.target as Element).matches(":focus-visible")) hold("focus");
+  });
+  listen(container, "focusout", (event) => {
+    if (!container.contains((event as FocusEvent).relatedTarget as Node)) release("focus");
+  });
+  listen(document, "visibilitychange", () => (document.hidden ? stop() : start()));
+  signal.addEventListener("abort", stop);
 
-  function setHoverPause(enabled: boolean): void {
-    if (enabled === hoverListenersActive) return;
-    if (enabled) {
-      ctx.container.addEventListener("mouseenter", onMouseEnter);
-      ctx.container.addEventListener("mouseleave", onMouseLeave);
-      ctx.track.addEventListener("touchstart", onTouchStart, { passive: true });
-      ctx.track.addEventListener("touchend", onTouchEnd, { passive: true });
-      ctx.track.addEventListener("touchcancel", onTouchEnd, { passive: true });
-      hoverListenersActive = true;
-    } else {
-      ctx.container.removeEventListener("mouseenter", onMouseEnter);
-      ctx.container.removeEventListener("mouseleave", onMouseLeave);
-      ctx.track.removeEventListener("touchstart", onTouchStart);
-      ctx.track.removeEventListener("touchend", onTouchEnd);
-      ctx.track.removeEventListener("touchcancel", onTouchEnd);
-      if (touchResumeTimer !== null) {
-        clearTimeout(touchResumeTimer);
-        touchResumeTimer = null;
-      }
-      hoverListenersActive = false;
-    }
-  }
-
-  return { start, pause, setHoverPause };
+  return { start, stop, hold, release };
 }

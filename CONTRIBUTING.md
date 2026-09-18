@@ -12,7 +12,8 @@ bun install
 
 ## Working on the library
 
-- **`bun run build`** — Build the slider
+- **`bun run build`** — Build the slider (`build.ts`: bundles JS and CSS with Bun, emits types with `tsc`)
+- **`bun run test`** — Build, then run the headless-Chrome smoke test in `test/smoke.ts` (needs Google Chrome, or set `CHROME=/path/to/chrome`)
 - **`bun run typecheck`** — Run TypeScript checks
 - **`bun run format`** — Format code with Prettier
 - **`bun run format:check`** — Check formatting
@@ -29,6 +30,7 @@ The documentation site lives in `site/` (Astro + Tailwind):
 ### Publishing to npm
 
 1. **Log in to npm** (if not already):
+
    ```bash
    npm login
    ```
@@ -39,11 +41,13 @@ The documentation site lives in `site/` (Astro + Tailwind):
    - Prerelease: `npm version prerelease --preid=beta` (e.g. 1.0.0 → 1.0.1-beta.0)
 
 3. **Run checks**:
+
    ```bash
-   bun run build
    bun run typecheck
+   bun run test
    bun run pack
    ```
+
    `pack` creates a `.tgz` so you can verify what gets published.
 
 4. **Publish**:
