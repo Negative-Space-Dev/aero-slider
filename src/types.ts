@@ -16,13 +16,18 @@ export interface SliderConfig {
   direction?: "ltr" | "rtl" | "ttb";
 }
 
+export interface GoToOptions {
+  /** Jump straight there, with no scroll animation. */
+  instant?: boolean;
+}
+
 export interface SliderInstance {
   readonly element: HTMLElement;
   readonly currentIndex: number;
   readonly slideCount: number;
   next(): void;
   prev(): void;
-  goTo(index: number): void;
+  goTo(index: number, options?: GoToOptions): void;
   update(config?: SliderConfig): void;
   refresh(): void;
   add(slides: HTMLElement | HTMLElement[], index?: number): void;

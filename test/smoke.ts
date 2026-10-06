@@ -171,6 +171,18 @@ const scenario = `(async () => {
   check("cursor.fixed", getComputedStyle(track("fixed")).cursor !== "grab", getComputedStyle(track("fixed")).cursor);
   check("cursor.draggable", getComputedStyle(track("basic")).cursor === "grab", getComputedStyle(track("basic")).cursor);
 
+  // goTo(..., { instant: true }) jumps with no animation, and the next move still animates from there
+  {
+    const s = S.fixed, t = track("fixed");
+    s.goTo(3, { instant: true });
+    check("goTo.instant", s.currentIndex === 3 && near(t.scrollLeft, 1830), { i: s.currentIndex, pos: t.scrollLeft });
+    await settled("fixed");
+    s.next(); await sleep(40);
+    check("goTo.instant.nextAnimates", t.scrollLeft > 1830 && t.scrollLeft < 2400, { pos: t.scrollLeft });
+    await settled("fixed");
+    check("goTo.instant.nextLands", s.currentIndex === 4 && near(t.scrollLeft, t.scrollWidth - t.clientWidth), { i: s.currentIndex, pos: t.scrollLeft });
+  }
+
   // Clones of link slides leave the tab order and drop their ids
   {
     const clones = [...track("cards").querySelectorAll("[data-aero-slider-clone]")];
