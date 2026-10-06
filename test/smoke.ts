@@ -29,6 +29,7 @@ ${slider("dots", 12, "--slides-per-view:3;--slide-gap:6px")}
 <div id="hiddenWrap" style="display:none">${slider("hidden", 4)}</div>
 ${slider("fixed", 5, "--slide-gap:10px")}
 ${slider("ticking", 4)}
+${slider("interval", 4)}
 <div id="cards" class="aero-slider" style="width:600px"><div class="aero-slider__viewport"><div class="aero-slider__track">${Array.from({ length: 3 }, (_, i) => `<a href="#card${i}" id="card${i}">${i}</a>`).join("")}</div></div></div>
 <script type="module">
   import { createSlider } from "/dist/aero-slider.min.js";
@@ -41,6 +42,7 @@ ${slider("ticking", 4)}
     hidden: createSlider(document.getElementById("hidden"), { loop: true }),
     fixed: createSlider(document.getElementById("fixed"), { draggable: false }),
     ticking: createSlider(document.getElementById("ticking"), { loop: true, autoplay: true, autoplayInterval: 300 }),
+    interval: createSlider(document.getElementById("interval"), { loop: true, autoplay: true, autoplayInterval: 400 }),
     cards: createSlider(document.getElementById("cards"), { loop: true }),
   };
 </script></body></html>`;
@@ -187,6 +189,40 @@ const scenario = `(async () => {
   {
     const clones = [...track("cards").querySelectorAll("[data-aero-slider-clone]")];
     check("clones.linkSlides", clones.length > 0 && clones.every((c) => c.tabIndex === -1 && !c.id && c.getAttribute("aria-hidden") === "true"), { n: clones.length, tabbable: clones.filter((c) => c.tabIndex !== -1).length });
+  }
+
+  // Interval autoplay: restarts after a manual change, pause()/resume(), holds while pressed
+  {
+    const s = S.interval, t = track("interval"), el = document.getElementById("interval");
+    // Two jumps so at least one is a change, which restarts the countdown from here.
+    s.goTo(1, { instant: true }); s.goTo(0, { instant: true }); await sleep(470);
+    check("interval.advances", s.currentIndex === 1, { i: s.currentIndex });
+    await sleep(150); s.goTo(3);
+    await sleep(300);
+    check("interval.restartsAfterManual", s.currentIndex === 3, { i: s.currentIndex });
+    await sleep(170);
+    check("interval.wraps", s.currentIndex === 0, { i: s.currentIndex });
+    s.pause(); await sleep(500);
+    check("interval.pause", s.currentIndex === 0, { i: s.currentIndex });
+    s.resume(); await sleep(450);
+    check("interval.resume", s.currentIndex === 1, { i: s.currentIndex });
+    const r = t.getBoundingClientRect();
+    const press = () => t.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerId: 2, pointerType: "mouse", button: 0, buttons: 1, clientX: r.left + 10, clientY: r.top + 10 }));
+    const lift = () => window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 2, pointerType: "mouse" }));
+    press();
+    const pressedAt = s.currentIndex; await sleep(600);
+    check("interval.holdsWhilePressed", s.currentIndex === pressedAt, { i: s.currentIndex });
+    lift(); await sleep(600);
+    check("interval.resumesAfterPress", s.currentIndex !== pressedAt, { i: s.currentIndex });
+    // A press that sets off a scroll (a fling) waits for it to settle, not the 150ms fallback.
+    let settledAt = 0, startedAt = 0;
+    // Capture runs before the slider's own scrollend handler, which is what restarts autoplay.
+    t.addEventListener("scrollend", () => (settledAt ||= performance.now()), { capture: true });
+    el.addEventListener("aero:autoplayStart", () => (startedAt ||= performance.now()));
+    press(); lift(); t.scrollBy({ left: 300, behavior: "smooth" });
+    await sleep(1200);
+    check("interval.waitsForSettle", settledAt > 0 && startedAt >= settledAt, { settledAt, startedAt });
+    s.update({ autoplay: false });
   }
 
   // Destroy leaves the DOM clean and the API inert

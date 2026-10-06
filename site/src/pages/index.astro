@@ -952,7 +952,7 @@ createSlider(rightEl, { alignment: "right", loop: true });`}
       <div>
         <h3 class="mb-1 text-lg font-semibold text-slate-800">Autoplay + Loop</h3>
         <p class="mb-4 text-sm text-slate-600">
-          Auto-advances every 3 seconds with infinite looping. Pauses on hover, keyboard focus, drag, and hidden tabs, and stops as soon as prefers-reduced-motion is turned on.
+          Auto-advances every 3 seconds with infinite looping. Pauses on hover, press, keyboard focus, drag, and hidden tabs, and stops as soon as prefers-reduced-motion is turned on.
         </p>
         <div id="autoplay" class="aero-slider">
           <div class="aero-slider__viewport relative rounded-2xl">
@@ -1628,13 +1628,13 @@ const teardown = AeroSlider.syncThumbnails(main, thumbs);
                 <tr class="border-b border-slate-100"
                   ><td class="py-2 pr-4 font-mono text-xs">autoplay</td><td class="py-2 pr-4"
                     >boolean</td
-                  ><td class="py-2 pr-4">false</td><td class="py-2">Auto-advance slides</td></tr
+                  ><td class="py-2 pr-4">false</td><td class="py-2">Auto-advance one move every <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">autoplayInterval</code>. Pauses on hover, while pressed (until scrolling settles), while keyboard focus is inside, during a drag, while the tab is hidden, and on <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">pause()</code>. Never runs under <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">prefers-reduced-motion</code>.</td></tr
                 >
                 <tr class="border-b border-slate-100"
                   ><td class="py-2 pr-4 font-mono text-xs">autoplayInterval</td><td
                     class="py-2 pr-4">number</td
                   ><td class="py-2 pr-4">5000</td><td class="py-2"
-                    >Delay between auto-advances (ms)</td
+                    >Delay between auto-advances (ms). Any slide change restarts the countdown.</td
                   ></tr
                 >
                 <tr class="border-b border-slate-100"
@@ -1704,6 +1704,11 @@ const teardown = AeroSlider.syncThumbnails(main, thumbs);
                 <tr class="border-b border-slate-100"
                   ><td class="py-2 pr-4 font-mono text-xs">.goTo(index, options?)</td><td class="py-2"
                     >Scroll to a specific slide index. Pass <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">{"{ instant: true }"}</code> to jump with no animation.</td
+                  ></tr
+                >
+                <tr class="border-b border-slate-100"
+                  ><td class="py-2 pr-4 font-mono text-xs">.pause() / .resume()</td><td class="py-2"
+                    >Hold autoplay until <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">resume()</code>; hover, focus, and drag pauses still apply on top</td
                   ></tr
                 >
                 <tr class="border-b border-slate-100"

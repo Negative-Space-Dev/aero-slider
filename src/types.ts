@@ -28,6 +28,9 @@ export interface SliderInstance {
   next(): void;
   prev(): void;
   goTo(index: number, options?: GoToOptions): void;
+  /** Hold autoplay until resume(); other pauses (hover, focus, drag) still apply on top. */
+  pause(): void;
+  resume(): void;
   update(config?: SliderConfig): void;
   refresh(): void;
   add(slides: HTMLElement | HTMLElement[], index?: number): void;

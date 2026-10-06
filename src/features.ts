@@ -159,14 +159,18 @@ export function keyboard(core: SliderCore): void {
 }
 
 // ── Autoplay ───────────────────────────────────────────────────────────
-// Pauses while the pointer is over the slider, while keyboard focus is inside,
-// during a drag, and while the tab is hidden. Never runs under
-// prefers-reduced-motion, and stops as soon as it is turned on.
+// Advances one move per autoplayInterval, restarting the countdown whenever the slide changes.
+// Pauses while the pointer is over the slider, while it is pressed, while keyboard focus is
+// inside, during a drag, while the tab is hidden, and on pause(). After a press it resumes once
+// scrolling settles. Never runs under prefers-reduced-motion, and stops as soon as it is turned on.
+
+const SETTLE_FALLBACK_MS = 150; // resume a press that never scrolled
 
 export function autoplay(core: SliderCore) {
-  const { container, config, signal, reducedMotion } = core;
+  const { container, track, config, signal, reducedMotion } = core;
   const holds = new Set<string>();
   let timer = 0;
+  let settleFallback = 0;
 
   function start(): void {
     if (timer || !config.autoplay || holds.size || document.hidden || reducedMotion.matches) return;
@@ -197,19 +201,60 @@ export function autoplay(core: SliderCore) {
     start();
   }
 
+  /** Holds until the next scroll settles, or briefly if nothing scrolls at all. */
+  function holdUntilSettled(): void {
+    hold("settle");
+    clearTimeout(settleFallback);
+    settleFallback = window.setTimeout(() => release("settle"), SETTLE_FALLBACK_MS);
+  }
+
   const listen = (target: EventTarget, type: string, handler: (event: Event) => void) =>
     target.addEventListener(type, handler, { passive: true, signal });
   listen(container, "pointerenter", () => hold("pointer"));
   listen(container, "pointerleave", () => release("pointer"));
+  listen(track, "pointerdown", () => {
+    if (!config.autoplay) return;
+    hold("press");
+    const up = () => {
+      removeEventListener("pointerup", up);
+      removeEventListener("pointercancel", up);
+      holds.delete("press");
+      holdUntilSettled();
+    };
+    addEventListener("pointerup", up, { signal });
+    addEventListener("pointercancel", up, { signal });
+  });
   listen(container, "focusin", (event) => {
     if ((event.target as Element).matches(":focus-visible")) hold("focus");
   });
   listen(container, "focusout", (event) => {
     if (!container.contains((event as FocusEvent).relatedTarget as Node)) release("focus");
   });
+  // A manual change earns a full interval before the next automatic one.
+  listen(container, "aero:slideChange", () => {
+    if (!timer) return;
+    clearInterval(timer);
+    timer = window.setInterval(advance, config.autoplayInterval);
+  });
   listen(document, "visibilitychange", () => (document.hidden ? stop() : start()));
   listen(reducedMotion, "change", () => (reducedMotion.matches ? stop() : start()));
-  signal.addEventListener("abort", stop);
+  signal.addEventListener("abort", () => {
+    clearTimeout(settleFallback);
+    stop();
+  });
 
-  return { start, stop, hold, release };
+  return {
+    start,
+    stop,
+    hold,
+    release,
+    /** A scroll is under way, so wait for it to settle rather than the fallback. */
+    scrolled(): void {
+      if (holds.has("settle")) clearTimeout(settleFallback);
+    },
+    settled(): void {
+      clearTimeout(settleFallback);
+      if (holds.has("settle")) release("settle");
+    },
+  };
 }

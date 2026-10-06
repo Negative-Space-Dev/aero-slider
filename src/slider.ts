@@ -259,6 +259,7 @@ export function createSlider(
   // ── Scroll tracking ──────────────────────────────────────────────────
 
   function onScroll(): void {
+    play.scrolled();
     if (!programmaticScroll && !scrollFrame) {
       scrollFrame = requestAnimationFrame(() => {
         scrollFrame = 0;
@@ -283,6 +284,7 @@ export function createSlider(
     // A clamped edge can park several indices at one spot; keep the requested one there.
     const moved = loop() || Math.abs(position - restPositionOf(current)) > 1;
     if (landed !== current && moved) setCurrent(landed);
+    play.settled();
   }
 
   // ── Mouse / pen drag ─────────────────────────────────────────────────
@@ -534,6 +536,8 @@ export function createSlider(
     next,
     prev,
     goTo,
+    pause: () => play.hold("api"),
+    resume: () => play.release("api"),
     update,
     refresh,
     add,
