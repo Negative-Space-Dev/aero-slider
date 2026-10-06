@@ -70,8 +70,11 @@
   overscroll-behavior-x: contain; /* x only, so vertical wheel scrolling still reaches the page */
   overflow-anchor: none;
   touch-action: manipulation;
-  cursor: grab;
   scrollbar-width: none;
+}
+
+.aero-slider--draggable .aero-slider__track {
+  cursor: grab;
 }
 
 .aero-slider__track::-webkit-scrollbar {

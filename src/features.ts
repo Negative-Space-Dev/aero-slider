@@ -161,11 +161,10 @@ export function keyboard(core: SliderCore): void {
 // ── Autoplay ───────────────────────────────────────────────────────────
 // Pauses while the pointer is over the slider, while keyboard focus is inside,
 // during a drag, and while the tab is hidden. Never runs under
-// prefers-reduced-motion.
+// prefers-reduced-motion, and stops as soon as it is turned on.
 
 export function autoplay(core: SliderCore) {
-  const { container, config, signal } = core;
-  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  const { container, config, signal, reducedMotion } = core;
   const holds = new Set<string>();
   let timer = 0;
 
@@ -209,6 +208,7 @@ export function autoplay(core: SliderCore) {
     if (!container.contains((event as FocusEvent).relatedTarget as Node)) release("focus");
   });
   listen(document, "visibilitychange", () => (document.hidden ? stop() : start()));
+  listen(reducedMotion, "change", () => (reducedMotion.matches ? stop() : start()));
   signal.addEventListener("abort", stop);
 
   return { start, stop, hold, release };
