@@ -30,6 +30,8 @@ ${slider("dots", 12, "--slides-per-view:3;--slide-gap:6px")}
 ${slider("fixed", 5, "--slide-gap:10px")}
 ${slider("ticking", 4)}
 ${slider("interval", 4)}
+${slider("eased", 5, "--slide-gap:10px")}
+${slider("linear", 5, "--slide-gap:10px")}
 <div id="cards" class="aero-slider" style="width:600px"><div class="aero-slider__viewport"><div class="aero-slider__track">${Array.from({ length: 3 }, (_, i) => `<a href="#card${i}" id="card${i}">${i}</a>`).join("")}</div></div></div>
 <script type="module">
   import { createSlider } from "/dist/aero-slider.min.js";
@@ -43,6 +45,8 @@ ${slider("interval", 4)}
     fixed: createSlider(document.getElementById("fixed"), { draggable: false }),
     ticking: createSlider(document.getElementById("ticking"), { loop: true, autoplay: true, autoplayInterval: 300 }),
     interval: createSlider(document.getElementById("interval"), { loop: true, autoplay: true, autoplayInterval: 400 }),
+    eased: createSlider(document.getElementById("eased"), { scrollDuration: 300 }),
+    linear: createSlider(document.getElementById("linear"), { scrollDuration: 400, scrollEasing: (t) => t }),
     cards: createSlider(document.getElementById("cards"), { loop: true }),
   };
 </script></body></html>`;
@@ -225,6 +229,43 @@ const scenario = `(async () => {
     s.update({ autoplay: false });
   }
 
+  // scrollDuration eases goTo() on its own timeline and lands exactly
+  {
+    const s = S.eased, t = track("eased");
+    s.goTo(2); await sleep(110);
+    const mid = t.scrollLeft;
+    check("eased.midway", mid > 300 && mid < 1200, { mid });
+    await settled("eased");
+    check("eased.lands", s.currentIndex === 2 && near(t.scrollLeft, 1220), { i: s.currentIndex, pos: t.scrollLeft });
+  }
+
+  // scrollEasing shapes the curve: linear is about halfway at half time (ease-out would be ~88%)
+  {
+    const s = S.linear, t = track("linear");
+    s.goTo(2); await sleep(200);
+    const half = t.scrollLeft;
+    check("easing.custom", half > 400 && half < 820, { half });
+    await settled("linear");
+    check("easing.customLands", near(t.scrollLeft, 1220), { pos: t.scrollLeft });
+  }
+
+  // The wheel and a mouse press stop an eased scroll where it is
+  {
+    const s = S.eased, t = track("eased");
+    s.goTo(4); await sleep(100);
+    t.dispatchEvent(new WheelEvent("wheel", { bubbles: true, deltaX: 1 }));
+    await sleep(400);
+    check("eased.wheelTakesOver", t.scrollLeft < 2340, { pos: t.scrollLeft });
+    s.goTo(0, { instant: true }); await settled("eased");
+    s.goTo(4); await sleep(100);
+    const r = t.getBoundingClientRect();
+    t.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerId: 3, pointerType: "mouse", button: 0, buttons: 1, clientX: r.left + 10, clientY: r.top + 10 }));
+    window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 3, pointerType: "mouse" }));
+    await sleep(400);
+    check("eased.pressTakesOver", t.scrollLeft < 2340, { pos: t.scrollLeft });
+    s.goTo(0, { instant: true }); await settled("eased");
+  }
+
   // Destroy leaves the DOM clean and the API inert
   {
     const el = document.getElementById("rtl"), s = S.rtl;
@@ -310,11 +351,39 @@ const inPage = async (body: string) =>
 const setReducedMotion = (value: string) =>
   send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value }] });
 
+// A real touch stops an eased scroll too: touch fires pointerdown, so no touchstart listener is needed.
+await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 1 });
+const touchAt = (
+  await send("Runtime.evaluate", {
+    expression: `(() => {
+      const el = document.getElementById("eased");
+      el.scrollIntoView({ block: "center" });
+      window.sliders.eased.goTo(4);
+      const r = el.getBoundingClientRect();
+      return { x: r.left + 200, y: r.top + 20 };
+    })()`,
+    returnByValue: true,
+  })
+).result.value;
+await sleep(90);
+await send("Input.dispatchTouchEvent", {
+  type: "touchStart",
+  touchPoints: touchAt ? [touchAt] : [],
+});
+await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+await send("Emulation.setTouchEmulationEnabled", { enabled: false });
+const touched = await inPage(`
+  await sleep(400);
+  check("eased.touchTakesOver", track("eased").scrollLeft < 2340, { pos: track("eased").scrollLeft });
+`);
+
 await setReducedMotion("reduce");
 const reduced = await inPage(`
   S.basic.goTo(0); await sleep(600);
   S.basic.goTo(1);
   check("reduced.scrollIsInstant", near(track("basic").scrollLeft, 610), { pos: track("basic").scrollLeft });
+  S.eased.goTo(0);
+  check("reduced.easedIsInstant", near(track("eased").scrollLeft, 0), { pos: track("eased").scrollLeft });
   const at = S.ticking.currentIndex; await sleep(700);
   check("reduced.autoplayStops", S.ticking.currentIndex === at, { at, now: S.ticking.currentIndex });
 `);
@@ -329,6 +398,7 @@ server.stop();
 
 const failures: string[] = [
   ...(result.result?.value ?? [`evaluate failed: ${JSON.stringify(result)}`]),
+  ...touched,
   ...reduced,
   ...restored,
   ...errors.map((e) => "page error: " + e),

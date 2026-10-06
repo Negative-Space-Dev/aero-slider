@@ -14,6 +14,13 @@ export interface SliderConfig {
   /** Slides advanced per next()/prev() call. */
   perMove?: number;
   direction?: "ltr" | "rtl" | "ttb";
+  /**
+   * Length of next()/prev()/goTo() scrolls in ms, eased by `scrollEasing`. 0 uses the browser's
+   * native smooth scrolling. Either way, prefers-reduced-motion makes every scroll instant.
+   */
+  scrollDuration?: number;
+  /** Maps linear progress 0–1 to eased progress, for `scrollDuration` scrolls. */
+  scrollEasing?: (progress: number) => number;
 }
 
 export interface GoToOptions {
