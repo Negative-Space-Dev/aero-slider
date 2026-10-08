@@ -94,7 +94,9 @@ export function createSlider(
   let settleTimer = 0;
   let easeFrame = 0; // a scrollDuration animation is in flight
   let fallbackSettle = false; // a wheel or touch moved the track and scrollend may never come
-  const touches = new Set<number>(); // touch pointers down on the track
+  // Fingers on the track, from touch events: a pan turns the pointer stream into pointercancel
+  // while the finger is still down, so pointer events can't say when it lifts.
+  const touches = new Set<number>();
   let settleDeferred = false; // a settle arrived while a finger was still down
 
   const isVertical = () => config.direction === "ttb";
@@ -411,11 +413,8 @@ export function createSlider(
   function onPointerDown(event: PointerEvent): void {
     suppressNextClick = false;
     programmaticScroll = false; // a press takes over from any goTo() animation
-    if (event.pointerType === "touch") {
-      touches.add(event.pointerId);
-      // A wheel settle that was still pending waits for this finger to lift.
-      if (fallbackSettle) settleDeferred = true;
-    }
+    // A wheel settle that was still pending waits for the finger to lift (see touchstart below).
+    if (event.pointerType === "touch" && fallbackSettle) settleDeferred = true;
     fallbackSettle = false;
     clearTimeout(settleTimer);
     cancelEase();
@@ -742,18 +741,25 @@ export function createSlider(
     { passive: true, signal }
   );
   track.addEventListener("pointerdown", onPointerDown, { signal });
-  // Touch releases land on window wherever the finger lifts. A settle that waited on the finger
-  // runs now, or once any fling it started comes to rest.
-  const onTouchRelease = (event: Event) => {
-    if (!touches.delete((event as PointerEvent).pointerId) || touches.size || !settleDeferred)
-      return;
+  track.addEventListener(
+    "touchstart",
+    (event) => {
+      for (const touch of event.changedTouches) touches.add(touch.identifier);
+    },
+    { passive: true, signal }
+  );
+  // Fingers lift on window wherever they are. A settle that waited on them runs once any fling
+  // they started comes to rest.
+  const onTouchEnd = (event: Event) => {
+    for (const touch of (event as TouchEvent).changedTouches) touches.delete(touch.identifier);
+    if (touches.size || !settleDeferred) return;
     settleDeferred = false;
     fallbackSettle = true;
     clearTimeout(settleTimer);
     settleTimer = window.setTimeout(onSettle, WHEEL_SETTLE_MS);
   };
-  for (const type of ["pointerup", "pointercancel"]) {
-    addEventListener(type, onTouchRelease, { capture: true, passive: true, signal });
+  for (const type of ["touchend", "touchcancel"]) {
+    addEventListener(type, onTouchEnd, { capture: true, passive: true, signal });
   }
   track.addEventListener("click", onClick, { capture: true, signal });
   track.addEventListener("dragstart", (e) => config.draggable && e.preventDefault(), { signal });

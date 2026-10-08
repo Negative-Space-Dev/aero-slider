@@ -703,11 +703,46 @@ const heldTouch = await inPage(`
 `);
 await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
 await send("Emulation.setTouchEmulationEnabled", { enabled: false });
-const releasedTouch = await inPage(`
+const releasedTouchStill = await inPage(`
   await sleep(800);
   const t = track("settle");
   document.getElementById("settle").removeEventListener("scrollend", window.__block, { capture: true });
   check("settle.settlesAfterTouch", near(t.scrollLeft, 0) && S.settle.currentIndex === 0, { pos: t.scrollLeft });
+`);
+
+// A finger that pans the track (the browser takes the gesture over and sends pointercancel) and
+// then stays down is still a finger on the track: no easing under it until it lifts.
+await inPage(`S.settleLoop.goTo(1, { instant: true });`);
+await sleep(300);
+await wheel("settleLoop", 120);
+await sleep(60);
+await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 1 });
+const panFrom = (
+  await send("Runtime.evaluate", {
+    expression: `(() => { const r = document.getElementById("settleLoop").getBoundingClientRect(); return { x: r.left + 400, y: r.top + 60 }; })()`,
+    returnByValue: true,
+  })
+).result.value;
+await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [panFrom] });
+for (let i = 1; i <= 10; i++) {
+  await send("Input.dispatchTouchEvent", {
+    type: "touchMove",
+    touchPoints: [{ x: panFrom.x - i * 10, y: panFrom.y }],
+  });
+  await sleep(16);
+}
+await sleep(150);
+const pannedTouch = await inPage(`
+  const t = track("settleLoop"), at = t.scrollLeft; await sleep(700);
+  check("settle.waitsForPanningFinger", near(t.scrollLeft, at), { at, now: t.scrollLeft });
+`);
+await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+await send("Emulation.setTouchEmulationEnabled", { enabled: false });
+const releasedTouch = await inPage(`
+  await sleep(900);
+  const t = track("settleLoop"), r = t.getBoundingClientRect(), mid = r.left + r.width / 2;
+  const off = Math.min(...[...t.children].map((k) => { const b = k.getBoundingClientRect(); return Math.abs(b.left + b.width / 2 - mid); }));
+  check("settle.settlesAfterPan", off < 1.5, { off, pos: t.scrollLeft });
 `);
 
 // An eased scroll already running when reduced motion turns on lands at once.
@@ -740,6 +775,8 @@ const failures: string[] = [
   ...wheelSettle,
   ...wheelNone,
   ...heldTouch,
+  ...releasedTouchStill,
+  ...pannedTouch,
   ...releasedTouch,
   ...reduced,
   ...restored,
