@@ -30,6 +30,10 @@ ${slider("dots", 12, "--slides-per-view:3;--slide-gap:6px")}
 ${slider("fixed", 5, "--slide-gap:10px")}
 ${slider("ticking", 4)}
 ${slider("interval", 4)}
+${slider("nest", 3).replace("<div><div>0</div></div>", `<div>${slider("nested", 3)}</div>`)}
+${slider("multi", 4)}
+${slider("stopper", 3).replace("<div><div>0</div></div>", '<div><button id="stopBtn">0</button></div>')}
+${slider("doomed", 3)}
 <div id="cards" class="aero-slider" style="width:600px"><div class="aero-slider__viewport"><div class="aero-slider__track">${Array.from({ length: 3 }, (_, i) => `<a href="#card${i}" id="card${i}">${i}</a>`).join("")}</div></div></div>
 <script type="module">
   import { createSlider } from "/dist/aero-slider.min.js";
@@ -43,6 +47,11 @@ ${slider("interval", 4)}
     fixed: createSlider(document.getElementById("fixed"), { draggable: false }),
     ticking: createSlider(document.getElementById("ticking"), { loop: true, autoplay: true, autoplayInterval: 300 }),
     interval: createSlider(document.getElementById("interval"), { loop: true, autoplay: true, autoplayInterval: 400 }),
+    nest: createSlider(document.getElementById("nest"), { loop: true, autoplay: true, autoplayInterval: 400 }),
+    nested: createSlider(document.getElementById("nested"), { loop: true, autoplay: true, autoplayInterval: 150 }),
+    multi: createSlider(document.getElementById("multi"), { loop: true, autoplay: true, autoplayInterval: 400 }),
+    stopper: createSlider(document.getElementById("stopper"), { loop: true, autoplay: true, autoplayInterval: 150 }),
+    doomed: createSlider(document.getElementById("doomed"), { loop: true, autoplay: true, autoplayInterval: 100 }),
     cards: createSlider(document.getElementById("cards"), { loop: true }),
   };
 </script></body></html>`;
@@ -239,6 +248,43 @@ const scenario = `(async () => {
     await sleep(1200);
     check("interval.waitsForSettle", settledAt > 0 && startedAt >= settledAt, { settledAt, startedAt });
     s.update({ autoplay: false });
+  }
+
+  // Autoplay edge cases
+  {
+    // A nested slider's slideChange bubbles up; only the slider's own changes restart its countdown.
+    const parent = document.getElementById("nest");
+    let own = 0;
+    parent.addEventListener("aero:slideChange", (e) => e.target === parent && own++);
+    await sleep(1000);
+    check("autoplay.ignoresNestedSlider", own >= 1, { own, nested: S.nested.currentIndex });
+
+    // Two fingers down: lifting one keeps the hold until the last one lifts.
+    const t = track("multi"), s = S.multi;
+    const down = (id) => t.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerId: id, pointerType: "touch" }));
+    const up = (id) => window.dispatchEvent(new PointerEvent("pointerup", { pointerId: id, pointerType: "touch" }));
+    await settled("multi");
+    down(41); down(42);
+    const at = s.currentIndex;
+    up(41); await sleep(900);
+    check("autoplay.holdsUntilLastPointer", s.currentIndex === at, { at, now: s.currentIndex });
+    up(42); await sleep(900);
+    check("autoplay.resumesAfterLastPointer", s.currentIndex !== at, { at, now: s.currentIndex });
+
+    // Content that stops pointerup from bubbling can't strand the press hold.
+    const btn = document.getElementById("stopBtn");
+    btn.addEventListener("pointerup", (e) => e.stopPropagation());
+    btn.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerId: 43, pointerType: "touch" }));
+    btn.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerId: 43, pointerType: "touch" }));
+    const stopAt = S.stopper.currentIndex; await sleep(700);
+    check("autoplay.resumesWhenReleaseIsStopped", S.stopper.currentIndex !== stopAt, { stopAt, now: S.stopper.currentIndex });
+
+    // resume() after destroy() stays inert.
+    const doomed = document.getElementById("doomed");
+    let starts = 0;
+    doomed.addEventListener("aero:autoplayStart", () => starts++);
+    S.doomed.destroy(); S.doomed.resume(); await sleep(50);
+    check("autoplay.resumeAfterDestroy", starts === 0, { starts });
   }
 
   // Destroy leaves the DOM clean and the API inert
