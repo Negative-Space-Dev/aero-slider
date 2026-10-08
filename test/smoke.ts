@@ -238,24 +238,45 @@ const scenario = `(async () => {
     s.update({ autoplay: false });
   }
 
-  // scrollDuration eases goTo() on its own timeline and lands exactly
+  // scrollDuration eases goTo() on its own timeline: every frame moves a little the same way, faster
+  // first (ease-out), with snapping off until it lands exactly. Snapping left on pulls each frame to
+  // a slide, so the path jumps 0 → 610 → 1220.
+  const glide = (path, from, to) => {
+    const steps = path.slice(1).map((p, k) => p - path[k]).filter((d) => d !== 0);
+    const half = Math.floor(steps.length / 2), avg = (a) => a.reduce((x, y) => x + y, 0) / (a.length || 1);
+    return {
+      steps: steps.length,
+      oneWay: steps.every((d) => Math.sign(d) === Math.sign(to - from)),
+      biggest: Math.max(0, ...steps.map(Math.abs)) / Math.abs(to - from),
+      firstHalf: Math.abs(avg(steps.slice(0, half))),
+      secondHalf: Math.abs(avg(steps.slice(half))),
+    };
+  };
   {
     const s = S.eased, t = track("eased");
-    s.goTo(2); await sleep(110);
-    const mid = t.scrollLeft;
-    check("eased.midway", mid > 300 && mid < 1200, { mid });
+    s.goTo(2);
+    check("eased.snapOffWhileEasing", t.style.scrollSnapType === "none", t.style.scrollSnapType);
+    const path = await frames("eased", 450), g = glide(path, 0, 1220);
+    check("eased.smooth", g.steps >= 8 && g.oneWay && g.biggest < 0.3, { g, path });
+    check("eased.easesOut", g.firstHalf > g.secondHalf, { g });
     await settled("eased");
     check("eased.lands", s.currentIndex === 2 && near(t.scrollLeft, 1220), { i: s.currentIndex, pos: t.scrollLeft });
+    check("eased.snapRestored", t.style.scrollSnapType === "", t.style.scrollSnapType);
   }
 
-  // scrollEasing shapes the curve: linear is about halfway at half time (ease-out would be ~88%)
+  // scrollEasing shapes the curve: linear moves in even steps (ease-out front-loads them)
   {
     const s = S.linear, t = track("linear");
-    s.goTo(2); await sleep(200);
-    const half = t.scrollLeft;
-    check("easing.custom", half > 400 && half < 820, { half });
+    s.goTo(2);
+    const path = await frames("linear", 550), g = glide(path, 0, 1220);
+    check("easing.custom", g.steps >= 12 && g.oneWay && g.biggest < 0.15, { g, path });
     await settled("linear");
     check("easing.customLands", near(t.scrollLeft, 1220), { pos: t.scrollLeft });
+    // Back the other way glides too
+    s.goTo(0);
+    const back = glide(await frames("linear", 550), 1220, 0);
+    check("easing.reverse", back.steps >= 12 && back.oneWay && back.biggest < 0.15, { back });
+    await settled("linear");
   }
 
   // The wheel and a mouse press stop an eased scroll where it is
@@ -265,6 +286,9 @@ const scenario = `(async () => {
     t.dispatchEvent(new WheelEvent("wheel", { bubbles: true, deltaX: 1 }));
     await sleep(400);
     check("eased.wheelTakesOver", t.scrollLeft < 2340, { pos: t.scrollLeft });
+    // Snapping comes back, so an interrupted scroll still comes to rest on a slide.
+    await settled("eased");
+    check("eased.interruptedSnaps", t.style.scrollSnapType === "" && near(t.scrollLeft % 610, 0, 2) , { snap: t.style.scrollSnapType, pos: t.scrollLeft });
     s.goTo(0, { instant: true }); await settled("eased");
     s.goTo(4); await sleep(100);
     const r = t.getBoundingClientRect();

@@ -122,8 +122,10 @@ export function createSlider(
   }
 
   function cancelEase(): void {
-    if (easeFrame) cancelAnimationFrame(easeFrame);
+    if (!easeFrame) return;
+    cancelAnimationFrame(easeFrame);
     easeFrame = 0;
+    track.style.scrollSnapType = "";
   }
 
   /** Smooth scrolls honour prefers-reduced-motion, and use scrollDuration's easing when set. */
@@ -135,11 +137,13 @@ export function createSlider(
     const from = scrollPosition();
     const distance = position - from;
     const started = performance.now();
+    track.style.scrollSnapType = "none"; // mandatory snapping would pull every frame to a slide
     const step = (now: number) => {
       // Frame timestamps can predate `started`, so clamp before easing.
       const t = Math.min(1, Math.max(0, (now - started) / config.scrollDuration));
       nativeScrollTo(from + distance * config.scrollEasing(t), "instant");
       easeFrame = t < 1 ? requestAnimationFrame(step) : 0;
+      if (!easeFrame) track.style.scrollSnapType = "";
     };
     easeFrame = requestAnimationFrame(step);
   }
