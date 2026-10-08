@@ -687,6 +687,12 @@ requestAnimationFrame(() => {
   });
 
   createSlider(getRequiredElementById<HTMLElement>("per-move"), { perMove: 2, loop: true });
+  createSlider(getRequiredElementById<HTMLElement>("snap-settle"), {
+    loop: true,
+    snap: "settle",
+    scrollDuration: 550,
+  });
+  createSlider(getRequiredElementById<HTMLElement>("snap-none"), { snap: "none" });
   createSlider(getRequiredElementById<HTMLElement>("pagination-minimal"));
   createSlider(getRequiredElementById<HTMLElement>("nav-minimal"));
 });

@@ -6,6 +6,7 @@ export type { SyncThumbnailsOptions } from "./sync.ts";
 export type {
   GoToOptions,
   SliderAlignment,
+  SliderSnap,
   SliderConfig,
   SliderInstance,
   SliderEvent,

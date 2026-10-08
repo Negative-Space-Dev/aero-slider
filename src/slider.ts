@@ -22,6 +22,7 @@ const DEFAULTS: Required<SliderConfig> = {
   noDrag: "",
   perMove: 1,
   direction: "ltr",
+  snap: "native",
   scrollDuration: 0,
   scrollEasing: easeOutCubic,
 };
@@ -30,6 +31,7 @@ const DRAG_THRESHOLD_PX = 5;
 const FLICK_VELOCITY = 0.3; // px per ms
 const FLICK_PROJECTION_MS = 250;
 const SETTLE_FALLBACK_MS = 150; // for browsers without the scrollend event
+const WHEEL_SETTLE_MS = 200; // Firefox can skip scrollend after wheel scrolling
 
 /** What the UI features (nav, dots, keyboard, autoplay) need from the core. */
 export interface SliderCore {
@@ -91,6 +93,7 @@ export function createSlider(
   let scrollFrame = 0;
   let settleTimer = 0;
   let easeFrame = 0; // a scrollDuration animation is in flight
+  let wheelScrolling = false; // the wheel moved the track and scrollend may never come
 
   const isVertical = () => config.direction === "ttb";
   const isRtl = () => config.direction === "rtl";
@@ -102,6 +105,7 @@ export function createSlider(
     return Math.max(0, pagesByStart ? slideCount - slidesPerView : slideCount - 1);
   }
   const loop = () => config.loop && maxIndex() > 0;
+  const snapMode = () => config.snap;
   const pageCount = () => (loop() ? slideCount : maxIndex() + 1);
   const cloneCount = () => (loop() ? Math.max(slideCount, Math.ceil(slidesPerView) + 2) : 0);
 
@@ -304,18 +308,25 @@ export function createSlider(
         if (!programmaticScroll) setCurrent(indexAt(scrollPosition()));
       });
     }
-    if (!("onscrollend" in track)) {
+    if (!("onscrollend" in track) || wheelScrolling) {
       clearTimeout(settleTimer);
-      settleTimer = window.setTimeout(onSettle, SETTLE_FALLBACK_MS);
+      settleTimer = window.setTimeout(
+        onSettle,
+        wheelScrolling ? WHEEL_SETTLE_MS : SETTLE_FALLBACK_MS
+      );
     }
   }
 
   function onSettle(): void {
     if (dragging) return;
+    clearTimeout(settleTimer);
+    wheelScrolling = false;
     // A scrollend from an instant scroll issued just before goTo() lands mid-animation; wait for ours.
     if (programmaticScroll && Math.abs(scrollPosition() - scrollTarget) > 1) return;
+    const userScroll = !programmaticScroll;
     programmaticScroll = false;
     track.style.scrollSnapType = "";
+    if (userScroll && snapMode() === "settle" && settleOntoNearest()) return;
     teleportToRealSlides();
     const position = scrollPosition();
     const landed = indexAt(position);
@@ -325,6 +336,28 @@ export function createSlider(
     play.settled();
   }
 
+  /**
+   * snap: "settle" — after a free scroll, ease onto the nearest slide on screen. On a loop that can
+   * be a clone; the clone→real teleport runs once the ease lands, so the track never flies across
+   * to the real copy. Returns false when already resting on a slide.
+   */
+  function settleOntoNearest(): boolean {
+    if (!slideStride) return false;
+    const position = scrollPosition();
+    const domIndex = loop()
+      ? clamp(domIndexAt(position), 0, track.children.length - 1)
+      : clonesBefore + indexAt(position);
+    const target = loop()
+      ? snapPositionOf(track.children[domIndex]!)
+      : restPositionOf(indexAt(position));
+    if (Math.abs(target - position) <= 1) return false;
+    setCurrent(indexOfDom(domIndex));
+    programmaticScroll = true;
+    scrollTarget = target;
+    scrollTo(target, true);
+    return true;
+  }
+
   // ── Mouse / pen drag ─────────────────────────────────────────────────
   // Touch scrolls natively. For other pointers we move the scroller by hand
   // with snapping off, then release into a smooth scroll the way a fling would.
@@ -332,6 +365,7 @@ export function createSlider(
   function onPointerDown(event: PointerEvent): void {
     suppressNextClick = false;
     programmaticScroll = false; // a press takes over from any goTo() animation
+    wheelScrolling = false;
     cancelEase();
     if (!config.draggable || event.button !== 0 || event.pointerType === "touch") return;
     if (config.noDrag && (event.target as Element).closest(config.noDrag)) return;
@@ -396,6 +430,21 @@ export function createSlider(
       }
       const idle = up.timeStamp - lastTime;
       if (idle > 50) velocity *= Math.max(0, 1 - idle / 200);
+
+      if (snapMode() === "none") {
+        // No snapping: coast on the release velocity and rest wherever that ends.
+        const position = scrollPosition();
+        const rest = position + velocity * FLICK_PROJECTION_MS;
+        const target = loop() ? rest : clamp(rest, 0, maxScroll);
+        if (Math.abs(target - position) > 1) {
+          programmaticScroll = true;
+          scrollTarget = target;
+          scrollTo(target, true);
+        } else onSettle();
+        emit("dragEnd", { index: current, fromIndex });
+        play.release("drag");
+        return;
+      }
 
       // Like native paging: a flick always moves at least one slide its way.
       let domTarget = domIndexAt(scrollPosition() + velocity * FLICK_PROJECTION_MS);
@@ -497,6 +546,7 @@ export function createSlider(
     else container.removeAttribute("dir");
     container.setAttribute("data-aero-alignment", config.alignment);
     container.classList.toggle("aero-slider--draggable", config.draggable);
+    container.classList.toggle("aero-slider--free", snapMode() !== "native");
 
     readSlidesPerView();
     clonesBefore = cloneCount();
@@ -554,6 +604,7 @@ export function createSlider(
     container.classList.remove(
       "aero-slider--dragging",
       "aero-slider--draggable",
+      "aero-slider--free",
       "aero-slider--vertical",
       "aero-slider--ready"
     );
@@ -626,6 +677,7 @@ export function createSlider(
     "wheel",
     () => {
       programmaticScroll = false;
+      wheelScrolling = true;
       cancelEase();
     },
     { passive: true, signal }

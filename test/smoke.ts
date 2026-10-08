@@ -38,6 +38,10 @@ ${slider("nest", 3).replace("<div><div>0</div></div>", `<div>${slider("nested", 
 ${slider("multi", 4)}
 ${slider("stopper", 3).replace("<div><div>0</div></div>", '<div><button id="stopBtn">0</button></div>')}
 ${slider("doomed", 3)}
+${slider("settle", 5, "--slide-gap:10px")}
+${slider("settleLoop", 4, "--slide-gap:10px")}
+${slider("free", 5, "--slide-gap:10px")}
+${slider("settleTtb", 4, "height:300px")}
 <div id="cards" class="aero-slider" style="width:600px"><div class="aero-slider__viewport"><div class="aero-slider__track">${Array.from({ length: 3 }, (_, i) => `<a href="#card${i}" id="card${i}">${i}</a>`).join("")}</div></div></div>
 <script type="module">
   import { createSlider } from "/dist/aero-slider.min.js";
@@ -61,6 +65,10 @@ ${slider("doomed", 3)}
     stopper: createSlider(document.getElementById("stopper"), { loop: true, autoplay: true, autoplayInterval: 150 }),
     doomed: createSlider(document.getElementById("doomed"), { loop: true, autoplay: true, autoplayInterval: 100 }),
     cards: createSlider(document.getElementById("cards"), { loop: true }),
+    settle: createSlider(document.getElementById("settle"), { snap: "settle", scrollDuration: 300 }),
+    settleLoop: createSlider(document.getElementById("settleLoop"), { loop: true, snap: "settle", scrollDuration: 300 }),
+    free: createSlider(document.getElementById("free"), { snap: "none", scrollDuration: 300 }),
+    settleTtb: createSlider(document.getElementById("settleTtb"), { direction: "ttb", snap: "settle" }),
   };
 </script></body></html>`;
 
@@ -488,6 +496,141 @@ const touched = await inPage(`
   check("eased.touchTakesOver", track("eased").scrollLeft < 2340, { pos: track("eased").scrollLeft });
 `);
 
+// Snap modes. Helpers for this phase: every-frame sampling, settling, and a real wheel over CDP.
+const snapHelpers = `
+  const frames = async (id, ms) => {
+    const t = track(id), out = [], end = performance.now() + ms;
+    while (performance.now() < end) { await new Promise(requestAnimationFrame); out.push(t.scrollLeft + t.scrollTop); }
+    return out;
+  };
+  const settled = async (id) => {
+    const t = track(id);
+    for (let last = -1, still = 0, n = 0; still < 3 && n < 60; n++) { await sleep(60); const p = t.scrollLeft + t.scrollTop; still = p === last ? still + 1 : 0; last = p; }
+  };
+  const stepsOf = (path) => path.slice(1).map((p, k) => p - path[k]).filter((d) => d !== 0);
+  const pe = (id, type, x, extra = {}) => { const t = track(id), r = t.getBoundingClientRect(); t.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: "mouse", isPrimary: true, button: 0, buttons: 1, clientX: r.left + x, clientY: r.top + 50, ...extra })); };
+  const drag = async (id, from, to, step) => {
+    pe(id, "pointerdown", from); await sleep(16); await new Promise(requestAnimationFrame);
+    for (let x = from - step; step > 0 ? x >= to : x <= to; x -= step) { pe(id, "pointermove", x); await sleep(16); await new Promise(requestAnimationFrame); }
+  };
+`;
+const wheel = async (id: string, deltaX: number) => {
+  const at = (
+    await send("Runtime.evaluate", {
+      expression: `(() => { const el = document.getElementById(${JSON.stringify(id)}); el.scrollIntoView({ block: "center" }); const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + 60 }; })()`,
+      returnByValue: true,
+    })
+  ).result.value;
+  await sleep(100);
+  await send("Input.dispatchMouseEvent", {
+    type: "mouseWheel",
+    x: at.x,
+    y: at.y,
+    deltaX,
+    deltaY: 0,
+  });
+};
+
+const snapped = await inPage(`${snapHelpers}
+  // Native snapping stays the default; free modes turn CSS snapping off, even on a vertical track.
+  check("snap.nativeByDefault", !document.getElementById("basic").classList.contains("aero-slider--free") && getComputedStyle(track("basic")).scrollSnapType.includes("mandatory"), getComputedStyle(track("basic")).scrollSnapType);
+  for (const id of ["settle", "free", "settleTtb"]) {
+    check("snap.free." + id, document.getElementById(id).classList.contains("aero-slider--free") && getComputedStyle(track(id)).scrollSnapType === "none", getComputedStyle(track(id)).scrollSnapType);
+  }
+
+  // settle: a free scroll stays put while it moves, then eases onto the nearest slide.
+  {
+    const t = track("settle"), s = S.settle;
+    t.scrollLeft = 820;
+    const path = await frames("settle", 700), steps = stepsOf(path);
+    check("settle.scrollsFreely", near(path[0], 820), { first: path[0] });
+    check("settle.easesOntoNearest", steps.length >= 6 && steps.every((d) => d < 0) && Math.max(...steps.map(Math.abs)) < 210 * 0.4, { path });
+    await settled("settle");
+    check("settle.lands", s.currentIndex === 1 && near(t.scrollLeft, 610), { i: s.currentIndex, pos: t.scrollLeft });
+  }
+
+  // settle: a mouse drag moves freely with the pointer, then the release eases exactly onto a slide.
+  {
+    const t = track("settle"), s = S.settle;
+    s.goTo(0, { instant: true }); await settled("settle");
+    await drag("settle", 500, 100, 20);
+    check("settle.dragFollows", near(t.scrollLeft, 400), { pos: t.scrollLeft });
+    await sleep(250); // let the drag's velocity decay to a dead stop
+    pe("settle", "pointerup", 100, { buttons: 0 });
+    const path = await frames("settle", 600), steps = stepsOf(path);
+    check("settle.dragEases", steps.length >= 6 && steps.every((d) => d > 0), { path });
+    await settled("settle");
+    check("settle.dragLands", s.currentIndex === 1 && near(t.scrollLeft, 610), { i: s.currentIndex, pos: t.scrollLeft });
+  }
+
+  // settle on a loop: past the last real slide, it eases onto the nearest slide on screen (a clone),
+  // then teleports to the real copy. It never flies back across the track to get there.
+  {
+    const t = track("settleLoop"), s = S.settleLoop, kids = t.children;
+    const pos = (i) => kids[i].offsetLeft - kids[0].offsetLeft;
+    const lastReal = [...kids].findLastIndex((k) => !k.hasAttribute("data-aero-slider-clone"));
+    s.goTo(3, { instant: true }); await settled("settleLoop");
+    const from = pos(lastReal) + 488, clone = pos(lastReal + 1), home = pos(lastReal - 3);
+    t.scrollLeft = from;
+    const path = await frames("settleLoop", 700);
+    const jump = path.findIndex((p, k) => k && Math.abs(p - path[k - 1]) > 300);
+    const before = jump < 0 ? path : path.slice(0, jump), after = jump < 0 ? [] : path.slice(jump);
+    check("settleLoop.easesOntoClone", before.length >= 6 && before.every((p, k) => p >= from - 1 && p <= clone + 1 && (!k || p >= before[k - 1])) && Math.abs(before.at(-1) - clone) <= 4, { from, clone, before });
+    check("settleLoop.thenTeleports", after.length > 0 && after.every((p) => near(p, home)), { home, after: after.slice(0, 5) });
+    await settled("settleLoop");
+    check("settleLoop.lands", s.currentIndex === 0 && near(t.scrollLeft, home), { i: s.currentIndex, pos: t.scrollLeft, home });
+  }
+
+  // Firefox can skip scrollend after wheel scrolling; the wheel's own settle timer covers it.
+  {
+    const el = document.getElementById("settle"), t = track("settle"), s = S.settle;
+    s.goTo(0, { instant: true }); await settled("settle");
+    const block = (e) => e.stopPropagation();
+    el.addEventListener("scrollend", block, { capture: true });
+    t.dispatchEvent(new WheelEvent("wheel", { bubbles: true, deltaX: 1 }));
+    t.scrollLeft = 820;
+    await sleep(900);
+    el.removeEventListener("scrollend", block, { capture: true });
+    check("settle.withoutScrollend", s.currentIndex === 1 && near(t.scrollLeft, 610), { i: s.currentIndex, pos: t.scrollLeft });
+  }
+
+  // none: the track rests wherever it stops, a drag release coasts on its momentum, and the index
+  // follows the nearest slide.
+  {
+    const t = track("free"), s = S.free;
+    t.scrollLeft = 820; await settled("free"); await sleep(400);
+    check("none.restsWhereItStops", near(t.scrollLeft, 820) && s.currentIndex === 1, { pos: t.scrollLeft, i: s.currentIndex });
+    s.goTo(0, { instant: true }); await settled("free");
+    await drag("free", 500, 100, 20);
+    await sleep(250);
+    pe("free", "pointerup", 100, { buttons: 0 }); await settled("free");
+    check("none.dragRestsWhereReleased", near(t.scrollLeft, 400), { pos: t.scrollLeft });
+    s.goTo(0, { instant: true }); await settled("free");
+    await drag("free", 400, 280, 20);
+    pe("free", "pointerup", 280, { buttons: 0 });
+    const path = await frames("free", 500), steps = stepsOf(path);
+    await settled("free");
+    const rest = t.scrollLeft;
+    check("none.flickCoasts", steps.length >= 4 && steps.every((d) => d > 0) && rest > 170 && rest < 560 && Math.abs(rest % 610) > 5, { rest, path });
+  }
+`);
+
+// Real wheel input: settle eases a short trackpad scroll back onto its slide; none leaves it put.
+await inPage(`S.settle.goTo(0, { instant: true }); S.free.goTo(0, { instant: true });`);
+await sleep(300);
+await wheel("settle", 200);
+const wheelSettle = await inPage(`${snapHelpers}
+  const path = await frames("settle", 900); await settled("settle");
+  check("settle.wheelScrollsFreely", Math.max(...path) > 120, { peak: Math.max(...path) });
+  check("settle.wheelEasesBack", near(track("settle").scrollLeft, 0) && S.settle.currentIndex === 0, { pos: track("settle").scrollLeft, path });
+`);
+await wheel("free", 200);
+const wheelNone = await inPage(`${snapHelpers}
+  await settled("free"); await sleep(300);
+  const pos = track("free").scrollLeft;
+  check("none.wheelRests", pos > 120 && pos < 260, { pos });
+`);
+
 // An eased scroll already running when reduced motion turns on lands at once.
 await inPage(`S.longEase.goTo(4); await sleep(150);`);
 await setReducedMotion("reduce");
@@ -514,6 +657,9 @@ server.stop();
 const failures: string[] = [
   ...(result.result?.value ?? [`evaluate failed: ${JSON.stringify(result)}`]),
   ...touched,
+  ...snapped,
+  ...wheelSettle,
+  ...wheelNone,
   ...reduced,
   ...restored,
   ...errors.map((e) => "page error: " + e),
