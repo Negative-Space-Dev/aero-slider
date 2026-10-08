@@ -1,4 +1,10 @@
-import type { SliderConfig, SliderEvent, SliderEventData, SliderInstance } from "./types.ts";
+import type {
+  GoToOptions,
+  SliderConfig,
+  SliderEvent,
+  SliderEventData,
+  SliderInstance,
+} from "./types.ts";
 import { autoplay, keyboard, navigation, pagination } from "./features.ts";
 
 export const SLIDE_INDEX_ATTR = "data-aero-slider-index";
@@ -34,7 +40,7 @@ export interface SliderCore {
   loop(): boolean;
   next(): void;
   prev(): void;
-  goTo(index: number): void;
+  goTo(index: number, options?: GoToOptions): void;
   emit<E extends SliderEvent>(event: E, data: SliderEventData<E>): void;
 }
 
@@ -225,7 +231,7 @@ export function createSlider(
 
   // ── Navigation ───────────────────────────────────────────────────────
 
-  function goTo(index: number): void {
+  function goTo(index: number, options: GoToOptions = {}): void {
     if (destroyed || !slideCount) return;
     const logical = loop() ? wrap(Math.trunc(index)) : clamp(Math.trunc(index), 0, maxIndex());
     setCurrent(logical);
@@ -240,10 +246,15 @@ export function createSlider(
     } else {
       target = restPositionOf(logical);
     }
-    if (Math.abs(target - scrollPosition()) < 1) return onSettle();
+    if (Math.abs(target - scrollPosition()) < 1) {
+      // Already there, but a move started a moment ago may still be headed elsewhere: stop it.
+      if (programmaticScroll) scrollTo(target);
+      programmaticScroll = false;
+      return onSettle();
+    }
     programmaticScroll = true;
     scrollTarget = target;
-    scrollTo(target, true);
+    scrollTo(target, !options.instant);
   }
 
   const step = () => Math.max(1, Math.trunc(config.perMove));

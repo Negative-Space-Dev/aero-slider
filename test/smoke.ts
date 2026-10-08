@@ -63,6 +63,12 @@ const scenario = `(async () => {
     const t = track(id);
     for (let last = -1, still = 0, tries = 0; still < 3 && tries < 60; tries++) { await sleep(60); const p = t.scrollLeft + t.scrollTop; still = p === last ? still + 1 : 0; last = p; }
   };
+  // Scroll position on every animation frame for \`ms\`, to check how a scroll moves, not just where it ends.
+  const frames = async (id, ms) => {
+    const t = track(id), out = [], end = performance.now() + ms;
+    while (performance.now() < end) { await new Promise(requestAnimationFrame); out.push(t.scrollLeft + t.scrollTop); }
+    return out;
+  };
   const near = (a, b, tol = 1.5) => Math.abs(a - b) <= tol;
   const failures = [];
   const check = (name, ok, info) => { if (!ok) failures.push(name + " " + JSON.stringify(info)); };
@@ -170,6 +176,28 @@ const scenario = `(async () => {
   // The grab cursor only shows on draggable sliders
   check("cursor.fixed", getComputedStyle(track("fixed")).cursor !== "grab", getComputedStyle(track("fixed")).cursor);
   check("cursor.draggable", getComputedStyle(track("basic")).cursor === "grab", getComputedStyle(track("basic")).cursor);
+
+  // goTo(..., { instant: true }) jumps with no animation, and the next move still animates from there
+  {
+    const s = S.fixed, t = track("fixed");
+    s.goTo(3, { instant: true });
+    check("goTo.instant", s.currentIndex === 3 && near(t.scrollLeft, 1830), { i: s.currentIndex, pos: t.scrollLeft });
+    await settled("fixed");
+    const end = t.scrollWidth - t.clientWidth;
+    s.next();
+    const path = await frames("fixed", 500);
+    const between = path.filter((p) => p > 1831 && p < end - 1);
+    check("goTo.instant.nextAnimates", new Set(between).size >= 3 && path.every((p, k) => !k || p >= path[k - 1]), { path });
+    await settled("fixed");
+    check("goTo.instant.nextLands", s.currentIndex === 4 && near(t.scrollLeft, t.scrollWidth - t.clientWidth), { i: s.currentIndex, pos: t.scrollLeft });
+    // Reversing a move before it leaves the spot stops it there, instantly or smoothly
+    s.goTo(0, { instant: true }); await settled("fixed");
+    s.goTo(3); s.goTo(0, { instant: true }); await settled("fixed");
+    check("goTo.reverseInstant", s.currentIndex === 0 && near(t.scrollLeft, 0), { i: s.currentIndex, pos: t.scrollLeft });
+    s.goTo(0, { instant: true }); await settled("fixed");
+    s.goTo(3); s.goTo(0); await settled("fixed");
+    check("goTo.reverseSmooth", s.currentIndex === 0 && near(t.scrollLeft, 0), { i: s.currentIndex, pos: t.scrollLeft });
+  }
 
   // Clones of link slides leave the tab order and drop their ids
   {
