@@ -27,6 +27,9 @@ ${slider("loop", 4, "--slides-per-view:1.5;--slide-gap:8px")}
 ${slider("rtl", 4)}
 ${slider("dots", 12, "--slides-per-view:3;--slide-gap:6px")}
 <div id="hiddenWrap" style="display:none">${slider("hidden", 4)}</div>
+${slider("fixed", 5, "--slide-gap:10px")}
+${slider("ticking", 4)}
+<div id="cards" class="aero-slider" style="width:600px"><div class="aero-slider__viewport"><div class="aero-slider__track">${Array.from({ length: 3 }, (_, i) => `<a href="#card${i}" id="card${i}">${i}</a>`).join("")}</div></div></div>
 <script type="module">
   import { createSlider } from "/dist/aero-slider.min.js";
   window.sliders = {
@@ -36,6 +39,9 @@ ${slider("dots", 12, "--slides-per-view:3;--slide-gap:6px")}
     rtl: createSlider(document.getElementById("rtl"), { direction: "rtl" }),
     dots: createSlider(document.getElementById("dots"), { loop: true, perMove: 2, maxDots: 5 }),
     hidden: createSlider(document.getElementById("hidden"), { loop: true }),
+    fixed: createSlider(document.getElementById("fixed"), { draggable: false }),
+    ticking: createSlider(document.getElementById("ticking"), { loop: true, autoplay: true, autoplayInterval: 300 }),
+    cards: createSlider(document.getElementById("cards"), { loop: true }),
   };
 </script></body></html>`;
 
@@ -55,7 +61,7 @@ const scenario = `(async () => {
   const track = (id) => document.getElementById(id).querySelector(".aero-slider__track");
   const settled = async (id) => {
     const t = track(id);
-    for (let last = -1, still = 0; still < 3; ) { await sleep(60); const p = t.scrollLeft + t.scrollTop; still = p === last ? still + 1 : 0; last = p; }
+    for (let last = -1, still = 0, tries = 0; still < 3 && tries < 60; tries++) { await sleep(60); const p = t.scrollLeft + t.scrollTop; still = p === last ? still + 1 : 0; last = p; }
   };
   const near = (a, b, tol = 1.5) => Math.abs(a - b) <= tol;
   const failures = [];
@@ -161,6 +167,16 @@ const scenario = `(async () => {
     check("hidden.next", s.currentIndex === 3, { i: s.currentIndex });
   }
 
+  // The grab cursor only shows on draggable sliders
+  check("cursor.fixed", getComputedStyle(track("fixed")).cursor !== "grab", getComputedStyle(track("fixed")).cursor);
+  check("cursor.draggable", getComputedStyle(track("basic")).cursor === "grab", getComputedStyle(track("basic")).cursor);
+
+  // Clones of link slides leave the tab order and drop their ids
+  {
+    const clones = [...track("cards").querySelectorAll("[data-aero-slider-clone]")];
+    check("clones.linkSlides", clones.length > 0 && clones.every((c) => c.tabIndex === -1 && !c.id && c.getAttribute("aria-hidden") === "true"), { n: clones.length, tabbable: clones.filter((c) => c.tabIndex !== -1).length });
+  }
+
   // Destroy leaves the DOM clean and the API inert
   {
     const el = document.getElementById("rtl"), s = S.rtl;
@@ -224,12 +240,49 @@ const result = await send("Runtime.evaluate", {
   awaitPromise: true,
   returnByValue: true,
 });
+
+// Reduced motion, switched on and off while the page runs: scrolls turn instant and autoplay stops,
+// then autoplay comes back.
+const inPage = async (body: string) =>
+  (
+    await send("Runtime.evaluate", {
+      expression: `(async () => {
+        const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+        const near = (a, b) => Math.abs(a - b) <= 1.5;
+        const S = window.sliders, track = (id) => document.getElementById(id).querySelector(".aero-slider__track");
+        const failures = [];
+        const check = (name, ok, info) => { if (!ok) failures.push(name + " " + JSON.stringify(info)); };
+        ${body}
+        return failures;
+      })()`,
+      awaitPromise: true,
+      returnByValue: true,
+    })
+  ).result?.value ?? ["reduced-motion evaluate failed"];
+const setReducedMotion = (value: string) =>
+  send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value }] });
+
+await setReducedMotion("reduce");
+const reduced = await inPage(`
+  S.basic.goTo(0); await sleep(600);
+  S.basic.goTo(1);
+  check("reduced.scrollIsInstant", near(track("basic").scrollLeft, 610), { pos: track("basic").scrollLeft });
+  const at = S.ticking.currentIndex; await sleep(700);
+  check("reduced.autoplayStops", S.ticking.currentIndex === at, { at, now: S.ticking.currentIndex });
+`);
+await setReducedMotion("no-preference");
+const restored = await inPage(`
+  const at = S.ticking.currentIndex; await sleep(500);
+  check("reduced.autoplayResumes", S.ticking.currentIndex !== at, { at, now: S.ticking.currentIndex });
+`);
 ws.close();
 chrome.kill();
 server.stop();
 
 const failures: string[] = [
   ...(result.result?.value ?? [`evaluate failed: ${JSON.stringify(result)}`]),
+  ...reduced,
+  ...restored,
   ...errors.map((e) => "page error: " + e),
 ];
 if (failures.length) {

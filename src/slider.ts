@@ -27,6 +27,7 @@ export interface SliderCore {
   track: HTMLElement;
   config: Required<SliderConfig>;
   signal: AbortSignal;
+  reducedMotion: MediaQueryList;
   current(): number;
   maxIndex(): number;
   pageCount(): number;
@@ -68,6 +69,8 @@ export function createSlider(
   let paddingStart = 0; // track padding doubles as scroll-padding (see slider.css)
   let paddingEnd = 0;
 
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+
   // Scroll state
   let programmaticScroll = false; // a goTo() animation is in flight
   let scrollTarget = 0; // where that animation is headed
@@ -102,8 +105,9 @@ export function createSlider(
     return isRtl() ? -track.scrollLeft : track.scrollLeft;
   }
 
+  /** Smooth scrolls honour prefers-reduced-motion. */
   function scrollTo(position: number, smooth = false): void {
-    const behavior: ScrollBehavior = smooth ? "smooth" : "instant";
+    const behavior: ScrollBehavior = smooth && !reducedMotion.matches ? "smooth" : "instant";
     if (isVertical()) track.scrollTo({ top: position, behavior });
     else track.scrollTo({ left: isRtl() ? -position : position, behavior });
   }
@@ -211,10 +215,10 @@ export function createSlider(
     clone.setAttribute(CLONE_ATTR, "");
     clone.setAttribute("aria-hidden", "true");
     for (const el of [clone, ...clone.querySelectorAll("[id]")]) el.removeAttribute("id");
-    for (const el of clone.querySelectorAll<HTMLElement>(
-      "a, button, input, select, textarea, [tabindex]"
-    )) {
-      el.tabIndex = -1;
+    // The slide itself can be the link (a card), so it leaves the tab order too.
+    const focusable = "a, button, input, select, textarea, [tabindex]";
+    for (const el of [clone, ...clone.querySelectorAll<HTMLElement>(focusable)]) {
+      if (el.matches(focusable)) el.tabIndex = -1;
     }
     return clone;
   }
@@ -445,6 +449,7 @@ export function createSlider(
     if (isRtl()) container.setAttribute("dir", "rtl");
     else container.removeAttribute("dir");
     container.setAttribute("data-aero-alignment", config.alignment);
+    container.classList.toggle("aero-slider--draggable", config.draggable);
 
     readSlidesPerView();
     clonesBefore = cloneCount();
@@ -500,6 +505,7 @@ export function createSlider(
     track.style.scrollSnapType = "";
     container.classList.remove(
       "aero-slider--dragging",
+      "aero-slider--draggable",
       "aero-slider--vertical",
       "aero-slider--ready"
     );
@@ -536,6 +542,7 @@ export function createSlider(
     track,
     config,
     signal,
+    reducedMotion,
     current: () => current,
     maxIndex,
     pageCount,
