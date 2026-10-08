@@ -32,6 +32,8 @@ ${slider("ticking", 4)}
 ${slider("interval", 4)}
 ${slider("eased", 5, "--slide-gap:10px")}
 ${slider("linear", 5, "--slide-gap:10px")}
+${slider("longEase", 5, "--slide-gap:10px")}
+${slider("slowAuto", 4)}
 ${slider("nest", 3).replace("<div><div>0</div></div>", `<div>${slider("nested", 3)}</div>`)}
 ${slider("multi", 4)}
 ${slider("stopper", 3).replace("<div><div>0</div></div>", '<div><button id="stopBtn">0</button></div>')}
@@ -51,6 +53,8 @@ ${slider("doomed", 3)}
     interval: createSlider(document.getElementById("interval"), { loop: true, autoplay: true, autoplayInterval: 400 }),
     eased: createSlider(document.getElementById("eased"), { scrollDuration: 300 }),
     linear: createSlider(document.getElementById("linear"), { scrollDuration: 400, scrollEasing: (t) => t }),
+    longEase: createSlider(document.getElementById("longEase"), { scrollDuration: 2000 }),
+    slowAuto: createSlider(document.getElementById("slowAuto"), { loop: true, autoplay: true, autoplayInterval: 300, scrollDuration: 900 }),
     nest: createSlider(document.getElementById("nest"), { loop: true, autoplay: true, autoplayInterval: 400 }),
     nested: createSlider(document.getElementById("nested"), { loop: true, autoplay: true, autoplayInterval: 150 }),
     multi: createSlider(document.getElementById("multi"), { loop: true, autoplay: true, autoplayInterval: 400 }),
@@ -315,6 +319,20 @@ const scenario = `(async () => {
     s.goTo(0, { instant: true }); await settled("eased");
   }
 
+  // Autoplay doesn't cut off its own eased move when scrollDuration outlasts the interval: each move
+  // comes to rest on a slide before the next starts.
+  {
+    const t = track("slowAuto"), stride = t.children[1].offsetLeft - t.children[0].offsetLeft;
+    let rests = 0, still = 0, last = -1;
+    for (let i = 0; i < 40; i++) {
+      await sleep(75);
+      const p = t.scrollLeft;
+      still = p === last ? still + 1 : 0; last = p;
+      if (still === 1 && near(p % stride, 0, 2)) rests++;
+    }
+    check("autoplay.waitsForEase", rests >= 2, { rests });
+  }
+
   // Autoplay edge cases
   {
     // A nested slider's slideChange bubbles up; only the slider's own changes restart its countdown.
@@ -467,8 +485,12 @@ const touched = await inPage(`
   check("eased.touchTakesOver", track("eased").scrollLeft < 2340, { pos: track("eased").scrollLeft });
 `);
 
+// An eased scroll already running when reduced motion turns on lands at once.
+await inPage(`S.longEase.goTo(4); await sleep(150);`);
 await setReducedMotion("reduce");
 const reduced = await inPage(`
+  await sleep(50);
+  { const t = track("longEase"); check("reduced.stopsEaseInFlight", near(t.scrollLeft, t.scrollWidth - t.clientWidth), { pos: t.scrollLeft }); }
   S.basic.goTo(0); await sleep(600);
   S.basic.goTo(1);
   check("reduced.scrollIsInstant", near(track("basic").scrollLeft, 610), { pos: track("basic").scrollLeft });

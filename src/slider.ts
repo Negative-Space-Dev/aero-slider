@@ -38,6 +38,8 @@ export interface SliderCore {
   config: Required<SliderConfig>;
   signal: AbortSignal;
   reducedMotion: MediaQueryList;
+  /** A scrollDuration animation is in flight. */
+  easing(): boolean;
   current(): number;
   maxIndex(): number;
   pageCount(): number;
@@ -590,6 +592,7 @@ export function createSlider(
     config,
     signal,
     reducedMotion,
+    easing: () => easeFrame !== 0,
     current: () => current,
     maxIndex,
     pageCount,
@@ -610,6 +613,12 @@ export function createSlider(
   track.classList.add("aero-slider__track");
 
   track.addEventListener("scroll", onScroll, { passive: true, signal });
+  // Reduced motion turned on mid-move: land it now rather than finish the animation.
+  reducedMotion.addEventListener(
+    "change",
+    () => reducedMotion.matches && programmaticScroll && scrollTo(scrollTarget),
+    { signal }
+  );
   track.addEventListener("scrollend", onSettle, { signal });
   // The wheel takes over from any goTo() animation; touch and mouse do so in onPointerDown.
   track.addEventListener(

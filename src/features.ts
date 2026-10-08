@@ -195,6 +195,7 @@ export function autoplay(core: SliderCore) {
   }
 
   function advance(): void {
+    if (core.easing()) return; // scrollDuration outlasts the interval: let the move land first
     const atEnd = !core.loop() && core.current() >= core.maxIndex();
     if (atEnd) core.goTo(0);
     else core.next();
