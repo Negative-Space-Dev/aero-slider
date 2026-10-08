@@ -246,7 +246,12 @@ export function createSlider(
     } else {
       target = restPositionOf(logical);
     }
-    if (Math.abs(target - scrollPosition()) < 1) return onSettle();
+    if (Math.abs(target - scrollPosition()) < 1) {
+      // Already there, but a move started a moment ago may still be headed elsewhere: stop it.
+      if (programmaticScroll) scrollTo(target);
+      programmaticScroll = false;
+      return onSettle();
+    }
     programmaticScroll = true;
     scrollTarget = target;
     scrollTo(target, !options.instant);

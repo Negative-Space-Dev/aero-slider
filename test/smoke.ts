@@ -190,6 +190,13 @@ const scenario = `(async () => {
     check("goTo.instant.nextAnimates", new Set(between).size >= 3 && path.every((p, k) => !k || p >= path[k - 1]), { path });
     await settled("fixed");
     check("goTo.instant.nextLands", s.currentIndex === 4 && near(t.scrollLeft, t.scrollWidth - t.clientWidth), { i: s.currentIndex, pos: t.scrollLeft });
+    // Reversing a move before it leaves the spot stops it there, instantly or smoothly
+    s.goTo(0, { instant: true }); await settled("fixed");
+    s.goTo(3); s.goTo(0, { instant: true }); await settled("fixed");
+    check("goTo.reverseInstant", s.currentIndex === 0 && near(t.scrollLeft, 0), { i: s.currentIndex, pos: t.scrollLeft });
+    s.goTo(0, { instant: true }); await settled("fixed");
+    s.goTo(3); s.goTo(0); await settled("fixed");
+    check("goTo.reverseSmooth", s.currentIndex === 0 && near(t.scrollLeft, 0), { i: s.currentIndex, pos: t.scrollLeft });
   }
 
   // Clones of link slides leave the tab order and drop their ids
