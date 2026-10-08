@@ -44,6 +44,8 @@ ${slider("free", 5, "--slide-gap:10px")}
 ${slider("settleTtb", 4, "height:300px")}
 ${slider("ticker", 4, "--slides-per-view:3;--slide-gap:10px").replace("<div><div>0</div></div>", '<div><button id="tickBtn">0</button></div>')}
 ${slider("tickerRtl", 4, "--slides-per-view:3;--slide-gap:10px")}
+${slider("freeLoop", 4, "--slides-per-view:3;--slide-gap:10px")}
+${slider("settleFrac", 4, "--slides-per-view:1.5;--slide-gap:8px")}
 <div id="cards" class="aero-slider" style="width:600px"><div class="aero-slider__viewport"><div class="aero-slider__track">${Array.from({ length: 3 }, (_, i) => `<a href="#card${i}" id="card${i}">${i}</a>`).join("")}</div></div></div>
 <script type="module">
   import { createSlider } from "/dist/aero-slider.min.js";
@@ -73,6 +75,8 @@ ${slider("tickerRtl", 4, "--slides-per-view:3;--slide-gap:10px")}
     settleTtb: createSlider(document.getElementById("settleTtb"), { direction: "ttb", snap: "settle" }),
     ticker: createSlider(document.getElementById("ticker"), { autoplay: "continuous", autoplaySpeed: 600 }),
     tickerRtl: createSlider(document.getElementById("tickerRtl"), { autoplay: "continuous", autoplaySpeed: 600, direction: "rtl" }),
+    freeLoop: createSlider(document.getElementById("freeLoop"), { loop: true, snap: "none", scrollDuration: 550 }),
+    settleFrac: createSlider(document.getElementById("settleFrac"), { loop: true, snap: "settle", scrollDuration: 300 }),
   };
 </script></body></html>`;
 
@@ -697,6 +701,50 @@ const snapped = await inPage(`${snapHelpers}
     check("settle.withoutScrollend", s.currentIndex === 1 && near(t.scrollLeft, 610), { i: s.currentIndex, pos: t.scrollLeft });
   }
 
+  // settle: a slow mouse release eases onto the nearest slide; a real flick carries to the next.
+  {
+    const t = track("settle"), s = S.settle;
+    s.goTo(0, { instant: true }); await settled("settle");
+    pe("settle", "pointerdown", 500); await sleep(16); await new Promise(requestAnimationFrame);
+    for (let x = 485; x >= 410; x -= 15) { pe("settle", "pointermove", x); await sleep(33); }
+    pe("settle", "pointerup", 410, { buttons: 0 }); await settled("settle");
+    check("settle.slowReleaseNearest", s.currentIndex === 0 && near(t.scrollLeft, 0), { i: s.currentIndex, pos: t.scrollLeft });
+    s.goTo(0, { instant: true }); await settled("settle");
+    await drag("settle", 500, 380, 20);
+    pe("settle", "pointerup", 380, { buttons: 0 }); await settled("settle");
+    check("settle.flickCarries", s.currentIndex === 1 && near(t.scrollLeft, 610), { i: s.currentIndex, pos: t.scrollLeft });
+  }
+
+  // settle on a loop with fractional slides per view: the end clones' snap points lie off the
+  // runway, so it settles onto the real twin instead of waiting at an edge it can never leave.
+  {
+    const t = track("settleFrac"), s = S.settleFrac;
+    const centred = () => {
+      const r = t.getBoundingClientRect(), mid = r.left + r.width / 2;
+      return Math.min(...[...t.children].map((k) => { const b = k.getBoundingClientRect(); return Math.abs(b.left + b.width / 2 - mid); }));
+    };
+    for (const edge of [0, t.scrollWidth]) {
+      t.scrollLeft = edge; await settled("settleFrac"); await sleep(100);
+      check("settleFrac.landsOnSlide." + (edge ? "end" : "start"), centred() < 1.5 && t.scrollLeft > 0 && t.scrollLeft < t.scrollWidth - t.clientWidth, { off: centred(), pos: t.scrollLeft });
+    }
+  }
+
+  // none on a loop: a fast flick near the end coasts without running off the runway, and the
+  // slider keeps tracking afterwards (it used to wait forever for a spot it couldn't reach).
+  {
+    const t = track("freeLoop"), s = S.freeLoop, kids = t.children;
+    s.goTo(3, { instant: true }); await settled("freeLoop");
+    pe("freeLoop", "pointerdown", 500); await sleep(16); await new Promise(requestAnimationFrame);
+    for (let x = 380; x >= -340; x -= 120) { pe("freeLoop", "pointermove", x); await new Promise(requestAnimationFrame); }
+    pe("freeLoop", "pointerup", -340, { buttons: 0 }); await settled("freeLoop"); await sleep(200);
+    const max = t.scrollWidth - t.clientWidth;
+    check("noneLoop.flickStaysOnRunway", t.scrollLeft > 1 && t.scrollLeft < max - 1, { pos: t.scrollLeft, max });
+    const real1 = [...kids].find((k) => !k.hasAttribute("data-aero-slider-clone") && k.textContent === "1");
+    const at = t.scrollLeft + (real1.getBoundingClientRect().left + real1.offsetWidth / 2) - (t.getBoundingClientRect().left + t.clientWidth / 2);
+    t.scrollLeft = at; await settled("freeLoop");
+    check("noneLoop.keepsTracking", s.currentIndex === 1, { i: s.currentIndex });
+  }
+
   // none: the track rests wherever it stops, a drag release coasts on its momentum, and the index
   // follows the nearest slide.
   {
@@ -787,6 +835,35 @@ const tickerWheel = await inPage(`${tickerHelpers}
   check("ticker.keepsDriftingAfterWheel", anims().length > 0, { anims: anims().length });
 `);
 
+// A touch held on the track after a wheel scroll waits: the wheel's settle timer must not start
+// easing under a still finger (Firefox, where scrollend can be missing). It settles on release.
+await inPage(
+  `S.settle.goTo(0, { instant: true }); window.__block = (e) => e.stopPropagation(); document.getElementById("settle").addEventListener("scrollend", window.__block, { capture: true });`
+);
+await sleep(300);
+await wheel("settle", 80);
+await sleep(60);
+await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 1 });
+const touchSpot = (
+  await send("Runtime.evaluate", {
+    expression: `(() => { const r = document.getElementById("settle").getBoundingClientRect(); return { x: r.left + 300, y: r.top + 60 }; })()`,
+    returnByValue: true,
+  })
+).result.value;
+await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [touchSpot] });
+const heldTouch = await inPage(`
+  const t = track("settle"), at = t.scrollLeft; await sleep(600);
+  check("settle.waitsForTouch", at > 40 && near(t.scrollLeft, at), { at, now: t.scrollLeft });
+`);
+await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+await send("Emulation.setTouchEmulationEnabled", { enabled: false });
+const releasedTouch = await inPage(`
+  await sleep(800);
+  const t = track("settle");
+  document.getElementById("settle").removeEventListener("scrollend", window.__block, { capture: true });
+  check("settle.settlesAfterTouch", near(t.scrollLeft, 0) && S.settle.currentIndex === 0, { pos: t.scrollLeft });
+`);
+
 // An eased scroll already running when reduced motion turns on lands at once.
 await inPage(`S.longEase.goTo(4); await sleep(150);`);
 await setReducedMotion("reduce");
@@ -825,6 +902,8 @@ const failures: string[] = [
   ...snapped,
   ...wheelSettle,
   ...wheelNone,
+  ...heldTouch,
+  ...releasedTouch,
   ...reduced,
   ...restored,
   ...errors.map((e) => "page error: " + e),

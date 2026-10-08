@@ -102,7 +102,9 @@ export function createSlider(
   let scrollFrame = 0;
   let settleTimer = 0;
   let easeFrame = 0; // a scrollDuration animation is in flight
-  let wheelScrolling = false; // the wheel moved the track and scrollend may never come
+  let fallbackSettle = false; // a wheel or touch moved the track and scrollend may never come
+  const touches = new Set<number>(); // touch pointers down on the track
+  let settleDeferred = false; // a settle arrived while a finger was still down
 
   const isVertical = () => config.direction === "ttb";
   const isRtl = () => config.direction === "rtl";
@@ -269,6 +271,23 @@ export function createSlider(
     if (!isRealDomIndex(domIndex)) scrollTo(scrollPosition() + shiftToRealCopy(domIndex));
   }
 
+  /** One lap of real slides on a loop: the distance from a slide to its next copy. */
+  function cycleWidth(): number {
+    const first = track.children[clonesBefore];
+    const twin = track.children[clonesBefore + slideCount];
+    return first && twin ? snapPositionOf(twin) - snapPositionOf(first) : 0;
+  }
+
+  /**
+   * Starts a programmatic move. The browser clamps scrolling to the runway, so the target is
+   * clamped too; otherwise onSettle() would wait forever for a spot the track can't reach.
+   */
+  function startMove(target: number, smooth = true): void {
+    programmaticScroll = true;
+    scrollTarget = clamp(target, 0, maxScroll);
+    scrollTo(scrollTarget, smooth);
+  }
+
   function cloneOf(slide: HTMLElement): HTMLElement {
     const clone = slide.cloneNode(true) as HTMLElement;
     clone.removeAttribute(SLIDE_INDEX_ATTR);
@@ -308,9 +327,7 @@ export function createSlider(
       programmaticScroll = false;
       return onSettle();
     }
-    programmaticScroll = true;
-    scrollTarget = target;
-    scrollTo(target, !options.instant);
+    startMove(target, !options.instant);
   }
 
   const step = () => Math.max(1, Math.trunc(config.perMove));
@@ -328,11 +345,11 @@ export function createSlider(
         if (!programmaticScroll) setCurrent(indexAt(scrollPosition()));
       });
     }
-    if (!("onscrollend" in track) || wheelScrolling) {
+    if (!("onscrollend" in track) || fallbackSettle) {
       clearTimeout(settleTimer);
       settleTimer = window.setTimeout(
         onSettle,
-        wheelScrolling ? WHEEL_SETTLE_MS : SETTLE_FALLBACK_MS
+        fallbackSettle ? WHEEL_SETTLE_MS : SETTLE_FALLBACK_MS
       );
     }
   }
@@ -340,13 +357,18 @@ export function createSlider(
   function onSettle(): void {
     if (dragging) return;
     clearTimeout(settleTimer);
-    wheelScrolling = false;
+    fallbackSettle = false;
+    // A finger still on the track owns the scroll; settle once the last one lifts.
+    if (touches.size) {
+      settleDeferred = true;
+      return;
+    }
     // A scrollend from an instant scroll issued just before goTo() lands mid-animation; wait for ours.
     if (programmaticScroll && Math.abs(scrollPosition() - scrollTarget) > 1) return;
     const userScroll = !programmaticScroll;
     programmaticScroll = false;
     track.style.scrollSnapType = "";
-    if (userScroll && snapMode() === "settle" && settleOntoNearest()) return;
+    if (userScroll && snapMode() === "settle" && settleNear(scrollPosition())) return;
     teleportToRealSlides();
     const position = scrollPosition();
     const landed = indexAt(position);
@@ -357,25 +379,49 @@ export function createSlider(
   }
 
   /**
-   * snap: "settle" — after a free scroll, ease onto the nearest slide on screen. On a loop that can
-   * be a clone; the clone→real teleport runs once the ease lands, so the track never flies across
-   * to the real copy. Returns false when already resting on a slide.
+   * Eases onto track.children[domIndex]. On a loop, a clone whose snap point lies off the runway
+   * (fractional slides per view put the end clones there) is swapped for its real twin: the track
+   * first jumps by the same distance, which looks identical, so nothing visibly flies across.
    */
-  function settleOntoNearest(): boolean {
-    if (!slideStride) return false;
-    const position = scrollPosition();
-    const domIndex = loop()
-      ? clamp(domIndexAt(position), 0, track.children.length - 1)
-      : clonesBefore + indexAt(position);
-    const target = loop()
-      ? snapPositionOf(track.children[domIndex]!)
-      : restPositionOf(indexAt(position));
-    if (Math.abs(target - position) <= 1) return false;
+  function settleOnto(domIndex: number): void {
+    let target = snapPositionOf(track.children[domIndex]!);
+    if (target < -1 || target > maxScroll + 1) {
+      const shift = shiftToRealCopy(domIndex);
+      scrollTo(scrollPosition() + shift);
+      target += shift;
+    }
     setCurrent(indexOfDom(domIndex));
-    programmaticScroll = true;
-    scrollTarget = target;
-    scrollTo(target, true);
+    startMove(target);
+  }
+
+  /**
+   * snap: "settle" — ease onto the slide nearest `position` (where the track is, or where a
+   * release would carry it). On a loop that can be a clone on screen; the clone→real teleport runs
+   * once the ease lands, so the track never flies back across to the real copy. Returns false when
+   * it's already resting there.
+   */
+  function settleNear(position: number): boolean {
+    if (!slideStride) return false;
+    if (!loop()) {
+      const index = indexAt(clamp(position, 0, maxScroll));
+      const target = restPositionOf(index);
+      if (Math.abs(target - scrollPosition()) <= 1) return false;
+      setCurrent(index);
+      startMove(target);
+      return true;
+    }
+    const domIndex = clamp(domIndexAt(position), 0, track.children.length - 1);
+    if (Math.abs(snapPositionOf(track.children[domIndex]!) - scrollPosition()) <= 1) return false;
+    settleOnto(domIndex);
     return true;
+  }
+
+  /** How far a release at `velocity` carries; on a loop, never a full lap, so a shift keeps it on the runway. */
+  function projection(velocity: number): number {
+    const distance = velocity * FLICK_PROJECTION_MS;
+    if (!loop()) return distance;
+    const limit = Math.max(0, cycleWidth() - slideStride);
+    return clamp(distance, -limit, limit);
   }
 
   // ── Mouse / pen drag ─────────────────────────────────────────────────
@@ -385,7 +431,13 @@ export function createSlider(
   function onPointerDown(event: PointerEvent): void {
     suppressNextClick = false;
     programmaticScroll = false; // a press takes over from any goTo() animation
-    wheelScrolling = false;
+    if (event.pointerType === "touch") {
+      touches.add(event.pointerId);
+      // A wheel settle that was still pending waits for this finger to lift.
+      if (fallbackSettle) settleDeferred = true;
+    }
+    fallbackSettle = false;
+    clearTimeout(settleTimer);
     cancelEase();
     if (!config.draggable || event.button !== 0 || event.pointerType === "touch") return;
     if (config.noDrag && (event.target as Element).closest(config.noDrag)) return;
@@ -451,16 +503,23 @@ export function createSlider(
       const idle = up.timeStamp - lastTime;
       if (idle > 50) velocity *= Math.max(0, 1 - idle / 200);
 
-      if (snapMode() === "none") {
-        // No snapping: coast on the release velocity and rest wherever that ends.
+      if (snapMode() !== "native") {
         const position = scrollPosition();
-        const rest = position + velocity * FLICK_PROJECTION_MS;
-        const target = loop() ? rest : clamp(rest, 0, maxScroll);
-        if (Math.abs(target - position) > 1) {
-          programmaticScroll = true;
-          scrollTarget = target;
-          scrollTo(target, true);
-        } else onSettle();
+        let rest = position + projection(velocity);
+        if (snapMode() === "settle") {
+          // Coast on the release velocity, then ease onto the slide nearest where that ends.
+          if (!settleNear(rest)) onSettle();
+        } else {
+          // No snapping: coast and rest wherever that ends. On a loop, shift a lap first if the
+          // coast would run off the runway (a lap away looks identical).
+          if (loop() && (rest < 0 || rest > maxScroll)) {
+            const shift = rest > maxScroll ? -cycleWidth() : cycleWidth();
+            scrollTo(position + shift);
+            rest += shift;
+          }
+          if (Math.abs(rest - scrollPosition()) > 1) startMove(rest);
+          else onSettle();
+        }
         emit("dragEnd", { index: current, fromIndex });
         play.release("drag");
         return;
@@ -715,12 +774,25 @@ export function createSlider(
     "wheel",
     () => {
       programmaticScroll = false;
-      wheelScrolling = true;
+      fallbackSettle = true;
       cancelEase();
     },
     { passive: true, signal }
   );
   track.addEventListener("pointerdown", onPointerDown, { signal });
+  // Touch releases land on window wherever the finger lifts. A settle that waited on the finger
+  // runs now, or once any fling it started comes to rest.
+  const onTouchRelease = (event: Event) => {
+    if (!touches.delete((event as PointerEvent).pointerId) || touches.size || !settleDeferred)
+      return;
+    settleDeferred = false;
+    fallbackSettle = true;
+    clearTimeout(settleTimer);
+    settleTimer = window.setTimeout(onSettle, WHEEL_SETTLE_MS);
+  };
+  for (const type of ["pointerup", "pointercancel"]) {
+    addEventListener(type, onTouchRelease, { capture: true, passive: true, signal });
+  }
   track.addEventListener("click", onClick, { capture: true, signal });
   track.addEventListener("dragstart", (e) => config.draggable && e.preventDefault(), { signal });
 
