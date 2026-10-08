@@ -606,8 +606,10 @@ const snapped = await inPage(`${snapHelpers}
     for (let x = 485; x >= 410; x -= 15) { pe("settle", "pointermove", x); await sleep(33); }
     pe("settle", "pointerup", 410, { buttons: 0 }); await settled("settle");
     check("settle.slowReleaseNearest", s.currentIndex === 0 && near(t.scrollLeft, 0), { i: s.currentIndex, pos: t.scrollLeft });
+    // A real flick (a move every frame, ~1.25 px/ms) carries past the midpoint to the next slide.
     s.goTo(0, { instant: true }); await settled("settle");
-    await drag("settle", 500, 380, 20);
+    pe("settle", "pointerdown", 500); await sleep(16); await new Promise(requestAnimationFrame);
+    for (let x = 480; x >= 380; x -= 20) { pe("settle", "pointermove", x); await new Promise(requestAnimationFrame); }
     pe("settle", "pointerup", 380, { buttons: 0 }); await settled("settle");
     check("settle.flickCarries", s.currentIndex === 1 && near(t.scrollLeft, 610), { i: s.currentIndex, pos: t.scrollLeft });
   }
