@@ -171,9 +171,18 @@ export function autoplay(core: SliderCore) {
   const holds = new Set<string>();
   let timer = 0;
   let settleFallback = 0;
+  const pressed = new Set<number>(); // pointerIds currently down on the track
 
   function start(): void {
-    if (timer || !config.autoplay || holds.size || document.hidden || reducedMotion.matches) return;
+    if (
+      signal.aborted ||
+      timer ||
+      !config.autoplay ||
+      holds.size ||
+      document.hidden ||
+      reducedMotion.matches
+    )
+      return;
     timer = window.setInterval(advance, config.autoplayInterval);
     core.emit("autoplayStart", {});
   }
@@ -212,18 +221,21 @@ export function autoplay(core: SliderCore) {
     target.addEventListener(type, handler, { passive: true, signal });
   listen(container, "pointerenter", () => hold("pointer"));
   listen(container, "pointerleave", () => release("pointer"));
-  listen(track, "pointerdown", () => {
+  listen(track, "pointerdown", (event) => {
     if (!config.autoplay) return;
+    pressed.add((event as PointerEvent).pointerId);
     hold("press");
-    const up = () => {
-      removeEventListener("pointerup", up);
-      removeEventListener("pointercancel", up);
-      holds.delete("press");
-      holdUntilSettled();
-    };
-    addEventListener("pointerup", up, { signal });
-    addEventListener("pointercancel", up, { signal });
   });
+  // Releases are caught on window in the capture phase, so they count wherever the pointer is
+  // and even if content inside a slide stops them. The hold lasts until the last pointer lifts.
+  const onRelease = (event: Event) => {
+    if (!pressed.delete((event as PointerEvent).pointerId) || pressed.size) return;
+    holds.delete("press");
+    holdUntilSettled();
+  };
+  for (const type of ["pointerup", "pointercancel"]) {
+    addEventListener(type, onRelease, { capture: true, passive: true, signal });
+  }
   listen(container, "focusin", (event) => {
     if ((event.target as Element).matches(":focus-visible")) hold("focus");
   });
@@ -231,8 +243,8 @@ export function autoplay(core: SliderCore) {
     if (!container.contains((event as FocusEvent).relatedTarget as Node)) release("focus");
   });
   // A manual change earns a full interval before the next automatic one.
-  listen(container, "aero:slideChange", () => {
-    if (!timer) return;
+  listen(container, "aero:slideChange", (event) => {
+    if (event.target !== container || !timer) return; // not a nested slider's change
     clearInterval(timer);
     timer = window.setInterval(advance, config.autoplayInterval);
   });

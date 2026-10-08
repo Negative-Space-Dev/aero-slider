@@ -32,6 +32,10 @@ ${slider("ticking", 4)}
 ${slider("interval", 4)}
 ${slider("eased", 5, "--slide-gap:10px")}
 ${slider("linear", 5, "--slide-gap:10px")}
+${slider("nest", 3).replace("<div><div>0</div></div>", `<div>${slider("nested", 3)}</div>`)}
+${slider("multi", 4)}
+${slider("stopper", 3).replace("<div><div>0</div></div>", '<div><button id="stopBtn">0</button></div>')}
+${slider("doomed", 3)}
 <div id="cards" class="aero-slider" style="width:600px"><div class="aero-slider__viewport"><div class="aero-slider__track">${Array.from({ length: 3 }, (_, i) => `<a href="#card${i}" id="card${i}">${i}</a>`).join("")}</div></div></div>
 <script type="module">
   import { createSlider } from "/dist/aero-slider.min.js";
@@ -47,6 +51,11 @@ ${slider("linear", 5, "--slide-gap:10px")}
     interval: createSlider(document.getElementById("interval"), { loop: true, autoplay: true, autoplayInterval: 400 }),
     eased: createSlider(document.getElementById("eased"), { scrollDuration: 300 }),
     linear: createSlider(document.getElementById("linear"), { scrollDuration: 400, scrollEasing: (t) => t }),
+    nest: createSlider(document.getElementById("nest"), { loop: true, autoplay: true, autoplayInterval: 400 }),
+    nested: createSlider(document.getElementById("nested"), { loop: true, autoplay: true, autoplayInterval: 150 }),
+    multi: createSlider(document.getElementById("multi"), { loop: true, autoplay: true, autoplayInterval: 400 }),
+    stopper: createSlider(document.getElementById("stopper"), { loop: true, autoplay: true, autoplayInterval: 150 }),
+    doomed: createSlider(document.getElementById("doomed"), { loop: true, autoplay: true, autoplayInterval: 100 }),
     cards: createSlider(document.getElementById("cards"), { loop: true }),
   };
 </script></body></html>`;
@@ -196,6 +205,13 @@ const scenario = `(async () => {
     check("goTo.instant.nextAnimates", new Set(between).size >= 3 && path.every((p, k) => !k || p >= path[k - 1]), { path });
     await settled("fixed");
     check("goTo.instant.nextLands", s.currentIndex === 4 && near(t.scrollLeft, t.scrollWidth - t.clientWidth), { i: s.currentIndex, pos: t.scrollLeft });
+    // Reversing a move before it leaves the spot stops it there, instantly or smoothly
+    s.goTo(0, { instant: true }); await settled("fixed");
+    s.goTo(3); s.goTo(0, { instant: true }); await settled("fixed");
+    check("goTo.reverseInstant", s.currentIndex === 0 && near(t.scrollLeft, 0), { i: s.currentIndex, pos: t.scrollLeft });
+    s.goTo(0, { instant: true }); await settled("fixed");
+    s.goTo(3); s.goTo(0); await settled("fixed");
+    check("goTo.reverseSmooth", s.currentIndex === 0 && near(t.scrollLeft, 0), { i: s.currentIndex, pos: t.scrollLeft });
   }
 
   // Clones of link slides leave the tab order and drop their ids
@@ -297,6 +313,43 @@ const scenario = `(async () => {
     await sleep(400);
     check("eased.pressTakesOver", t.scrollLeft < 2340, { pos: t.scrollLeft });
     s.goTo(0, { instant: true }); await settled("eased");
+  }
+
+  // Autoplay edge cases
+  {
+    // A nested slider's slideChange bubbles up; only the slider's own changes restart its countdown.
+    const parent = document.getElementById("nest");
+    let own = 0;
+    parent.addEventListener("aero:slideChange", (e) => e.target === parent && own++);
+    await sleep(1000);
+    check("autoplay.ignoresNestedSlider", own >= 1, { own, nested: S.nested.currentIndex });
+
+    // Two fingers down: lifting one keeps the hold until the last one lifts.
+    const t = track("multi"), s = S.multi;
+    const down = (id) => t.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerId: id, pointerType: "touch" }));
+    const up = (id) => window.dispatchEvent(new PointerEvent("pointerup", { pointerId: id, pointerType: "touch" }));
+    await settled("multi");
+    down(41); down(42);
+    const at = s.currentIndex;
+    up(41); await sleep(900);
+    check("autoplay.holdsUntilLastPointer", s.currentIndex === at, { at, now: s.currentIndex });
+    up(42); await sleep(900);
+    check("autoplay.resumesAfterLastPointer", s.currentIndex !== at, { at, now: s.currentIndex });
+
+    // Content that stops pointerup from bubbling can't strand the press hold.
+    const btn = document.getElementById("stopBtn");
+    btn.addEventListener("pointerup", (e) => e.stopPropagation());
+    btn.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerId: 43, pointerType: "touch" }));
+    btn.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerId: 43, pointerType: "touch" }));
+    const stopAt = S.stopper.currentIndex; await sleep(700);
+    check("autoplay.resumesWhenReleaseIsStopped", S.stopper.currentIndex !== stopAt, { stopAt, now: S.stopper.currentIndex });
+
+    // resume() after destroy() stays inert.
+    const doomed = document.getElementById("doomed");
+    let starts = 0;
+    doomed.addEventListener("aero:autoplayStart", () => starts++);
+    S.doomed.destroy(); S.doomed.resume(); await sleep(50);
+    check("autoplay.resumeAfterDestroy", starts === 0, { starts });
   }
 
   // Destroy leaves the DOM clean and the API inert

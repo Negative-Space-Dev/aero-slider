@@ -1634,7 +1634,7 @@ const teardown = AeroSlider.syncThumbnails(main, thumbs);
                   ><td class="py-2 pr-4 font-mono text-xs">autoplayInterval</td><td
                     class="py-2 pr-4">number</td
                   ><td class="py-2 pr-4">5000</td><td class="py-2"
-                    >Delay between auto-advances (ms)</td
+                    >Delay between auto-advances (ms). Restarts after any manual change, and holds while the slider is pressed</td
                   ></tr
                 >
                 <tr class="border-b border-slate-100"
@@ -1702,8 +1702,18 @@ const teardown = AeroSlider.syncThumbnails(main, thumbs);
                   ></tr
                 >
                 <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">.goTo(index)</td><td class="py-2"
-                    >Jump to a specific slide index</td
+                  ><td class="py-2 pr-4 font-mono text-xs">.goTo(index, options?)</td><td class="py-2"
+                    >Scroll to a specific slide index. Pass <code>{'{ instant: true }'}</code> to jump there with no animation</td
+                  ></tr
+                >
+                <tr class="border-b border-slate-100"
+                  ><td class="py-2 pr-4 font-mono text-xs">.pause()</td><td class="py-2"
+                    >Hold autoplay until <code>.resume()</code>. Hover, focus and drag pauses still apply on top</td
+                  ></tr
+                >
+                <tr class="border-b border-slate-100"
+                  ><td class="py-2 pr-4 font-mono text-xs">.resume()</td><td class="py-2"
+                    >Release a <code>.pause()</code> and restart the autoplay countdown</td
                   ></tr
                 >
                 <tr class="border-b border-slate-100"
