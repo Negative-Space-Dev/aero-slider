@@ -1654,10 +1654,20 @@ const teardown = AeroSlider.syncThumbnails(main, thumbs);
                     >number</td
                   ><td class="py-2 pr-4">1</td><td class="py-2">Number of slides to advance per <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">next()</code> / <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">prev()</code> call</td></tr
                 >
-                <tr
+                <tr class="border-b border-slate-100"
                   ><td class="py-2 pr-4 font-mono text-xs">direction</td><td class="py-2 pr-4"
                     >"ltr" | "rtl" | "ttb"</td
                   ><td class="py-2 pr-4">"ltr"</td><td class="py-2">Carousel direction: left-to-right, right-to-left, or top-to-bottom (vertical)</td></tr
+                >
+                <tr class="border-b border-slate-100"
+                  ><td class="py-2 pr-4 font-mono text-xs">scrollDuration</td><td class="py-2 pr-4"
+                    >number</td
+                  ><td class="py-2 pr-4">0</td><td class="py-2">Length of <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">next()</code> / <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">prev()</code> / <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">goTo()</code> scrolls in ms, eased by <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">scrollEasing</code>, so they move the same way in every browser. <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">0</code> uses the browser's native smooth scrolling. Reduced motion makes every scroll instant either way</td></tr
+                >
+                <tr
+                  ><td class="py-2 pr-4 font-mono text-xs">scrollEasing</td><td class="py-2 pr-4"
+                    >(t: number) =&gt; number</td
+                  ><td class="py-2 pr-4">ease-out cubic</td><td class="py-2">Maps linear progress 0–1 to eased progress for <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">scrollDuration</code> scrolls, e.g. <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">{"(t) => t"}</code> for linear</td></tr
                 >
               </tbody>
             </table>

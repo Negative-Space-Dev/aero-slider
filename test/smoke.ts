@@ -30,6 +30,10 @@ ${slider("dots", 12, "--slides-per-view:3;--slide-gap:6px")}
 ${slider("fixed", 5, "--slide-gap:10px")}
 ${slider("ticking", 4)}
 ${slider("interval", 4)}
+${slider("eased", 5, "--slide-gap:10px")}
+${slider("linear", 5, "--slide-gap:10px")}
+${slider("longEase", 5, "--slide-gap:10px")}
+${slider("slowAuto", 4)}
 ${slider("nest", 3).replace("<div><div>0</div></div>", `<div>${slider("nested", 3)}</div>`)}
 ${slider("multi", 4)}
 ${slider("stopper", 3).replace("<div><div>0</div></div>", '<div><button id="stopBtn">0</button></div>')}
@@ -47,6 +51,10 @@ ${slider("doomed", 3)}
     fixed: createSlider(document.getElementById("fixed"), { draggable: false }),
     ticking: createSlider(document.getElementById("ticking"), { loop: true, autoplay: true, autoplayInterval: 300 }),
     interval: createSlider(document.getElementById("interval"), { loop: true, autoplay: true, autoplayInterval: 400 }),
+    eased: createSlider(document.getElementById("eased"), { scrollDuration: 300 }),
+    linear: createSlider(document.getElementById("linear"), { scrollDuration: 400, scrollEasing: (t) => t }),
+    longEase: createSlider(document.getElementById("longEase"), { scrollDuration: 2000 }),
+    slowAuto: createSlider(document.getElementById("slowAuto"), { loop: true, autoplay: true, autoplayInterval: 300, scrollDuration: 900 }),
     nest: createSlider(document.getElementById("nest"), { loop: true, autoplay: true, autoplayInterval: 400 }),
     nested: createSlider(document.getElementById("nested"), { loop: true, autoplay: true, autoplayInterval: 150 }),
     multi: createSlider(document.getElementById("multi"), { loop: true, autoplay: true, autoplayInterval: 400 }),
@@ -250,6 +258,81 @@ const scenario = `(async () => {
     s.update({ autoplay: false });
   }
 
+  // scrollDuration eases goTo() on its own timeline: every frame moves a little the same way, faster
+  // first (ease-out), with snapping off until it lands exactly. Snapping left on pulls each frame to
+  // a slide, so the path jumps 0 → 610 → 1220.
+  const glide = (path, from, to) => {
+    const steps = path.slice(1).map((p, k) => p - path[k]).filter((d) => d !== 0);
+    const half = Math.floor(steps.length / 2), avg = (a) => a.reduce((x, y) => x + y, 0) / (a.length || 1);
+    return {
+      steps: steps.length,
+      oneWay: steps.every((d) => Math.sign(d) === Math.sign(to - from)),
+      biggest: Math.max(0, ...steps.map(Math.abs)) / Math.abs(to - from),
+      firstHalf: Math.abs(avg(steps.slice(0, half))),
+      secondHalf: Math.abs(avg(steps.slice(half))),
+    };
+  };
+  {
+    const s = S.eased, t = track("eased");
+    s.goTo(2);
+    check("eased.snapOffWhileEasing", t.style.scrollSnapType === "none", t.style.scrollSnapType);
+    const path = await frames("eased", 450), g = glide(path, 0, 1220);
+    check("eased.smooth", g.steps >= 8 && g.oneWay && g.biggest < 0.3, { g, path });
+    check("eased.easesOut", g.firstHalf > g.secondHalf, { g });
+    await settled("eased");
+    check("eased.lands", s.currentIndex === 2 && near(t.scrollLeft, 1220), { i: s.currentIndex, pos: t.scrollLeft });
+    check("eased.snapRestored", t.style.scrollSnapType === "", t.style.scrollSnapType);
+  }
+
+  // scrollEasing shapes the curve: linear moves in even steps (ease-out front-loads them)
+  {
+    const s = S.linear, t = track("linear");
+    s.goTo(2);
+    const path = await frames("linear", 550), g = glide(path, 0, 1220);
+    check("easing.custom", g.steps >= 12 && g.oneWay && g.biggest < 0.15, { g, path });
+    await settled("linear");
+    check("easing.customLands", near(t.scrollLeft, 1220), { pos: t.scrollLeft });
+    // Back the other way glides too
+    s.goTo(0);
+    const back = glide(await frames("linear", 550), 1220, 0);
+    check("easing.reverse", back.steps >= 12 && back.oneWay && back.biggest < 0.15, { back });
+    await settled("linear");
+  }
+
+  // The wheel and a mouse press stop an eased scroll where it is
+  {
+    const s = S.eased, t = track("eased");
+    s.goTo(4); await sleep(100);
+    t.dispatchEvent(new WheelEvent("wheel", { bubbles: true, deltaX: 1 }));
+    await sleep(400);
+    check("eased.wheelTakesOver", t.scrollLeft < 2340, { pos: t.scrollLeft });
+    // Snapping comes back, so an interrupted scroll still comes to rest on a slide.
+    await settled("eased");
+    check("eased.interruptedSnaps", t.style.scrollSnapType === "" && near(t.scrollLeft % 610, 0, 2) , { snap: t.style.scrollSnapType, pos: t.scrollLeft });
+    s.goTo(0, { instant: true }); await settled("eased");
+    s.goTo(4); await sleep(100);
+    const r = t.getBoundingClientRect();
+    t.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerId: 3, pointerType: "mouse", button: 0, buttons: 1, clientX: r.left + 10, clientY: r.top + 10 }));
+    window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 3, pointerType: "mouse" }));
+    await sleep(400);
+    check("eased.pressTakesOver", t.scrollLeft < 2340, { pos: t.scrollLeft });
+    s.goTo(0, { instant: true }); await settled("eased");
+  }
+
+  // Autoplay doesn't cut off its own eased move when scrollDuration outlasts the interval: each move
+  // comes to rest on a slide before the next starts.
+  {
+    const t = track("slowAuto"), stride = t.children[1].offsetLeft - t.children[0].offsetLeft;
+    let rests = 0, still = 0, last = -1;
+    for (let i = 0; i < 40; i++) {
+      await sleep(75);
+      const p = t.scrollLeft;
+      still = p === last ? still + 1 : 0; last = p;
+      if (still === 1 && near(p % stride, 0, 2)) rests++;
+    }
+    check("autoplay.waitsForEase", rests >= 2, { rests });
+  }
+
   // Autoplay edge cases
   {
     // A nested slider's slideChange bubbles up; only the slider's own changes restart its countdown.
@@ -376,11 +459,43 @@ const inPage = async (body: string) =>
 const setReducedMotion = (value: string) =>
   send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value }] });
 
+// A real touch stops an eased scroll too: touch fires pointerdown, so no touchstart listener is needed.
+await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 1 });
+const touchAt = (
+  await send("Runtime.evaluate", {
+    expression: `(() => {
+      const el = document.getElementById("eased");
+      el.scrollIntoView({ block: "center" });
+      window.sliders.eased.goTo(4);
+      const r = el.getBoundingClientRect();
+      return { x: r.left + 200, y: r.top + 20 };
+    })()`,
+    returnByValue: true,
+  })
+).result.value;
+await sleep(90);
+await send("Input.dispatchTouchEvent", {
+  type: "touchStart",
+  touchPoints: touchAt ? [touchAt] : [],
+});
+await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+await send("Emulation.setTouchEmulationEnabled", { enabled: false });
+const touched = await inPage(`
+  await sleep(400);
+  check("eased.touchTakesOver", track("eased").scrollLeft < 2340, { pos: track("eased").scrollLeft });
+`);
+
+// An eased scroll already running when reduced motion turns on lands at once.
+await inPage(`S.longEase.goTo(4); await sleep(150);`);
 await setReducedMotion("reduce");
 const reduced = await inPage(`
+  await sleep(50);
+  { const t = track("longEase"); check("reduced.stopsEaseInFlight", near(t.scrollLeft, t.scrollWidth - t.clientWidth), { pos: t.scrollLeft }); }
   S.basic.goTo(0); await sleep(600);
   S.basic.goTo(1);
   check("reduced.scrollIsInstant", near(track("basic").scrollLeft, 610), { pos: track("basic").scrollLeft });
+  S.eased.goTo(0);
+  check("reduced.easedIsInstant", near(track("eased").scrollLeft, 0), { pos: track("eased").scrollLeft });
   const at = S.ticking.currentIndex; await sleep(700);
   check("reduced.autoplayStops", S.ticking.currentIndex === at, { at, now: S.ticking.currentIndex });
 `);
@@ -395,6 +510,7 @@ server.stop();
 
 const failures: string[] = [
   ...(result.result?.value ?? [`evaluate failed: ${JSON.stringify(result)}`]),
+  ...touched,
   ...reduced,
   ...restored,
   ...errors.map((e) => "page error: " + e),

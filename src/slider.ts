@@ -10,6 +10,8 @@ import { autoplay, keyboard, navigation, pagination } from "./features.ts";
 export const SLIDE_INDEX_ATTR = "data-aero-slider-index";
 export const CLONE_ATTR = "data-aero-slider-clone";
 
+const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
+
 const DEFAULTS: Required<SliderConfig> = {
   loop: false,
   autoplay: false,
@@ -20,6 +22,8 @@ const DEFAULTS: Required<SliderConfig> = {
   noDrag: "",
   perMove: 1,
   direction: "ltr",
+  scrollDuration: 0,
+  scrollEasing: easeOutCubic,
 };
 
 const DRAG_THRESHOLD_PX = 5;
@@ -34,6 +38,8 @@ export interface SliderCore {
   config: Required<SliderConfig>;
   signal: AbortSignal;
   reducedMotion: MediaQueryList;
+  /** A scrollDuration animation is in flight. */
+  easing(): boolean;
   current(): number;
   maxIndex(): number;
   pageCount(): number;
@@ -84,6 +90,7 @@ export function createSlider(
   let suppressNextClick = false;
   let scrollFrame = 0;
   let settleTimer = 0;
+  let easeFrame = 0; // a scrollDuration animation is in flight
 
   const isVertical = () => config.direction === "ttb";
   const isRtl = () => config.direction === "rtl";
@@ -111,11 +118,36 @@ export function createSlider(
     return isRtl() ? -track.scrollLeft : track.scrollLeft;
   }
 
-  /** Smooth scrolls honour prefers-reduced-motion. */
-  function scrollTo(position: number, smooth = false): void {
-    const behavior: ScrollBehavior = smooth && !reducedMotion.matches ? "smooth" : "instant";
+  function nativeScrollTo(position: number, behavior: ScrollBehavior): void {
     if (isVertical()) track.scrollTo({ top: position, behavior });
     else track.scrollTo({ left: isRtl() ? -position : position, behavior });
+  }
+
+  function cancelEase(): void {
+    if (!easeFrame) return;
+    cancelAnimationFrame(easeFrame);
+    easeFrame = 0;
+    track.style.scrollSnapType = "";
+  }
+
+  /** Smooth scrolls honour prefers-reduced-motion, and use scrollDuration's easing when set. */
+  function scrollTo(position: number, smooth = false): void {
+    cancelEase();
+    if (!smooth || reducedMotion.matches) return nativeScrollTo(position, "instant");
+    if (config.scrollDuration <= 0) return nativeScrollTo(position, "smooth");
+
+    const from = scrollPosition();
+    const distance = position - from;
+    const started = performance.now();
+    track.style.scrollSnapType = "none"; // mandatory snapping would pull every frame to a slide
+    const step = (now: number) => {
+      // Frame timestamps can predate `started`, so clamp before easing.
+      const t = Math.min(1, Math.max(0, (now - started) / config.scrollDuration));
+      nativeScrollTo(from + distance * config.scrollEasing(t), "instant");
+      easeFrame = t < 1 ? requestAnimationFrame(step) : 0;
+      if (!easeFrame) track.style.scrollSnapType = "";
+    };
+    easeFrame = requestAnimationFrame(step);
   }
 
   /** Scroll position at which `el` rests on its snap point, honouring alignment and scroll-padding. */
@@ -299,6 +331,7 @@ export function createSlider(
   function onPointerDown(event: PointerEvent): void {
     suppressNextClick = false;
     programmaticScroll = false; // a press takes over from any goTo() animation
+    cancelEase();
     if (!config.draggable || event.button !== 0 || event.pointerType === "touch") return;
     if (config.noDrag && (event.target as Element).closest(config.noDrag)) return;
 
@@ -514,6 +547,7 @@ export function createSlider(
     intersectionObserver?.disconnect();
     clearTimeout(settleTimer);
     cancelAnimationFrame(scrollFrame);
+    cancelEase();
     for (const clone of track.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
     track.style.scrollSnapType = "";
     container.classList.remove(
@@ -558,6 +592,7 @@ export function createSlider(
     config,
     signal,
     reducedMotion,
+    easing: () => easeFrame !== 0,
     current: () => current,
     maxIndex,
     pageCount,
@@ -578,8 +613,22 @@ export function createSlider(
   track.classList.add("aero-slider__track");
 
   track.addEventListener("scroll", onScroll, { passive: true, signal });
+  // Reduced motion turned on mid-move: land it now rather than finish the animation.
+  reducedMotion.addEventListener(
+    "change",
+    () => reducedMotion.matches && programmaticScroll && scrollTo(scrollTarget),
+    { signal }
+  );
   track.addEventListener("scrollend", onSettle, { signal });
-  track.addEventListener("wheel", () => (programmaticScroll = false), { passive: true, signal });
+  // The wheel takes over from any goTo() animation; touch and mouse do so in onPointerDown.
+  track.addEventListener(
+    "wheel",
+    () => {
+      programmaticScroll = false;
+      cancelEase();
+    },
+    { passive: true, signal }
+  );
   track.addEventListener("pointerdown", onPointerDown, { signal });
   track.addEventListener("click", onClick, { capture: true, signal });
   track.addEventListener("dragstart", (e) => config.draggable && e.preventDefault(), { signal });
