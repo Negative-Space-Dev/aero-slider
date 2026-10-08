@@ -263,21 +263,25 @@ const scenario = `(async () => {
     const t = track("multi"), s = S.multi;
     const down = (id) => t.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerId: id, pointerType: "touch" }));
     const up = (id) => window.dispatchEvent(new PointerEvent("pointerup", { pointerId: id, pointerType: "touch" }));
-    await settled("multi");
-    down(41); down(42);
-    const at = s.currentIndex;
+    // Count moves rather than compare indices: a loop can come back round to the same one.
+    const moves = (id) => { const el = document.getElementById(id), n = { v: 0 }; el.addEventListener("aero:slideChange", (e) => e.target === el && n.v++); return n; };
+    const multiMoves = moves("multi");
+    // Start from rest, so a move already under way isn't counted; then only the press holds autoplay.
+    s.pause(); await settled("multi");
+    down(41); down(42); s.resume();
+    const at = s.currentIndex; multiMoves.v = 0;
     up(41); await sleep(900);
-    check("autoplay.holdsUntilLastPointer", s.currentIndex === at, { at, now: s.currentIndex });
-    up(42); await sleep(900);
-    check("autoplay.resumesAfterLastPointer", s.currentIndex !== at, { at, now: s.currentIndex });
+    check("autoplay.holdsUntilLastPointer", multiMoves.v === 0, { at, moves: multiMoves.v });
+    multiMoves.v = 0; up(42); await sleep(900);
+    check("autoplay.resumesAfterLastPointer", multiMoves.v >= 1, { at, moves: multiMoves.v });
 
     // Content that stops pointerup from bubbling can't strand the press hold.
     const btn = document.getElementById("stopBtn");
     btn.addEventListener("pointerup", (e) => e.stopPropagation());
     btn.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerId: 43, pointerType: "touch" }));
     btn.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerId: 43, pointerType: "touch" }));
-    const stopAt = S.stopper.currentIndex; await sleep(700);
-    check("autoplay.resumesWhenReleaseIsStopped", S.stopper.currentIndex !== stopAt, { stopAt, now: S.stopper.currentIndex });
+    const stopperMoves = moves("stopper"); await sleep(700);
+    check("autoplay.resumesWhenReleaseIsStopped", stopperMoves.v >= 1, { moves: stopperMoves.v });
 
     // resume() after destroy() stays inert.
     const doomed = document.getElementById("doomed");
