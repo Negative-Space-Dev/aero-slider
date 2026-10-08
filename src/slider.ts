@@ -103,8 +103,8 @@ export function createSlider(
   let settleTimer = 0;
   let easeFrame = 0; // a scrollDuration animation is in flight
   let fallbackSettle = false; // a wheel or touch moved the track and scrollend may never come
-  const touches = new Set<number>(); // touch pointers down on the track
-  let settleDeferred = false; // a settle arrived while a finger was still down
+  const pressed = new Set<number>(); // pointers down on the track
+  let settleDeferred = false; // a settle arrived while a pointer was still down
 
   const isVertical = () => config.direction === "ttb";
   const isRtl = () => config.direction === "rtl";
@@ -117,7 +117,7 @@ export function createSlider(
   }
   const continuous = () => config.autoplay === "continuous";
   // Continuous autoplay loops by nature and moves the track by hand, so snapping stays off.
-  const loop = () => (config.loop || continuous()) && maxIndex() > 0;
+  const loop = () => (continuous() ? slideCount > 1 : config.loop && maxIndex() > 0);
   const snapMode = () => (continuous() ? "none" : config.snap);
   const pageCount = () => (loop() ? slideCount : maxIndex() + 1);
   // A continuous lap travels one full set of slides past wherever it starts, so it needs a whole
@@ -331,8 +331,13 @@ export function createSlider(
   }
 
   const step = () => Math.max(1, Math.trunc(config.perMove));
-  const next = () => goTo(current + step());
-  const prev = () => goTo(current - step());
+  /** Steps from the slide that's showing: a continuous lap hands back first, so sync to it. */
+  function stepBy(delta: number): void {
+    if (play.interrupt()) setCurrent(indexAt(scrollPosition()));
+    goTo(current + delta);
+  }
+  const next = () => stepBy(step());
+  const prev = () => stepBy(-step());
 
   // ── Scroll tracking ──────────────────────────────────────────────────
 
@@ -358,8 +363,9 @@ export function createSlider(
     if (dragging) return;
     clearTimeout(settleTimer);
     fallbackSettle = false;
-    // A finger still on the track owns the scroll; settle once the last one lifts.
-    if (touches.size) {
+    // A pointer still down owns the track: a finger may still be scrolling it, and a teleport now
+    // would swap the pressed card for its copy, so a click would miss the link. Settle on release.
+    if (pressed.size) {
       settleDeferred = true;
       return;
     }
@@ -431,11 +437,9 @@ export function createSlider(
   function onPointerDown(event: PointerEvent): void {
     suppressNextClick = false;
     programmaticScroll = false; // a press takes over from any goTo() animation
-    if (event.pointerType === "touch") {
-      touches.add(event.pointerId);
-      // A wheel settle that was still pending waits for this finger to lift.
-      if (fallbackSettle) settleDeferred = true;
-    }
+    pressed.add(event.pointerId);
+    // A wheel settle that was still pending waits for the pointer to lift.
+    if (fallbackSettle) settleDeferred = true;
     fallbackSettle = false;
     clearTimeout(settleTimer);
     cancelEase();
@@ -780,10 +784,10 @@ export function createSlider(
     { passive: true, signal }
   );
   track.addEventListener("pointerdown", onPointerDown, { signal });
-  // Touch releases land on window wherever the finger lifts. A settle that waited on the finger
-  // runs now, or once any fling it started comes to rest.
-  const onTouchRelease = (event: Event) => {
-    if (!touches.delete((event as PointerEvent).pointerId) || touches.size || !settleDeferred)
+  // Releases land on window wherever the pointer lifts. A settle that waited on it runs once any
+  // fling it started comes to rest (and after the click, so a teleport can't steal it).
+  const onRelease = (event: Event) => {
+    if (!pressed.delete((event as PointerEvent).pointerId) || pressed.size || !settleDeferred)
       return;
     settleDeferred = false;
     fallbackSettle = true;
@@ -791,7 +795,7 @@ export function createSlider(
     settleTimer = window.setTimeout(onSettle, WHEEL_SETTLE_MS);
   };
   for (const type of ["pointerup", "pointercancel"]) {
-    addEventListener(type, onTouchRelease, { capture: true, passive: true, signal });
+    addEventListener(type, onRelease, { capture: true, passive: true, signal });
   }
   track.addEventListener("click", onClick, { capture: true, signal });
   track.addEventListener("dragstart", (e) => config.draggable && e.preventDefault(), { signal });

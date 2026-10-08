@@ -185,6 +185,7 @@ export function autoplay(core: SliderCore) {
   const continuous = () => config.autoplay === "continuous";
   let timer = 0;
   let lap: Lap | null = null;
+  let running = false; // autoplayStart has been announced; a lap swapped on resize doesn't re-announce
   let settleFallback = 0;
   const pressed = new Set<number>(); // pointerIds currently down on the track
 
@@ -193,7 +194,8 @@ export function autoplay(core: SliderCore) {
     !config.autoplay ||
     holds.size > 0 ||
     document.hidden ||
-    reducedMotion.matches;
+    reducedMotion.matches ||
+    (continuous() && !(config.autoplaySpeed > 0)); // a ticker at 0 px/s stays still
 
   function advance(): void {
     if (core.easing()) return; // scrollDuration outlasts the interval: let the move land first
@@ -223,7 +225,7 @@ export function autoplay(core: SliderCore) {
 
     const distance = (core.isRtl() ? 1 : -1) * cycle.width;
     const to = core.isVertical() ? `0 ${distance}px` : `${distance}px 0`;
-    const duration = (cycle.width / Math.max(1, config.autoplaySpeed)) * 1000;
+    const duration = (cycle.width / config.autoplaySpeed) * 1000;
     const startTime = document.timeline.currentTime;
     const animations = Array.from(track.children, (slide) => {
       const animation = slide.animate([{ translate: "0 0" }, { translate: to }], {
@@ -234,22 +236,40 @@ export function autoplay(core: SliderCore) {
       return animation;
     });
     lap = { ...cycle, duration, animations };
-    core.emit("autoplayStart", {});
+    if (!running) {
+      running = true;
+      core.emit("autoplayStart", {});
+    }
   }
 
-  /** Ends the lap, handing its travel back to the scroll offset unless the layout is stale. */
-  function stopLap(handBack: boolean): void {
+  /**
+   * Ends the lap, handing its travel back to the scroll offset unless the layout is stale. It isn't
+   * folded a lap back: the same cards stay under the pointer and keyboard focus, so a click on a
+   * product link lands on the link that was pressed. Laps start inside the band and the runway
+   * covers a full lap past it, so the unfolded offset is always reachable.
+   */
+  function stopLap(handBack: boolean, announce = true): void {
     if (!lap) return;
     const current = lap;
     lap = null;
-    const position = handBack ? fold(core.position() + travelled(current), current) : null;
+    const position = handBack ? core.position() + travelled(current) : null;
     for (const animation of current.animations) animation.cancel();
     if (position !== null) core.jumpTo(position);
-    core.emit("autoplayStop", {});
+    if (announce && running) {
+      running = false;
+      core.emit("autoplayStop", {});
+    }
   }
 
   function start(): void {
-    if (blocked()) return;
+    if (blocked()) {
+      // A lap reset quietly for a resize that can't restart now still owes its autoplayStop.
+      if (running && !lap) {
+        running = false;
+        core.emit("autoplayStop", {});
+      }
+      return;
+    }
     if (continuous()) {
       if (!lap) startLap();
     } else if (!timer) {
@@ -334,21 +354,25 @@ export function autoplay(core: SliderCore) {
     release,
     /** Ends a lap without handing it back, for when the layout is about to change under it. */
     reset(): void {
-      stopLap(false);
+      stopLap(false, false);
     },
-    /** goTo() is about to measure from the scroll offset. */
-    interrupt(): void {
-      if (lap) holdUntilSettled();
+    /** goTo() is about to measure from the scroll offset. True if a lap was handed back. */
+    interrupt(): boolean {
+      if (!lap) return false;
+      holdUntilSettled();
+      return true;
     },
     /** A scroll is under way, so wait for it to settle rather than the fallback. */
     scrolled(): void {
       if (holds.has("settle")) clearTimeout(settleFallback);
-      // A wheel scroll during a lap adds to the drift. Keep the offset inside the lap's band (a
-      // whole lap away looks identical), so the drift never runs past the last clone.
+      // A wheel scroll during a lap adds to the drift. Only if it carries the view to within a
+      // slide of the end of the track does it jump back a lap (which looks identical): jumping any
+      // sooner cuts the browser's smooth wheel animation short for nothing.
       if (lap) {
         const position = core.position();
-        const folded = fold(position, lap);
-        if (Math.abs(folded - position) > 0.5) core.jumpTo(folded);
+        const margin = lap.width / core.pageCount();
+        if (position + travelled(lap) > core.maxScroll() - margin)
+          core.jumpTo(position - lap.width);
       }
     },
     settled(): void {

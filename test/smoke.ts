@@ -44,6 +44,10 @@ ${slider("free", 5, "--slide-gap:10px")}
 ${slider("settleTtb", 4, "height:300px")}
 ${slider("ticker", 4, "--slides-per-view:3;--slide-gap:10px").replace("<div><div>0</div></div>", '<div><button id="tickBtn">0</button></div>')}
 ${slider("tickerRtl", 4, "--slides-per-view:3;--slide-gap:10px")}
+<div id="tickerLinks" class="aero-slider" style="width:600px;--slides-per-view:3;--slide-gap:10px"><div class="aero-slider__viewport"><div class="aero-slider__track">${Array.from({ length: 4 }, (_, i) => `<a href="#tl${i}" style="display:block;height:100px">${i}</a>`).join("")}</div></div></div>
+${slider("tickerLeft", 3, "--slides-per-view:3;--slide-gap:10px")}
+${slider("tickerSlow", 4, "--slides-per-view:3;--slide-gap:10px")}
+${slider("tickerZero", 4, "--slides-per-view:3;--slide-gap:10px")}
 ${slider("freeLoop", 4, "--slides-per-view:3;--slide-gap:10px")}
 ${slider("settleFrac", 4, "--slides-per-view:1.5;--slide-gap:8px")}
 <div id="cards" class="aero-slider" style="width:600px"><div class="aero-slider__viewport"><div class="aero-slider__track">${Array.from({ length: 3 }, (_, i) => `<a href="#card${i}" id="card${i}">${i}</a>`).join("")}</div></div></div>
@@ -75,6 +79,10 @@ ${slider("settleFrac", 4, "--slides-per-view:1.5;--slide-gap:8px")}
     settleTtb: createSlider(document.getElementById("settleTtb"), { direction: "ttb", snap: "settle" }),
     ticker: createSlider(document.getElementById("ticker"), { autoplay: "continuous", autoplaySpeed: 600 }),
     tickerRtl: createSlider(document.getElementById("tickerRtl"), { autoplay: "continuous", autoplaySpeed: 600, direction: "rtl" }),
+    tickerLinks: createSlider(document.getElementById("tickerLinks"), { autoplay: "continuous", autoplaySpeed: 36, draggable: false }),
+    tickerLeft: createSlider(document.getElementById("tickerLeft"), { autoplay: "continuous", alignment: "left" }),
+    tickerSlow: createSlider(document.getElementById("tickerSlow"), { autoplay: "continuous", autoplaySpeed: 0.5 }),
+    tickerZero: createSlider(document.getElementById("tickerZero"), { autoplay: "continuous", autoplaySpeed: 0 }),
     freeLoop: createSlider(document.getElementById("freeLoop"), { loop: true, snap: "none", scrollDuration: 550 }),
     settleFrac: createSlider(document.getElementById("settleFrac"), { loop: true, snap: "settle", scrollDuration: 300 }),
   };
@@ -484,6 +492,50 @@ const scenario = `(async () => {
     check("ticker.resumesAfterGoTo", anims().length > 0, { anims: anims().length });
   }
 
+  // Continuous autoplay edge cases
+  {
+    const el = document.getElementById("ticker"), t = track("ticker"), s = S.ticker;
+    const anims = (id = "ticker") => track(id).getAnimations({ subtree: true });
+    const visible = () => {
+      const r = t.getBoundingClientRect(), mid = r.left + r.width / 2;
+      return [...t.children].reduce((b, k) => { const x = k.getBoundingClientRect(), d = Math.abs(x.left + x.width / 2 - mid); return d < b.d ? { label: Number(k.textContent), d } : b; }, { d: 1e9 }).label;
+    };
+    const settled = async () => { for (let last = -1, still = 0, n = 0; still < 3 && n < 60; n++) { await sleep(60); const p = t.scrollLeft; still = p === last ? still + 1 : 0; last = p; } };
+
+    // next() steps from the slide that's actually showing, not the index from before the drift.
+    await sleep(700);
+    const showing = visible();
+    s.next(); await settled(); await sleep(100);
+    check("ticker.nextFromVisible", s.currentIndex === (showing + 1) % 4, { showing, now: s.currentIndex });
+
+    // A scroll that crosses the lap's boundary mid-gesture isn't jumped back a lap (that cut
+    // WebKit's smooth wheel gestures short); only running out of track is.
+    s.pause(); s.goTo(0, { instant: true }); await settled();
+    const home = t.scrollLeft, kids = [...t.children];
+    const cycle = kids[4].getBoundingClientRect().left - kids[0].getBoundingClientRect().left;
+    s.resume(); await new Promise(requestAnimationFrame);
+    const block = (e) => e.stopPropagation();
+    el.addEventListener("scrollend", block, { capture: true });
+    t.scrollLeft = home + cycle;
+    await new Promise(requestAnimationFrame); await new Promise(requestAnimationFrame);
+    check("ticker.boundaryCrossingStays", near(t.scrollLeft, home + cycle) && anims().length > 0, { home, cycle, now: t.scrollLeft });
+    el.removeEventListener("scrollend", block, { capture: true });
+
+    // Resizing replaces the lap quietly: no autoplayStop/autoplayStart pairs.
+    let events = 0;
+    for (const n of ["autoplayStart", "autoplayStop"]) el.addEventListener("aero:" + n, () => events++);
+    el.style.width = "601px"; await sleep(150); el.style.width = "600px"; await sleep(150);
+    check("ticker.resizeQuiet", events === 0 && anims().length > 0, { events, anims: anims().length });
+
+    // A short left-aligned rail (no more slides than fit) still drifts.
+    check("ticker.shortLeftRailRuns", anims("tickerLeft").length > 0, { anims: anims("tickerLeft").length });
+    // autoplaySpeed is honoured below 1 px/s, and 0 keeps the track still.
+    const slow = anims("tickerSlow")[0], sk = track("tickerSlow").children;
+    const lap = sk[4].getBoundingClientRect().left - sk[0].getBoundingClientRect().left;
+    check("ticker.slowSpeedHonoured", slow && Math.abs(slow.effect.getTiming().duration - (lap / 0.5) * 1000) < 50, { duration: slow?.effect.getTiming().duration, expected: (lap / 0.5) * 1000 });
+    check("ticker.zeroSpeedStill", anims("tickerZero").length === 0, { anims: anims("tickerZero").length });
+  }
+
   // Destroy leaves the DOM clean and the API inert
   {
     const el = document.getElementById("rtl"), s = S.rtl;
@@ -864,6 +916,46 @@ const releasedTouch = await inPage(`
   check("settle.settlesAfterTouch", near(t.scrollLeft, 0) && S.settle.currentIndex === 0, { pos: t.scrollLeft });
 `);
 
+// A real click on a product link near the end of a lap still reaches the link: handing the lap
+// back mustn't swap the card under the pointer for its copy a lap away.
+const linkSpot = (
+  await send("Runtime.evaluate", {
+    expression: `(() => {
+      const el = document.getElementById("tickerLinks"), t = el.querySelector(".aero-slider__track");
+      el.scrollIntoView({ block: "center" });
+      window.__clicks = [];
+      for (const a of t.querySelectorAll("a")) a.addEventListener("click", (e) => { e.preventDefault(); window.__clicks.push(a.textContent); });
+      const anims = t.getAnimations({ subtree: true }), d = anims[0].effect.getTiming().duration;
+      for (const a of anims) a.currentTime = d * 0.95;
+      const r = t.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + 50 };
+    })()`,
+    returnByValue: true,
+  })
+).result.value;
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: linkSpot.x, y: linkSpot.y });
+await send("Input.dispatchMouseEvent", {
+  type: "mousePressed",
+  x: linkSpot.x,
+  y: linkSpot.y,
+  button: "left",
+  buttons: 1,
+  clickCount: 1,
+});
+await sleep(120);
+await send("Input.dispatchMouseEvent", {
+  type: "mouseReleased",
+  x: linkSpot.x,
+  y: linkSpot.y,
+  button: "left",
+  buttons: 0,
+  clickCount: 1,
+});
+const linkClick = await inPage(`
+  await sleep(100);
+  check("ticker.linkClickSurvivesHandBack", window.__clicks.length === 1, { clicks: window.__clicks });
+`);
+
 // An eased scroll already running when reduced motion turns on lands at once.
 await inPage(`S.longEase.goTo(4); await sleep(150);`);
 await setReducedMotion("reduce");
@@ -899,6 +991,7 @@ const failures: string[] = [
   ...touched,
   ...tickerFocus,
   ...tickerWheel,
+  ...linkClick,
   ...snapped,
   ...wheelSettle,
   ...wheelNone,
