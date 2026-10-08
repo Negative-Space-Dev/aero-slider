@@ -16,6 +16,7 @@ const DEFAULTS: Required<SliderConfig> = {
   loop: false,
   autoplay: false,
   autoplayInterval: 5000,
+  autoplaySpeed: 40,
   draggable: true,
   alignment: "center",
   maxDots: 0,
@@ -50,6 +51,14 @@ export interface SliderCore {
   prev(): void;
   goTo(index: number, options?: GoToOptions): void;
   emit<E extends SliderEvent>(event: E, data: SliderEventData<E>): void;
+  // What continuous autoplay needs to drive the track by hand.
+  isVertical(): boolean;
+  isRtl(): boolean;
+  position(): number;
+  maxScroll(): number;
+  jumpTo(position: number): void;
+  /** One full lap of real slides: where its teleport-safe band starts, and its length. */
+  cycle(): { start: number; width: number } | null;
 }
 
 function requireTrack(container: HTMLElement): HTMLElement {
@@ -104,10 +113,19 @@ export function createSlider(
     const pagesByStart = config.alignment === "left" && Number.isInteger(slidesPerView);
     return Math.max(0, pagesByStart ? slideCount - slidesPerView : slideCount - 1);
   }
-  const loop = () => config.loop && maxIndex() > 0;
-  const snapMode = () => config.snap;
+  const continuous = () => config.autoplay === "continuous";
+  // Continuous autoplay loops by nature and moves the track by hand, so snapping stays off.
+  const loop = () => (config.loop || continuous()) && maxIndex() > 0;
+  const snapMode = () => (continuous() ? "none" : config.snap);
   const pageCount = () => (loop() ? slideCount : maxIndex() + 1);
-  const cloneCount = () => (loop() ? Math.max(slideCount, Math.ceil(slidesPerView) + 2) : 0);
+  // A continuous lap travels one full set of slides past wherever it starts, so it needs a whole
+  // set of clones beyond the real slides plus a viewport's worth.
+  const cloneCount = () =>
+    !loop()
+      ? 0
+      : continuous()
+        ? slideCount + Math.ceil(slidesPerView) + 2
+        : Math.max(slideCount, Math.ceil(slidesPerView) + 2);
 
   function emit<E extends SliderEvent>(event: E, detail: SliderEventData<E>): void {
     container.dispatchEvent(new CustomEvent(`aero:${event}`, { detail, bubbles: true }));
@@ -269,6 +287,8 @@ export function createSlider(
 
   function goTo(index: number, options: GoToOptions = {}): void {
     if (destroyed || !slideCount) return;
+    // Continuous autoplay hands its lap back to the scroll offset before we measure from it.
+    play.interrupt();
     const logical = loop() ? wrap(Math.trunc(index)) : clamp(Math.trunc(index), 0, maxIndex());
     setCurrent(logical);
     if (!slideStride) return; // no layout yet (display: none); relayout() lands here once shown
@@ -520,6 +540,7 @@ export function createSlider(
   /** Cheap path for size changes: re-measure and keep the current slide in place. */
   function relayout(): void {
     const previousPages = pageCount();
+    play.reset(); // continuous autoplay's transforms would skew every measurement
     readSlidesPerView();
     if (cloneCount() !== clonesBefore) return rebuild();
     measure();
@@ -528,10 +549,12 @@ export function createSlider(
     programmaticScroll = false; // an instant reposition supersedes any goTo() animation
     scrollTo(restPositionOf(current));
     nav.refresh();
+    play.start();
   }
 
   /** Full path: re-read slides from the DOM, rebuild clones and UI. */
   function rebuild(): void {
+    play.reset();
     for (const clone of track.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
     slides = Array.from(track.children) as HTMLElement[];
     slideCount = slides.length;
@@ -560,8 +583,8 @@ export function createSlider(
     dots.build();
     nav.refresh();
     observe();
-    play.stop();
-    if (config.autoplay) play.start();
+    play.stop(); // restarts interval autoplay's countdown; the lap was already reset above
+    play.start();
   }
 
   // ── Public API ───────────────────────────────────────────────────────
@@ -653,6 +676,21 @@ export function createSlider(
     prev,
     goTo,
     emit,
+    isVertical,
+    isRtl,
+    position: scrollPosition,
+    maxScroll: () => maxScroll,
+    jumpTo: (position) => scrollTo(position),
+    cycle() {
+      if (!loop() || !slideStride) return null;
+      const first = track.children[clonesBefore];
+      const twin = track.children[clonesBefore + slideCount];
+      if (!first || !twin) return null;
+      const home = snapPositionOf(first);
+      const width = snapPositionOf(twin) - home;
+      // Centred on the real slides, so resting anywhere in it never triggers a teleport.
+      return width > 0 ? { start: home - slideStride / 2, width } : null;
+    },
   };
   const nav = navigation(core);
   const dots = pagination(core);

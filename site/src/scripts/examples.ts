@@ -693,6 +693,11 @@ requestAnimationFrame(() => {
     scrollDuration: 550,
   });
   createSlider(getRequiredElementById<HTMLElement>("snap-none"), { snap: "none" });
+  createSlider(getRequiredElementById<HTMLElement>("continuous"), {
+    autoplay: "continuous",
+    autoplaySpeed: 36,
+    draggable: false,
+  });
   createSlider(getRequiredElementById<HTMLElement>("pagination-minimal"));
   createSlider(getRequiredElementById<HTMLElement>("nav-minimal"));
 });

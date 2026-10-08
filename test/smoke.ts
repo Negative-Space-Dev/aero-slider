@@ -42,6 +42,8 @@ ${slider("settle", 5, "--slide-gap:10px")}
 ${slider("settleLoop", 4, "--slide-gap:10px")}
 ${slider("free", 5, "--slide-gap:10px")}
 ${slider("settleTtb", 4, "height:300px")}
+${slider("ticker", 4, "--slides-per-view:3;--slide-gap:10px").replace("<div><div>0</div></div>", '<div><button id="tickBtn">0</button></div>')}
+${slider("tickerRtl", 4, "--slides-per-view:3;--slide-gap:10px")}
 <div id="cards" class="aero-slider" style="width:600px"><div class="aero-slider__viewport"><div class="aero-slider__track">${Array.from({ length: 3 }, (_, i) => `<a href="#card${i}" id="card${i}">${i}</a>`).join("")}</div></div></div>
 <script type="module">
   import { createSlider } from "/dist/aero-slider.min.js";
@@ -69,6 +71,8 @@ ${slider("settleTtb", 4, "height:300px")}
     settleLoop: createSlider(document.getElementById("settleLoop"), { loop: true, snap: "settle", scrollDuration: 300 }),
     free: createSlider(document.getElementById("free"), { snap: "none", scrollDuration: 300 }),
     settleTtb: createSlider(document.getElementById("settleTtb"), { direction: "ttb", snap: "settle" }),
+    ticker: createSlider(document.getElementById("ticker"), { autoplay: "continuous", autoplaySpeed: 600 }),
+    tickerRtl: createSlider(document.getElementById("tickerRtl"), { autoplay: "continuous", autoplaySpeed: 600, direction: "rtl" }),
   };
 </script></body></html>`;
 
@@ -385,6 +389,97 @@ const scenario = `(async () => {
     check("autoplay.resumeAfterDestroy", starts === 0, { starts });
   }
 
+  // Continuous autoplay. content() reads which slide is under the track's centre and how far into
+  // it, unwrapped around the loop, so a steady drift advances it by speed × frame time every frame
+  // and any jump (a lap seam, a hand-back) shows up as one bad frame.
+  {
+    const el = document.getElementById("ticker"), t = track("ticker"), s = S.ticker;
+    const kids = () => [...t.children];
+    const stride = kids()[1].getBoundingClientRect().left - kids()[0].getBoundingClientRect().left;
+    const cycle = stride * 4, speed = 600;
+    const anims = () => t.getAnimations({ subtree: true });
+    const content = () => {
+      const r = t.getBoundingClientRect(), cx = r.left + r.width / 2;
+      let best = null;
+      for (const k of kids()) { const b = k.getBoundingClientRect(); if (b.left <= cx && (!best || b.left > best.left)) best = { left: b.left, label: Number(k.textContent) }; }
+      return best.label * stride + (cx - best.left);
+    };
+    const forward = (a, b) => (((b - a) % cycle) + cycle) % cycle;
+    const shift = (a, b) => ((((b - a + cycle / 2) % cycle) + cycle) % cycle) - cycle / 2; // signed
+    const drift = async (ms) => {
+      const out = []; const end = performance.now() + ms; let last = null;
+      while (performance.now() < end) {
+        const now = await new Promise(requestAnimationFrame), c = content();
+        if (last) out.push({ dt: now - last.now, d: forward(last.c, c) });
+        last = { now, c };
+      }
+      return out;
+    };
+    const steady = (path) => {
+      const bad = path.filter(({ dt, d }) => Math.abs(d - (speed * dt) / 1000) > Math.max(3, (0.3 * speed * dt) / 1000));
+      const total = path.reduce((a, p) => a + p.d, 0), time = path.reduce((a, p) => a + p.dt, 0);
+      return { frames: path.length, bad: bad.length, worst: bad.slice(0, 3), speed: Math.round((total / time) * 1000) };
+    };
+
+    check("ticker.setup", el.classList.contains("aero-slider--free") && t.children.length === 4 + 2 * (4 + 3 + 2) && anims().length === t.children.length && new Set(anims().map((a) => a.startTime)).size === 1, { kids: t.children.length, anims: anims().length });
+
+    // Drifts steadily for longer than one lap, so the loop's seam is crossed in the sample.
+    const run = steady(await drift(2000));
+    check("ticker.drift", run.frames > 60 && run.bad === 0 && Math.abs(run.speed - speed) < speed * 0.1, run);
+    // The seam itself, stepped to either side of it.
+    const duration = anims()[0].effect.getTiming().duration;
+    for (const a of anims()) a.currentTime = duration - 5;
+    const beforeSeam = content();
+    for (const a of anims()) a.currentTime = duration + 5;
+    const afterSeam = content();
+    check("ticker.seamless", Math.abs(forward(beforeSeam, afterSeam) - (speed * 10) / 1000) < 1.5, { beforeSeam, afterSeam });
+
+    // RTL drifts the other way on screen: slide 0's box moves right.
+    // (Measured modulo one lap: a slide's box jumps back a lap at the seam, invisibly.)
+    { const k = track("tickerRtl").children[5], x0 = k.getBoundingClientRect().left; await sleep(200);
+      const moved = (((k.getBoundingClientRect().left - x0) % cycle) + cycle) % cycle;
+      check("ticker.rtlDirection", moved > 60 && moved < 200, { moved }); }
+
+    // A press holds the drift without moving anything; release resumes it.
+    const r = t.getBoundingClientRect();
+    const atPress = content();
+    t.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerId: 1, pointerType: "mouse", button: 0, buttons: 1, clientX: r.left + 20, clientY: r.top + 20 }));
+    const handedBack = content();
+    await sleep(400);
+    check("ticker.holdsOnPress", anims().length === 0 && Math.abs(shift(atPress, handedBack)) < 1.5 && Math.abs(content() - handedBack) < 0.5, { atPress, handedBack, now: content() });
+    window.dispatchEvent(new PointerEvent("pointerup", { pointerId: 1, pointerType: "mouse" }));
+    await sleep(400);
+    check("ticker.resumesAfterPress", anims().length > 0 && steady(await drift(300)).bad === 0, { anims: anims().length });
+
+    // pause() and resume() apply on top.
+    s.pause(); const pausedAt = content(); await sleep(300);
+    check("ticker.pause", anims().length === 0 && Math.abs(content() - pausedAt) < 0.5, {});
+    s.resume(); await sleep(50);
+    check("ticker.resume", anims().length > 0, {});
+
+    // A big scroll late in a lap, mid-gesture (a wheel or trackpad stream sends no scrollend until it
+    // ends, so the loop teleport hasn't run), gets folded back a lap, so the drift never shows empty
+    // track past the last clone.
+    {
+      const block = (e) => e.stopPropagation();
+      el.addEventListener("scrollend", block, { capture: true });
+      const duration = anims()[0].effect.getTiming().duration;
+      for (const a of anims()) a.currentTime = duration * 0.95;
+      t.scrollLeft = t.scrollWidth;
+      await new Promise(requestAnimationFrame); await new Promise(requestAnimationFrame);
+      const end = t.lastElementChild.getBoundingClientRect().right, edge = t.getBoundingClientRect().right;
+      el.removeEventListener("scrollend", block, { capture: true });
+      check("ticker.scrollStaysCovered", end >= edge - 0.5 && anims().length > 0, { end, edge });
+    }
+
+    // goTo() takes the lap back without a visible jump, then the drift resumes once it settles.
+    const beforeGoTo = content();
+    s.goTo(1);
+    check("ticker.goToHandsOff", anims().length === 0 && Math.abs(shift(beforeGoTo, content())) < 1.5, { beforeGoTo, after: content() });
+    await sleep(1200);
+    check("ticker.resumesAfterGoTo", anims().length > 0, { anims: anims().length });
+  }
+
   // Destroy leaves the DOM clean and the API inert
   {
     const el = document.getElementById("rtl"), s = S.rtl;
@@ -452,7 +547,7 @@ const result = await send("Runtime.evaluate", {
 // Reduced motion, switched on and off while the page runs: scrolls turn instant and autoplay stops,
 // then autoplay comes back.
 const inPage = async (body: string) =>
-  (
+  asFailures(
     await send("Runtime.evaluate", {
       expression: `(async () => {
         const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -465,8 +560,16 @@ const inPage = async (body: string) =>
       })()`,
       awaitPromise: true,
       returnByValue: true,
-    })
-  ).result?.value ?? ["reduced-motion evaluate failed"];
+    }),
+    "in-page phase"
+  );
+// A check that throws rejects the whole evaluate; report it as a failure instead of crashing.
+const asFailures = (response: any, label: string): string[] =>
+  Array.isArray(response?.result?.value)
+    ? response.result.value
+    : [
+        `${label} threw: ${response?.exceptionDetails?.exception?.description ?? JSON.stringify(response)}`,
+      ];
 const setReducedMotion = (value: string) =>
   send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value }] });
 
@@ -631,6 +734,59 @@ const wheelNone = await inPage(`${snapHelpers}
   check("none.wheelRests", pos > 120 && pos < 260, { pos });
 `);
 
+// Continuous autoplay holds while keyboard focus is inside. A real key press first, so Chrome
+// treats the focus that follows as keyboard focus (:focus-visible).
+await send("Input.dispatchKeyEvent", {
+  type: "rawKeyDown",
+  key: "Shift",
+  code: "ShiftLeft",
+  windowsVirtualKeyCode: 16,
+});
+await send("Input.dispatchKeyEvent", {
+  type: "keyUp",
+  key: "Shift",
+  code: "ShiftLeft",
+  windowsVirtualKeyCode: 16,
+});
+const tickerFocus = await inPage(`
+  const t = track("ticker"), btn = document.getElementById("tickBtn");
+  const anims = () => t.getAnimations({ subtree: true });
+  btn.focus();
+  const x = btn.getBoundingClientRect().left; await sleep(300);
+  check("ticker.holdsOnFocus", btn.matches(":focus-visible") && anims().length === 0 && Math.abs(btn.getBoundingClientRect().left - x) < 0.5, { visible: btn.matches(":focus-visible"), anims: anims().length });
+  btn.blur(); await sleep(100);
+  check("ticker.resumesAfterFocus", anims().length > 0, { anims: anims().length });
+`);
+
+// A real wheel scroll during the drift adds to it rather than fighting it: the content moves by
+// the drift plus the wheel, never backwards, and the lap keeps running.
+const tickerHelpers = `
+  const t = track("ticker"), kids = () => [...t.children];
+  const stride = kids()[1].getBoundingClientRect().left - kids()[0].getBoundingClientRect().left, cycle = stride * 4;
+  const content = () => {
+    const r = t.getBoundingClientRect(), cx = r.left + r.width / 2;
+    let best = null;
+    for (const k of kids()) { const b = k.getBoundingClientRect(); if (b.left <= cx && (!best || b.left > best.left)) best = { left: b.left, label: Number(k.textContent) }; }
+    return best.label * stride + (cx - best.left);
+  };
+  const shift = (a, b) => ((((b - a + cycle / 2) % cycle) + cycle) % cycle) - cycle / 2;
+  const anims = () => t.getAnimations({ subtree: true });
+`;
+await inPage(`${tickerHelpers}
+  window.__wheelRun = (async () => {
+    const out = []; let last = content(), t0 = performance.now();
+    while (performance.now() - t0 < 1200) { await new Promise(requestAnimationFrame); const c = content(); out.push(shift(last, c)); last = c; }
+    return { moved: out.reduce((a, d) => a + d, 0), time: performance.now() - t0, backwards: out.filter((d) => d < -1).length };
+  })();
+`);
+await sleep(200);
+await wheel("ticker", 300);
+const tickerWheel = await inPage(`${tickerHelpers}
+  const run = await window.__wheelRun, drift = (600 * run.time) / 1000;
+  check("ticker.wheelAddsToDrift", run.backwards === 0 && run.moved > drift + 200 && run.moved < drift + 400, { ...run, drift });
+  check("ticker.keepsDriftingAfterWheel", anims().length > 0, { anims: anims().length });
+`);
+
 // An eased scroll already running when reduced motion turns on lands at once.
 await inPage(`S.longEase.goTo(4); await sleep(150);`);
 await setReducedMotion("reduce");
@@ -642,12 +798,19 @@ const reduced = await inPage(`
   check("reduced.scrollIsInstant", near(track("basic").scrollLeft, 610), { pos: track("basic").scrollLeft });
   S.eased.goTo(0);
   check("reduced.easedIsInstant", near(track("eased").scrollLeft, 0), { pos: track("eased").scrollLeft });
+  check("reduced.tickerStopsLive", track("ticker").getAnimations({ subtree: true }).length === 0, {});
+  S.ticker.update({}); // a rebuild under reduced motion must not start a lap either
+  {
+    const t = track("ticker"), x = t.children[6].getBoundingClientRect().left; await sleep(500);
+    check("reduced.tickerStill", t.getAnimations({ subtree: true }).length === 0 && Math.abs(t.children[6].getBoundingClientRect().left - x) < 0.5, { moved: t.children[6].getBoundingClientRect().left - x });
+  }
   const at = S.ticking.currentIndex; await sleep(700);
   check("reduced.autoplayStops", S.ticking.currentIndex === at, { at, now: S.ticking.currentIndex });
 `);
 await setReducedMotion("no-preference");
 const restored = await inPage(`
   const at = S.ticking.currentIndex; await sleep(500);
+  check("reduced.tickerResumes", track("ticker").getAnimations({ subtree: true }).length > 0, {});
   check("reduced.autoplayResumes", S.ticking.currentIndex !== at, { at, now: S.ticking.currentIndex });
 `);
 ws.close();
@@ -655,8 +818,10 @@ chrome.kill();
 server.stop();
 
 const failures: string[] = [
-  ...(result.result?.value ?? [`evaluate failed: ${JSON.stringify(result)}`]),
+  ...asFailures(result, "main scenario"),
   ...touched,
+  ...tickerFocus,
+  ...tickerWheel,
   ...snapped,
   ...wheelSettle,
   ...wheelNone,
