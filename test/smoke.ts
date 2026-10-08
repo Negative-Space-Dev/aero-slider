@@ -69,6 +69,12 @@ const scenario = `(async () => {
     const t = track(id);
     for (let last = -1, still = 0, tries = 0; still < 3 && tries < 60; tries++) { await sleep(60); const p = t.scrollLeft + t.scrollTop; still = p === last ? still + 1 : 0; last = p; }
   };
+  // Scroll position on every animation frame for \`ms\`, to check how a scroll moves, not just where it ends.
+  const frames = async (id, ms) => {
+    const t = track(id), out = [], end = performance.now() + ms;
+    while (performance.now() < end) { await new Promise(requestAnimationFrame); out.push(t.scrollLeft + t.scrollTop); }
+    return out;
+  };
   const near = (a, b, tol = 1.5) => Math.abs(a - b) <= tol;
   const failures = [];
   const check = (name, ok, info) => { if (!ok) failures.push(name + " " + JSON.stringify(info)); };
@@ -183,8 +189,11 @@ const scenario = `(async () => {
     s.goTo(3, { instant: true });
     check("goTo.instant", s.currentIndex === 3 && near(t.scrollLeft, 1830), { i: s.currentIndex, pos: t.scrollLeft });
     await settled("fixed");
-    s.next(); await sleep(40);
-    check("goTo.instant.nextAnimates", t.scrollLeft > 1830 && t.scrollLeft < 2400, { pos: t.scrollLeft });
+    const end = t.scrollWidth - t.clientWidth;
+    s.next();
+    const path = await frames("fixed", 500);
+    const between = path.filter((p) => p > 1831 && p < end - 1);
+    check("goTo.instant.nextAnimates", new Set(between).size >= 3 && path.every((p, k) => !k || p >= path[k - 1]), { path });
     await settled("fixed");
     check("goTo.instant.nextLands", s.currentIndex === 4 && near(t.scrollLeft, t.scrollWidth - t.clientWidth), { i: s.currentIndex, pos: t.scrollLeft });
   }
