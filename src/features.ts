@@ -159,17 +159,30 @@ export function keyboard(core: SliderCore): void {
 }
 
 // ── Autoplay ───────────────────────────────────────────────────────────
-// Pauses while the pointer is over the slider, while keyboard focus is inside,
-// during a drag, and while the tab is hidden. Never runs under
-// prefers-reduced-motion, and stops as soon as it is turned on.
+// Advances one move per autoplayInterval, restarting the countdown whenever the slide changes.
+// Pauses while the pointer is over the slider, while it is pressed, while keyboard focus is
+// inside, during a drag, while the tab is hidden, and on pause(). After a press it resumes once
+// scrolling settles. Never runs under prefers-reduced-motion, and stops as soon as it is turned on.
+
+const SETTLE_FALLBACK_MS = 150; // resume a press that never scrolled
 
 export function autoplay(core: SliderCore) {
-  const { container, config, signal, reducedMotion } = core;
+  const { container, track, config, signal, reducedMotion } = core;
   const holds = new Set<string>();
   let timer = 0;
+  let settleFallback = 0;
+  const pressed = new Set<number>(); // pointerIds currently down on the track
 
   function start(): void {
-    if (timer || !config.autoplay || holds.size || document.hidden || reducedMotion.matches) return;
+    if (
+      signal.aborted ||
+      timer ||
+      !config.autoplay ||
+      holds.size ||
+      document.hidden ||
+      reducedMotion.matches
+    )
+      return;
     timer = window.setInterval(advance, config.autoplayInterval);
     core.emit("autoplayStart", {});
   }
@@ -197,19 +210,63 @@ export function autoplay(core: SliderCore) {
     start();
   }
 
+  /** Holds until the next scroll settles, or briefly if nothing scrolls at all. */
+  function holdUntilSettled(): void {
+    hold("settle");
+    clearTimeout(settleFallback);
+    settleFallback = window.setTimeout(() => release("settle"), SETTLE_FALLBACK_MS);
+  }
+
   const listen = (target: EventTarget, type: string, handler: (event: Event) => void) =>
     target.addEventListener(type, handler, { passive: true, signal });
   listen(container, "pointerenter", () => hold("pointer"));
   listen(container, "pointerleave", () => release("pointer"));
+  listen(track, "pointerdown", (event) => {
+    if (!config.autoplay) return;
+    pressed.add((event as PointerEvent).pointerId);
+    hold("press");
+  });
+  // Releases are caught on window in the capture phase, so they count wherever the pointer is
+  // and even if content inside a slide stops them. The hold lasts until the last pointer lifts.
+  const onRelease = (event: Event) => {
+    if (!pressed.delete((event as PointerEvent).pointerId) || pressed.size) return;
+    holds.delete("press");
+    holdUntilSettled();
+  };
+  for (const type of ["pointerup", "pointercancel"]) {
+    addEventListener(type, onRelease, { capture: true, passive: true, signal });
+  }
   listen(container, "focusin", (event) => {
     if ((event.target as Element).matches(":focus-visible")) hold("focus");
   });
   listen(container, "focusout", (event) => {
     if (!container.contains((event as FocusEvent).relatedTarget as Node)) release("focus");
   });
+  // A manual change earns a full interval before the next automatic one.
+  listen(container, "aero:slideChange", (event) => {
+    if (event.target !== container || !timer) return; // not a nested slider's change
+    clearInterval(timer);
+    timer = window.setInterval(advance, config.autoplayInterval);
+  });
   listen(document, "visibilitychange", () => (document.hidden ? stop() : start()));
   listen(reducedMotion, "change", () => (reducedMotion.matches ? stop() : start()));
-  signal.addEventListener("abort", stop);
+  signal.addEventListener("abort", () => {
+    clearTimeout(settleFallback);
+    stop();
+  });
 
-  return { start, stop, hold, release };
+  return {
+    start,
+    stop,
+    hold,
+    release,
+    /** A scroll is under way, so wait for it to settle rather than the fallback. */
+    scrolled(): void {
+      if (holds.has("settle")) clearTimeout(settleFallback);
+    },
+    settled(): void {
+      clearTimeout(settleFallback);
+      if (holds.has("settle")) release("settle");
+    },
+  };
 }
