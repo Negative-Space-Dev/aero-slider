@@ -252,7 +252,8 @@ export function createSlider(
     if (!programmaticScroll && !scrollFrame) {
       scrollFrame = requestAnimationFrame(() => {
         scrollFrame = 0;
-        setCurrent(indexAt(scrollPosition()));
+        // A goTo() since this frame was queued (a drag's release) has already set the index.
+        if (!programmaticScroll) setCurrent(indexAt(scrollPosition()));
       });
     }
     if (!("onscrollend" in track)) {

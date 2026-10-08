@@ -107,7 +107,9 @@ const scenario = `(async () => {
     const pe = (type, x, extra = {}) => t.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: "mouse", isPrimary: true, button: 0, buttons: 1, clientX: x, clientY: y, ...extra }));
     pe("pointerdown", x0); pe("pointermove", x0 - 3); await sleep(16);
     check("drag.threshold", !el.classList.contains("aero-slider--dragging"), {});
-    for (let i = 1; i <= 6; i++) { pe("pointermove", x0 - i * 20); await sleep(16); }
+    // Drag moves apply on the next frame, so wait for it. That also leaves the scroll's index read
+    // queued at release, which used to flicker the index 1 → 0 → 1.
+    for (let i = 1; i <= 6; i++) { pe("pointermove", x0 - i * 20); await new Promise(requestAnimationFrame); }
     check("drag.tracks", el.classList.contains("aero-slider--dragging") && near(t.scrollLeft, 120) && t.style.scrollSnapType === "none", { pos: t.scrollLeft });
     pe("pointerup", x0 - 120, { buttons: 0 }); await settled("basic");
     check("drag.flick", s.currentIndex === 1 && near(t.scrollLeft, 610) && t.style.scrollSnapType === "" && log.join() === "dragStart0,slideChange1,dragEnd1", { i: s.currentIndex, pos: t.scrollLeft, log });
