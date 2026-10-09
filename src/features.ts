@@ -320,11 +320,16 @@ export function autoplay(core: SliderCore) {
   // Releases are caught on window in the capture phase, so they count wherever the pointer is
   // and even if content inside a slide stops them. The hold lasts until the last pointer lifts.
   const onRelease = (event: Event) => {
-    if (!pressed.delete((event as PointerEvent).pointerId) || pressed.size) return;
+    if (event.type === "dragend" || event.type === "pointermove") {
+      // A native drag (a link or image) swallows the pointerup: its dragend, or the pointer coming
+      // back with no button held, means the press is over.
+      if (!pressed.size || (event as PointerEvent).buttons) return;
+      pressed.clear();
+    } else if (!pressed.delete((event as PointerEvent).pointerId) || pressed.size) return;
     holds.delete("press");
     holdUntilSettled();
   };
-  for (const type of ["pointerup", "pointercancel"]) {
+  for (const type of ["pointerup", "pointercancel", "pointermove", "dragend"]) {
     addEventListener(type, onRelease, { capture: true, passive: true, signal });
   }
   listen(container, "focusin", (event) => {

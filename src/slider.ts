@@ -788,18 +788,16 @@ export function createSlider(
     { passive: true, signal }
   );
   track.addEventListener("pointerdown", onPointerDown, { signal });
-  track.addEventListener(
-    "touchstart",
-    (event) => {
-      for (const touch of event.changedTouches) touches.add(touch.identifier);
-    },
-    { passive: true, signal }
-  );
   // Releases land on window wherever the pointer or finger lifts. A settle that waited on them runs
   // once any fling they started comes to rest (and after the click, so a teleport can't steal it).
   const onRelease = (event: Event) => {
     if (event.type.startsWith("touch")) {
       for (const touch of (event as TouchEvent).changedTouches) touches.delete(touch.identifier);
+    } else if (event.type === "dragend" || event.type === "pointermove") {
+      // A native drag (a link or image) swallows the pointerup: its dragend, or the pointer coming
+      // back with no button held, means the press is over.
+      if (!pressed.size || (event as PointerEvent).buttons) return;
+      pressed.clear();
     } else if (!pressed.delete((event as PointerEvent).pointerId)) return;
     if (pressed.size || touches.size || !settleDeferred) return;
     settleDeferred = false;
@@ -807,7 +805,30 @@ export function createSlider(
     clearTimeout(settleTimer);
     settleTimer = window.setTimeout(onSettle, WHEEL_SETTLE_MS);
   };
-  for (const type of ["pointerup", "pointercancel", "touchend", "touchcancel"]) {
+  // Fingers are counted in the capture phase on window, so content that stops touchstart can't
+  // hide one. The release is also heard on the touched element itself: if a rebuild or remove()
+  // detaches it mid-touch, its touchend no longer reaches window.
+  addEventListener(
+    "touchstart",
+    (event) => {
+      const target = event.target as Node;
+      if (!track.contains(target)) return;
+      for (const touch of (event as TouchEvent).changedTouches) touches.add(touch.identifier);
+      for (const type of ["touchend", "touchcancel"]) {
+        target.addEventListener(type, onRelease, { once: true, passive: true, signal });
+      }
+    },
+    { capture: true, passive: true, signal }
+  );
+  const releases = [
+    "pointerup",
+    "pointercancel",
+    "pointermove",
+    "dragend",
+    "touchend",
+    "touchcancel",
+  ];
+  for (const type of releases) {
     addEventListener(type, onRelease, { capture: true, passive: true, signal });
   }
   track.addEventListener("click", onClick, { capture: true, signal });

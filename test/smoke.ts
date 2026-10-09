@@ -50,6 +50,7 @@ ${slider("tickerSlow", 4, "--slides-per-view:3;--slide-gap:10px")}
 ${slider("tickerZero", 4, "--slides-per-view:3;--slide-gap:10px")}
 ${slider("freeLoop", 4, "--slides-per-view:3;--slide-gap:10px")}
 ${slider("settleFrac", 4, "--slides-per-view:1.5;--slide-gap:8px")}
+${slider("settleRm", 5, "--slide-gap:10px")}
 <div id="cards" class="aero-slider" style="width:600px"><div class="aero-slider__viewport"><div class="aero-slider__track">${Array.from({ length: 3 }, (_, i) => `<a href="#card${i}" id="card${i}">${i}</a>`).join("")}</div></div></div>
 <script type="module">
   import { createSlider } from "/dist/aero-slider.min.js";
@@ -85,6 +86,7 @@ ${slider("settleFrac", 4, "--slides-per-view:1.5;--slide-gap:8px")}
     tickerZero: createSlider(document.getElementById("tickerZero"), { autoplay: "continuous", autoplaySpeed: 0 }),
     freeLoop: createSlider(document.getElementById("freeLoop"), { loop: true, snap: "none", scrollDuration: 550 }),
     settleFrac: createSlider(document.getElementById("settleFrac"), { loop: true, snap: "settle", scrollDuration: 300 }),
+    settleRm: createSlider(document.getElementById("settleRm"), { snap: "settle", scrollDuration: 300 }),
   };
 </script></body></html>`;
 
@@ -526,6 +528,21 @@ const scenario = `(async () => {
     for (const n of ["autoplayStart", "autoplayStop"]) el.addEventListener("aero:" + n, () => events++);
     el.style.width = "601px"; await sleep(150); el.style.width = "600px"; await sleep(150);
     check("ticker.resizeQuiet", events === 0 && anims().length > 0, { events, anims: anims().length });
+
+    // Dragging a product link starts the browser's own drag, which swallows the pointerup. Its
+    // dragend, or the pointer coming back with no button held, still ends the press hold.
+    {
+      const lt = track("tickerLinks"), card = lt.querySelector("a"), r = lt.getBoundingClientRect();
+      for (const end of ["dragend", "pointermove"]) {
+        lt.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerId: 1, pointerType: "mouse", button: 0, buttons: 1, clientX: r.left + 20, clientY: r.top + 20 }));
+        await sleep(100);
+        const held = anims("tickerLinks").length === 0;
+        if (end === "dragend") card.dispatchEvent(new DragEvent("dragend", { bubbles: true }));
+        else window.dispatchEvent(new PointerEvent("pointermove", { pointerId: 1, pointerType: "mouse", buttons: 0 }));
+        await sleep(500);
+        check("ticker.resumesAfterNativeDrag." + end, held && anims("tickerLinks").length > 0, { held, anims: anims("tickerLinks").length });
+      }
+    }
 
     // A short left-aligned rail (no more slides than fit) still drifts.
     check("ticker.shortLeftRailRuns", anims("tickerLeft").length > 0, { anims: anims("tickerLeft").length });
@@ -993,6 +1010,56 @@ const releasedTouch = await inPage(`
   check("settle.settlesAfterPan", off < 1.5, { off, pos: t.scrollLeft });
 `);
 
+// Content that stops touchstart from bubbling still can't hide the finger: no easing under it.
+await inPage(`
+  S.settle.goTo(0, { instant: true });
+  window.__stopTouch = (e) => e.stopPropagation();
+  for (const k of track("settle").children) k.addEventListener("touchstart", window.__stopTouch);
+`);
+await sleep(300);
+await wheel("settle", 80);
+await sleep(60);
+await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 1 });
+const stopSpot = (
+  await send("Runtime.evaluate", {
+    expression: `(() => { const r = document.getElementById("settle").getBoundingClientRect(); return { x: r.left + 300, y: r.top + 60 }; })()`,
+    returnByValue: true,
+  })
+).result.value;
+await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [stopSpot] });
+const stoppedTouch = await inPage(`
+  const t = track("settle"), at = t.scrollLeft; await sleep(700);
+  check("settle.waitsForStoppedTouch", at > 20 && near(t.scrollLeft, at), { at, now: t.scrollLeft });
+`);
+await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+await inPage(
+  `for (const k of track("settle").children) k.removeEventListener("touchstart", window.__stopTouch);`
+);
+
+// A finger whose slide is removed mid-touch still counts as lifted when it lifts, so settling
+// isn't blocked afterwards.
+await send("Runtime.evaluate", {
+  expression: `document.getElementById("settleRm").scrollIntoView({ block: "center" })`,
+});
+await sleep(200);
+const rmSpot = (
+  await send("Runtime.evaluate", {
+    expression: `(() => { const r = document.getElementById("settleRm").getBoundingClientRect(); return { x: r.left + 300, y: r.top + 60 }; })()`,
+    returnByValue: true,
+  })
+).result.value;
+await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [rmSpot] });
+await inPage(`S.settleRm.remove(0);`);
+await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+await send("Emulation.setTouchEmulationEnabled", { enabled: false });
+await sleep(400);
+await wheel("settleRm", 80);
+const removedTouch = await inPage(`
+  await sleep(1200);
+  const t = track("settleRm");
+  check("settle.afterRemovedTouch", near(t.scrollLeft, 0) && S.settleRm.currentIndex === 0, { pos: t.scrollLeft });
+`);
+
 // An eased scroll already running when reduced motion turns on lands at once.
 await inPage(`S.longEase.goTo(4); await sleep(150);`);
 await setReducedMotion("reduce");
@@ -1036,6 +1103,8 @@ const failures: string[] = [
   ...releasedTouchStill,
   ...pannedTouch,
   ...releasedTouch,
+  ...stoppedTouch,
+  ...removedTouch,
   ...reduced,
   ...restored,
   ...errors.map((e) => "page error: " + e),
