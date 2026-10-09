@@ -741,15 +741,8 @@ export function createSlider(
     { passive: true, signal }
   );
   track.addEventListener("pointerdown", onPointerDown, { signal });
-  track.addEventListener(
-    "touchstart",
-    (event) => {
-      for (const touch of event.changedTouches) touches.add(touch.identifier);
-    },
-    { passive: true, signal }
-  );
-  // Fingers lift on window wherever they are. A settle that waited on them runs once any fling
-  // they started comes to rest.
+  // Fingers lift wherever they are. A settle that waited on them runs once any fling they started
+  // comes to rest.
   const onTouchEnd = (event: Event) => {
     for (const touch of (event as TouchEvent).changedTouches) touches.delete(touch.identifier);
     if (touches.size || !settleDeferred) return;
@@ -758,6 +751,21 @@ export function createSlider(
     clearTimeout(settleTimer);
     settleTimer = window.setTimeout(onSettle, WHEEL_SETTLE_MS);
   };
+  // Fingers are counted in the capture phase on window, so content that stops touchstart can't
+  // hide one. The release is also heard on the touched element itself: if a rebuild or remove()
+  // detaches it mid-touch, its touchend no longer reaches window.
+  addEventListener(
+    "touchstart",
+    (event) => {
+      const target = event.target as Node;
+      if (!track.contains(target)) return;
+      for (const touch of (event as TouchEvent).changedTouches) touches.add(touch.identifier);
+      for (const type of ["touchend", "touchcancel"]) {
+        target.addEventListener(type, onTouchEnd, { once: true, passive: true, signal });
+      }
+    },
+    { capture: true, passive: true, signal }
+  );
   for (const type of ["touchend", "touchcancel"]) {
     addEventListener(type, onTouchEnd, { capture: true, passive: true, signal });
   }
