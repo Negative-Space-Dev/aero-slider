@@ -4,6 +4,7 @@ A lightweight (~6 KB gzipped), CSS-first slider library for the modern web.
 
 - **CSS-First Architecture** — Layout via custom properties, responsive via media queries
 - **Native Scroll Snapping** — Hardware-accelerated, smooth scrolling
+- **Continuous Autoplay** — `autoplay: "continuous"` drifts the track like a ticker at `autoplaySpeed` px/s, seamlessly looped with no per-frame JavaScript
 - **Snap Modes** — Native CSS snapping by default; `snap: "settle"` scrolls freely and eases onto the nearest slide, `snap: "none"` rests wherever it stops
 - **Minimal JS Footprint** — Only handles events, loop cloning, pagination, autoplay
 - **Zero Dependencies** — No external libraries required

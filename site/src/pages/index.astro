@@ -1303,6 +1303,42 @@ slider.remove([0, 1]);`}
         </div>
       </div>
 
+      <!-- Continuous autoplay -->
+      <div>
+        <h3 class="mb-1 text-lg font-semibold text-slate-800">Continuous Autoplay</h3>
+        <p class="mb-4 text-sm text-slate-600">
+          <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">autoplay: "continuous"</code> drifts the track like a ticker at
+          <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">autoplaySpeed</code> pixels per second, looping seamlessly. It's a single CSS
+          animation with no per-frame JavaScript, so browsers can run it off the main thread. It keeps drifting under the
+          pointer, holds while the slider is pressed or keyboard focus is inside, and
+          <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">pause()</code> / <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">resume()</code> apply on top. Wheel and trackpad
+          scrolling add to the drift. Under <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">prefers-reduced-motion</code> the track stays
+          still. <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">currentIndex</code> catches up whenever the drift pauses.
+        </p>
+        <div id="continuous" class="aero-slider" style="--slides-per-view: 4; --slide-gap: 12px;">
+          <div class="aero-slider__viewport relative rounded-lg">
+            <div class="aero-slider__track">
+              <div class="rounded-lg bg-linear-to-br from-violet-400 to-fuchsia-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">1</div></div>
+              <div class="rounded-lg bg-linear-to-br from-sky-400 to-indigo-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">2</div></div>
+              <div class="rounded-lg bg-linear-to-br from-lime-400 to-green-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">3</div></div>
+              <div class="rounded-lg bg-linear-to-br from-yellow-400 to-amber-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">4</div></div>
+              <div class="rounded-lg bg-linear-to-br from-red-400 to-rose-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">5</div></div>
+              <div class="rounded-lg bg-linear-to-br from-teal-400 to-cyan-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">6</div></div>
+              <div class="rounded-lg bg-linear-to-br from-indigo-400 to-purple-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">7</div></div>
+              <div class="rounded-lg bg-linear-to-br from-orange-400 to-red-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">8</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 overflow-x-auto rounded-lg">
+          <Code
+            code={`createSlider(el, { autoplay: "continuous", autoplaySpeed: 36, draggable: false });
+// With CSS: --slides-per-view: 4; --slide-gap: 12px;`}
+            lang="typescript"
+            class="!rounded-lg !p-4 text-sm"
+          />
+        </div>
+      </div>
+
       <!-- Snap modes -->
       <div>
         <h3 class="mb-1 text-lg font-semibold text-slate-800">Snap Modes</h3>
@@ -1725,8 +1761,13 @@ const teardown = AeroSlider.syncThumbnails(main, thumbs);
                 >
                 <tr class="border-b border-slate-100"
                   ><td class="py-2 pr-4 font-mono text-xs">autoplay</td><td class="py-2 pr-4"
-                    >boolean</td
-                  ><td class="py-2 pr-4">false</td><td class="py-2">Auto-advance slides</td></tr
+                    >boolean | "continuous"</td
+                  ><td class="py-2 pr-4">false</td><td class="py-2"><code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">true</code> advances one move every <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">autoplayInterval</code>. <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">"continuous"</code> drifts the track smoothly like a ticker at <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">autoplaySpeed</code>; it implies <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">loop</code> and <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">snap: "none"</code></td></tr
+                >
+                <tr class="border-b border-slate-100"
+                  ><td class="py-2 pr-4 font-mono text-xs">autoplaySpeed</td><td class="py-2 pr-4"
+                    >number</td
+                  ><td class="py-2 pr-4">40</td><td class="py-2">Continuous autoplay speed in pixels per second. <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">0</code> or less keeps the track still</td></tr
                 >
                 <tr class="border-b border-slate-100"
                   ><td class="py-2 pr-4 font-mono text-xs">autoplayInterval</td><td

@@ -159,46 +159,135 @@ export function keyboard(core: SliderCore): void {
 }
 
 // ── Autoplay ───────────────────────────────────────────────────────────
-// Advances one move per autoplayInterval, restarting the countdown whenever the slide changes.
-// Pauses while the pointer is over the slider, while it is pressed, while keyboard focus is
-// inside, during a drag, while the tab is hidden, and on pause(). After a press it resumes once
-// scrolling settles. Never runs under prefers-reduced-motion, and stops as soon as it is turned on.
+// Interval autoplay advances one move per autoplayInterval, restarting its countdown whenever the
+// slide changes. Continuous autoplay drifts every slide with one shared compositor animation, so
+// main-thread work never stalls it; each lap travels exactly one set of slides and the clones on
+// either side make the restart seamless. Native scrolling simply adds to the drift, and anything
+// that needs the real offset (a press, goTo(), a resize) gets the lap handed back first.
+//
+// Both pause while pressed, while keyboard focus is inside, during a drag, while the tab is hidden,
+// and on pause(); interval autoplay also pauses on hover. Neither runs under
+// prefers-reduced-motion, and both stop as soon as it is turned on. After a press or goTo(), they
+// resume once scrolling settles.
 
 const SETTLE_FALLBACK_MS = 150; // resume a press that never scrolled
+
+interface Lap {
+  start: number;
+  width: number;
+  duration: number;
+  animations: Animation[];
+}
 
 export function autoplay(core: SliderCore) {
   const { container, track, config, signal, reducedMotion } = core;
   const holds = new Set<string>();
+  const continuous = () => config.autoplay === "continuous";
   let timer = 0;
+  let lap: Lap | null = null;
+  let running = false; // autoplayStart has been announced; a lap swapped on resize doesn't re-announce
   let settleFallback = 0;
   const pressed = new Set<number>(); // pointerIds currently down on the track
 
-  function start(): void {
-    if (
-      signal.aborted ||
-      timer ||
-      !config.autoplay ||
-      holds.size ||
-      document.hidden ||
-      reducedMotion.matches
-    )
-      return;
-    timer = window.setInterval(advance, config.autoplayInterval);
-    core.emit("autoplayStart", {});
-  }
-
-  function stop(): void {
-    if (!timer) return;
-    clearInterval(timer);
-    timer = 0;
-    core.emit("autoplayStop", {});
-  }
+  const blocked = () =>
+    signal.aborted ||
+    !config.autoplay ||
+    holds.size > 0 ||
+    document.hidden ||
+    reducedMotion.matches ||
+    (continuous() && !(config.autoplaySpeed > 0)); // a ticker at 0 px/s stays still
 
   function advance(): void {
     if (core.easing()) return; // scrollDuration outlasts the interval: let the move land first
     const atEnd = !core.loop() && core.current() >= core.maxIndex();
     if (atEnd) core.goTo(0);
     else core.next();
+  }
+
+  /** The same view one lap earlier or later, inside the teleport-safe band. */
+  function fold(position: number, { start, width }: { start: number; width: number }): number {
+    while (position < start) position += width;
+    while (position >= start + width) position -= width;
+    return position;
+  }
+
+  function travelled(current: Lap): number {
+    const time = Number(current.animations[0]?.currentTime) || 0;
+    return ((time % current.duration) / current.duration) * current.width;
+  }
+
+  function startLap(): void {
+    const cycle = core.cycle();
+    if (!cycle) return;
+    const base = fold(core.position(), cycle);
+    if (base + cycle.width > core.maxScroll()) return; // too few clones to cover a lap
+    if (Math.abs(base - core.position()) > 0.5) core.jumpTo(base);
+
+    const distance = (core.isRtl() ? 1 : -1) * cycle.width;
+    const to = core.isVertical() ? `0 ${distance}px` : `${distance}px 0`;
+    const duration = (cycle.width / config.autoplaySpeed) * 1000;
+    const startTime = document.timeline.currentTime;
+    const animations = Array.from(track.children, (slide) => {
+      const animation = slide.animate([{ translate: "0 0" }, { translate: to }], {
+        duration,
+        iterations: Infinity,
+      });
+      animation.startTime = startTime;
+      return animation;
+    });
+    lap = { ...cycle, duration, animations };
+    if (!running) {
+      running = true;
+      core.emit("autoplayStart", {});
+    }
+  }
+
+  /**
+   * Ends the lap, handing its travel back to the scroll offset unless the layout is stale. It isn't
+   * folded a lap back: the same cards stay under the pointer and keyboard focus, so a click on a
+   * product link lands on the link that was pressed. Laps start inside the band and the runway
+   * covers a full lap past it, so the unfolded offset is always reachable.
+   */
+  function stopLap(handBack: boolean, announce = true): void {
+    if (!lap) return;
+    const current = lap;
+    lap = null;
+    const position = handBack ? core.position() + travelled(current) : null;
+    for (const animation of current.animations) animation.cancel();
+    if (position !== null) core.jumpTo(position);
+    if (announce && running) {
+      running = false;
+      core.emit("autoplayStop", {});
+    }
+  }
+
+  function start(): void {
+    if (blocked()) {
+      // A lap reset quietly for a resize that can't restart now still owes its autoplayStop.
+      if (running && !lap) {
+        running = false;
+        core.emit("autoplayStop", {});
+      }
+      return;
+    }
+    if (continuous()) {
+      if (!lap) startLap();
+    } else if (!timer) {
+      timer = window.setInterval(advance, config.autoplayInterval);
+      core.emit("autoplayStart", {});
+    }
+  }
+
+  function stopInterval(): void {
+    if (!timer) return;
+    clearInterval(timer);
+    timer = 0;
+    core.emit("autoplayStop", {});
+  }
+
+  function stop(): void {
+    stopInterval();
+    stopLap(true);
   }
 
   function hold(reason: string): void {
@@ -220,7 +309,8 @@ export function autoplay(core: SliderCore) {
 
   const listen = (target: EventTarget, type: string, handler: (event: Event) => void) =>
     target.addEventListener(type, handler, { passive: true, signal });
-  listen(container, "pointerenter", () => hold("pointer"));
+  // A ticker keeps drifting under the pointer; only interval autoplay pauses on hover.
+  listen(container, "pointerenter", () => !continuous() && hold("pointer"));
   listen(container, "pointerleave", () => release("pointer"));
   listen(track, "pointerdown", (event) => {
     if (!config.autoplay) return;
@@ -230,11 +320,16 @@ export function autoplay(core: SliderCore) {
   // Releases are caught on window in the capture phase, so they count wherever the pointer is
   // and even if content inside a slide stops them. The hold lasts until the last pointer lifts.
   const onRelease = (event: Event) => {
-    if (!pressed.delete((event as PointerEvent).pointerId) || pressed.size) return;
+    if (event.type === "dragend" || event.type === "pointermove") {
+      // A native drag (a link or image) swallows the pointerup: its dragend, or the pointer coming
+      // back with no button held, means the press is over.
+      if (!pressed.size || (event as PointerEvent).buttons) return;
+      pressed.clear();
+    } else if (!pressed.delete((event as PointerEvent).pointerId) || pressed.size) return;
     holds.delete("press");
     holdUntilSettled();
   };
-  for (const type of ["pointerup", "pointercancel"]) {
+  for (const type of ["pointerup", "pointercancel", "pointermove", "dragend"]) {
     addEventListener(type, onRelease, { capture: true, passive: true, signal });
   }
   listen(container, "focusin", (event) => {
@@ -253,7 +348,8 @@ export function autoplay(core: SliderCore) {
   listen(reducedMotion, "change", () => (reducedMotion.matches ? stop() : start()));
   signal.addEventListener("abort", () => {
     clearTimeout(settleFallback);
-    stop();
+    stopInterval();
+    stopLap(false);
   });
 
   return {
@@ -261,9 +357,30 @@ export function autoplay(core: SliderCore) {
     stop,
     hold,
     release,
+    /** A continuous lap is moving the slides right now. */
+    drifting: () => lap !== null,
+    /** Ends a lap without handing it back, for when the layout is about to change under it. */
+    reset(): void {
+      stopLap(false, false);
+    },
+    /** goTo() is about to measure from the scroll offset. True if a lap was handed back. */
+    interrupt(): boolean {
+      if (!lap) return false;
+      holdUntilSettled();
+      return true;
+    },
     /** A scroll is under way, so wait for it to settle rather than the fallback. */
     scrolled(): void {
       if (holds.has("settle")) clearTimeout(settleFallback);
+      // A wheel scroll during a lap adds to the drift. Only if it carries the view to within a
+      // slide of the end of the track does it jump back a lap (which looks identical): jumping any
+      // sooner cuts the browser's smooth wheel animation short for nothing.
+      if (lap) {
+        const position = core.position();
+        const margin = lap.width / core.pageCount();
+        if (position + travelled(lap) > core.maxScroll() - margin)
+          core.jumpTo(position - lap.width);
+      }
     },
     settled(): void {
       clearTimeout(settleFallback);

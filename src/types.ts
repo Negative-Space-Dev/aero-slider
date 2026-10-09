@@ -8,8 +8,14 @@ export type SliderSnap = "native" | "settle" | "none";
 
 export interface SliderConfig {
   loop?: boolean;
-  autoplay?: boolean;
+  /**
+   * `true` advances one move every `autoplayInterval`. `"continuous"` drifts the track at
+   * `autoplaySpeed` like a ticker; it implies `loop` and `snap: "none"`.
+   */
+  autoplay?: boolean | "continuous";
   autoplayInterval?: number;
+  /** Continuous autoplay speed, in pixels per second. 0 or less keeps the track still. */
+  autoplaySpeed?: number;
   draggable?: boolean;
   /** Where the active slide rests in the viewport. */
   alignment?: SliderAlignment;

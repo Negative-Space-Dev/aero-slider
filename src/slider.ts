@@ -16,6 +16,7 @@ const DEFAULTS: Required<SliderConfig> = {
   loop: false,
   autoplay: false,
   autoplayInterval: 5000,
+  autoplaySpeed: 40,
   draggable: true,
   alignment: "center",
   maxDots: 0,
@@ -50,6 +51,14 @@ export interface SliderCore {
   prev(): void;
   goTo(index: number, options?: GoToOptions): void;
   emit<E extends SliderEvent>(event: E, data: SliderEventData<E>): void;
+  // What continuous autoplay needs to drive the track by hand.
+  isVertical(): boolean;
+  isRtl(): boolean;
+  position(): number;
+  maxScroll(): number;
+  jumpTo(position: number): void;
+  /** One full lap of real slides: where its teleport-safe band starts, and its length. */
+  cycle(): { start: number; width: number } | null;
 }
 
 function requireTrack(container: HTMLElement): HTMLElement {
@@ -94,10 +103,11 @@ export function createSlider(
   let settleTimer = 0;
   let easeFrame = 0; // a scrollDuration animation is in flight
   let fallbackSettle = false; // a wheel or touch moved the track and scrollend may never come
+  const pressed = new Set<number>(); // mouse and pen pointers down on the track
   // Fingers on the track, from touch events: a pan turns the pointer stream into pointercancel
   // while the finger is still down, so pointer events can't say when it lifts.
   const touches = new Set<number>();
-  let settleDeferred = false; // a settle arrived while a finger was still down
+  let settleDeferred = false; // a settle arrived while a pointer or finger was still down
 
   const isVertical = () => config.direction === "ttb";
   const isRtl = () => config.direction === "rtl";
@@ -108,10 +118,19 @@ export function createSlider(
     const pagesByStart = config.alignment === "left" && Number.isInteger(slidesPerView);
     return Math.max(0, pagesByStart ? slideCount - slidesPerView : slideCount - 1);
   }
-  const loop = () => config.loop && maxIndex() > 0;
-  const snapMode = () => config.snap;
+  const continuous = () => config.autoplay === "continuous";
+  // Continuous autoplay loops by nature and moves the track by hand, so snapping stays off.
+  const loop = () => (continuous() ? slideCount > 1 : config.loop && maxIndex() > 0);
+  const snapMode = () => (continuous() ? "none" : config.snap);
   const pageCount = () => (loop() ? slideCount : maxIndex() + 1);
-  const cloneCount = () => (loop() ? Math.max(slideCount, Math.ceil(slidesPerView) + 2) : 0);
+  // A continuous lap travels one full set of slides past wherever it starts, so it needs a whole
+  // set of clones beyond the real slides plus a viewport's worth.
+  const cloneCount = () =>
+    !loop()
+      ? 0
+      : continuous()
+        ? slideCount + Math.ceil(slidesPerView) + 2
+        : Math.max(slideCount, Math.ceil(slidesPerView) + 2);
 
   function emit<E extends SliderEvent>(event: E, detail: SliderEventData<E>): void {
     container.dispatchEvent(new CustomEvent(`aero:${event}`, { detail, bubbles: true }));
@@ -290,6 +309,8 @@ export function createSlider(
 
   function goTo(index: number, options: GoToOptions = {}): void {
     if (destroyed || !slideCount) return;
+    // Continuous autoplay hands its lap back to the scroll offset before we measure from it.
+    play.interrupt();
     const logical = loop() ? wrap(Math.trunc(index)) : clamp(Math.trunc(index), 0, maxIndex());
     setCurrent(logical);
     if (!slideStride) return; // no layout yet (display: none); relayout() lands here once shown
@@ -313,8 +334,13 @@ export function createSlider(
   }
 
   const step = () => Math.max(1, Math.trunc(config.perMove));
-  const next = () => goTo(current + step());
-  const prev = () => goTo(current - step());
+  /** Steps from the slide that's showing: a continuous lap hands back first, so sync to it. */
+  function stepBy(delta: number): void {
+    if (play.interrupt()) setCurrent(indexAt(scrollPosition()));
+    goTo(current + delta);
+  }
+  const next = () => stepBy(step());
+  const prev = () => stepBy(-step());
 
   // ── Scroll tracking ──────────────────────────────────────────────────
 
@@ -340,8 +366,9 @@ export function createSlider(
     if (dragging) return;
     clearTimeout(settleTimer);
     fallbackSettle = false;
-    // A finger still on the track owns the scroll; settle once the last one lifts.
-    if (touches.size) {
+    // A pointer still down owns the track: a finger may still be scrolling it, and a teleport now
+    // would swap the pressed card for its copy, so a click would miss the link. Settle on release.
+    if (pressed.size || touches.size) {
       settleDeferred = true;
       return;
     }
@@ -413,8 +440,10 @@ export function createSlider(
   function onPointerDown(event: PointerEvent): void {
     suppressNextClick = false;
     programmaticScroll = false; // a press takes over from any goTo() animation
-    // A wheel settle that was still pending waits for the finger to lift (see touchstart below).
-    if (event.pointerType === "touch" && fallbackSettle) settleDeferred = true;
+    // Fingers are counted from touch events (see touchstart below).
+    if (event.pointerType !== "touch") pressed.add(event.pointerId);
+    // A wheel settle that was still pending waits for the pointer or finger to lift.
+    if (fallbackSettle) settleDeferred = true;
     fallbackSettle = false;
     clearTimeout(settleTimer);
     cancelEase();
@@ -578,6 +607,16 @@ export function createSlider(
   /** Cheap path for size changes: re-measure and keep the current slide in place. */
   function relayout(): void {
     const previousPages = pageCount();
+    // The index doesn't follow a continuous drift, so keep the slide that's actually showing.
+    // Its box includes the drift, so the slide resting nearest the scroll offset is the one on screen.
+    if (play.drifting()) {
+      const children = Array.from(track.children);
+      const position = scrollPosition();
+      const distance = (el: Element) => Math.abs(snapPositionOf(el) - position);
+      const showing = children.reduce((best, el) => (distance(el) < distance(best) ? el : best));
+      current = indexOfDom(children.indexOf(showing));
+    }
+    play.reset(); // continuous autoplay's transforms would skew every measurement
     readSlidesPerView();
     if (cloneCount() !== clonesBefore) return rebuild();
     measure();
@@ -586,10 +625,12 @@ export function createSlider(
     programmaticScroll = false; // an instant reposition supersedes any goTo() animation
     scrollTo(restPositionOf(current));
     nav.refresh();
+    play.start();
   }
 
   /** Full path: re-read slides from the DOM, rebuild clones and UI. */
   function rebuild(): void {
+    play.reset();
     for (const clone of track.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
     slides = Array.from(track.children) as HTMLElement[];
     slideCount = slides.length;
@@ -618,8 +659,8 @@ export function createSlider(
     dots.build();
     nav.refresh();
     observe();
-    play.stop();
-    if (config.autoplay) play.start();
+    play.stop(); // restarts interval autoplay's countdown; the lap was already reset above
+    play.start();
   }
 
   // ── Public API ───────────────────────────────────────────────────────
@@ -711,6 +752,21 @@ export function createSlider(
     prev,
     goTo,
     emit,
+    isVertical,
+    isRtl,
+    position: scrollPosition,
+    maxScroll: () => maxScroll,
+    jumpTo: (position) => scrollTo(position),
+    cycle() {
+      if (!loop() || !slideStride) return null;
+      const first = track.children[clonesBefore];
+      const twin = track.children[clonesBefore + slideCount];
+      if (!first || !twin) return null;
+      const home = snapPositionOf(first);
+      const width = snapPositionOf(twin) - home;
+      // Centred on the real slides, so resting anywhere in it never triggers a teleport.
+      return width > 0 ? { start: home - slideStride / 2, width } : null;
+    },
   };
   const nav = navigation(core);
   const dots = pagination(core);
@@ -741,11 +797,18 @@ export function createSlider(
     { passive: true, signal }
   );
   track.addEventListener("pointerdown", onPointerDown, { signal });
-  // Fingers lift wherever they are. A settle that waited on them runs once any fling they started
-  // comes to rest.
-  const onTouchEnd = (event: Event) => {
-    for (const touch of (event as TouchEvent).changedTouches) touches.delete(touch.identifier);
-    if (touches.size || !settleDeferred) return;
+  // Releases land on window wherever the pointer or finger lifts. A settle that waited on them runs
+  // once any fling they started comes to rest (and after the click, so a teleport can't steal it).
+  const onRelease = (event: Event) => {
+    if (event.type.startsWith("touch")) {
+      for (const touch of (event as TouchEvent).changedTouches) touches.delete(touch.identifier);
+    } else if (event.type === "dragend" || event.type === "pointermove") {
+      // A native drag (a link or image) swallows the pointerup: its dragend, or the pointer coming
+      // back with no button held, means the press is over.
+      if (!pressed.size || (event as PointerEvent).buttons) return;
+      pressed.clear();
+    } else if (!pressed.delete((event as PointerEvent).pointerId)) return;
+    if (pressed.size || touches.size || !settleDeferred) return;
     settleDeferred = false;
     fallbackSettle = true;
     clearTimeout(settleTimer);
@@ -761,13 +824,21 @@ export function createSlider(
       if (!track.contains(target)) return;
       for (const touch of (event as TouchEvent).changedTouches) touches.add(touch.identifier);
       for (const type of ["touchend", "touchcancel"]) {
-        target.addEventListener(type, onTouchEnd, { once: true, passive: true, signal });
+        target.addEventListener(type, onRelease, { once: true, passive: true, signal });
       }
     },
     { capture: true, passive: true, signal }
   );
-  for (const type of ["touchend", "touchcancel"]) {
-    addEventListener(type, onTouchEnd, { capture: true, passive: true, signal });
+  const releases = [
+    "pointerup",
+    "pointercancel",
+    "pointermove",
+    "dragend",
+    "touchend",
+    "touchcancel",
+  ];
+  for (const type of releases) {
+    addEventListener(type, onRelease, { capture: true, passive: true, signal });
   }
   track.addEventListener("click", onClick, { capture: true, signal });
   track.addEventListener("dragstart", (e) => config.draggable && e.preventDefault(), { signal });
