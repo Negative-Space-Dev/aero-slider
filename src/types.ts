@@ -14,7 +14,7 @@ export interface SliderConfig {
    */
   autoplay?: boolean | "continuous";
   autoplayInterval?: number;
-  /** Continuous autoplay speed, in pixels per second. */
+  /** Continuous autoplay speed, in pixels per second. 0 or less keeps the track still. */
   autoplaySpeed?: number;
   draggable?: boolean;
   /** Where the active slide rests in the viewport. */
