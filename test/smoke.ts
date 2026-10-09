@@ -412,6 +412,9 @@ const scenario = `(async () => {
     const stride = kids()[1].getBoundingClientRect().left - kids()[0].getBoundingClientRect().left;
     const cycle = stride * 4, speed = 600;
     const anims = () => t.getAnimations({ subtree: true });
+    // Seek the lap the way the slider starts one: one shared startTime for every slide. Seeking each
+    // animation's currentTime separately left the slides subtly out of step, so clicks could miss.
+    const seek = (time) => { const start = document.timeline.currentTime - time; for (const a of anims()) a.startTime = start; };
     const content = () => {
       const r = t.getBoundingClientRect(), cx = r.left + r.width / 2;
       let best = null;
@@ -442,9 +445,9 @@ const scenario = `(async () => {
     check("ticker.drift", run.frames > 60 && run.bad === 0 && Math.abs(run.speed - speed) < speed * 0.1, run);
     // The seam itself, stepped to either side of it.
     const duration = anims()[0].effect.getTiming().duration;
-    for (const a of anims()) a.currentTime = duration - 5;
+    seek(duration - 5);
     const beforeSeam = content();
-    for (const a of anims()) a.currentTime = duration + 5;
+    seek(duration + 5);
     const afterSeam = content();
     check("ticker.seamless", Math.abs(forward(beforeSeam, afterSeam) - (speed * 10) / 1000) < 1.5, { beforeSeam, afterSeam });
 
@@ -478,7 +481,7 @@ const scenario = `(async () => {
       const block = (e) => e.stopPropagation();
       el.addEventListener("scrollend", block, { capture: true });
       const duration = anims()[0].effect.getTiming().duration;
-      for (const a of anims()) a.currentTime = duration * 0.95;
+      seek(duration * 0.95);
       t.scrollLeft = t.scrollWidth;
       await new Promise(requestAnimationFrame); await new Promise(requestAnimationFrame);
       const end = t.lastElementChild.getBoundingClientRect().right, edge = t.getBoundingClientRect().right;
@@ -522,6 +525,18 @@ const scenario = `(async () => {
     await new Promise(requestAnimationFrame); await new Promise(requestAnimationFrame);
     check("ticker.boundaryCrossingStays", near(t.scrollLeft, home + cycle) && anims().length > 0, { home, cycle, now: t.scrollLeft });
     el.removeEventListener("scrollend", block, { capture: true });
+
+    // A resize mid-drift keeps the card that's showing, rather than snapping back to the index
+    // recorded before the drift.
+    {
+      await sleep(700);
+      const before = visible();
+      el.style.width = "601px";
+      await new Promise(requestAnimationFrame); await new Promise(requestAnimationFrame); // relayout runs
+      const after = visible();
+      el.style.width = "600px"; await sleep(200);
+      check("ticker.resizeKeepsVisibleSlide", before === after, { before, after });
+    }
 
     // Resizing replaces the lap quietly: no autoplayStop/autoplayStart pairs.
     let events = 0;
@@ -945,7 +960,9 @@ const linkSpot = (
       window.__clicks = [];
       for (const a of t.querySelectorAll("a")) a.addEventListener("click", (e) => { e.preventDefault(); window.__clicks.push(a.textContent); });
       const anims = t.getAnimations({ subtree: true }), d = anims[0].effect.getTiming().duration;
-      for (const a of anims) a.currentTime = d * 0.95;
+      // Seek the way the slider starts a lap: one shared startTime for every slide.
+      const start = document.timeline.currentTime - d * 0.95;
+      for (const a of anims) a.startTime = start;
       const r = t.getBoundingClientRect();
       return { x: r.left + r.width / 2, y: r.top + 50 };
     })()`,

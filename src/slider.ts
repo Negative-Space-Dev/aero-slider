@@ -607,6 +607,15 @@ export function createSlider(
   /** Cheap path for size changes: re-measure and keep the current slide in place. */
   function relayout(): void {
     const previousPages = pageCount();
+    // The index doesn't follow a continuous drift, so keep the slide that's actually showing.
+    // Its box includes the drift, so the slide resting nearest the scroll offset is the one on screen.
+    if (play.drifting()) {
+      const children = Array.from(track.children);
+      const position = scrollPosition();
+      const distance = (el: Element) => Math.abs(snapPositionOf(el) - position);
+      const showing = children.reduce((best, el) => (distance(el) < distance(best) ? el : best));
+      current = indexOfDom(children.indexOf(showing));
+    }
     play.reset(); // continuous autoplay's transforms would skew every measurement
     readSlidesPerView();
     if (cloneCount() !== clonesBefore) return rebuild();

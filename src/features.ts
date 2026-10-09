@@ -357,6 +357,8 @@ export function autoplay(core: SliderCore) {
     stop,
     hold,
     release,
+    /** A continuous lap is moving the slides right now. */
+    drifting: () => lap !== null,
     /** Ends a lap without handing it back, for when the layout is about to change under it. */
     reset(): void {
       stopLap(false, false);
