@@ -1303,6 +1303,59 @@ slider.remove([0, 1]);`}
         </div>
       </div>
 
+      <!-- Snap modes -->
+      <div>
+        <h3 class="mb-1 text-lg font-semibold text-slate-800">Snap Modes</h3>
+        <p class="mb-4 text-sm text-slate-600">
+          By default the track uses native CSS scroll snapping. With
+          <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">snap: "settle"</code> it scrolls freely under a drag, swipe or trackpad, then
+          eases onto the nearest slide once scrolling stops, using <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">scrollDuration</code>
+          and <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">scrollEasing</code>. On a loop it eases onto whichever slide is nearest on
+          screen. Try a slow trackpad scroll on the first slider.
+        </p>
+        <div id="snap-settle" class="aero-slider" style="--slides-per-view: 3; --slide-gap: 12px;">
+          <div class="aero-slider__viewport relative rounded-lg">
+            <div class="aero-slider__track">
+              <div class="rounded-lg bg-linear-to-br from-violet-400 to-fuchsia-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">1</div></div>
+              <div class="rounded-lg bg-linear-to-br from-sky-400 to-indigo-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">2</div></div>
+              <div class="rounded-lg bg-linear-to-br from-lime-400 to-green-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">3</div></div>
+              <div class="rounded-lg bg-linear-to-br from-yellow-400 to-amber-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">4</div></div>
+              <div class="rounded-lg bg-linear-to-br from-red-400 to-rose-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">5</div></div>
+              <div class="rounded-lg bg-linear-to-br from-teal-400 to-cyan-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">6</div></div>
+              <div class="rounded-lg bg-linear-to-br from-indigo-400 to-purple-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">7</div></div>
+              <div class="rounded-lg bg-linear-to-br from-orange-400 to-red-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">8</div></div>
+            </div>
+          </div>
+        </div>
+        <p class="mt-6 mb-4 text-sm text-slate-600">
+          With <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">snap: "none"</code> the track rests wherever it stops, and a mouse drag
+          coasts on its release speed.
+        </p>
+        <div id="snap-none" class="aero-slider" style="--slides-per-view: 3; --slide-gap: 12px;">
+          <div class="aero-slider__viewport relative rounded-lg">
+            <div class="aero-slider__track">
+              <div class="rounded-lg bg-linear-to-br from-violet-400 to-fuchsia-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">1</div></div>
+              <div class="rounded-lg bg-linear-to-br from-sky-400 to-indigo-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">2</div></div>
+              <div class="rounded-lg bg-linear-to-br from-lime-400 to-green-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">3</div></div>
+              <div class="rounded-lg bg-linear-to-br from-yellow-400 to-amber-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">4</div></div>
+              <div class="rounded-lg bg-linear-to-br from-red-400 to-rose-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">5</div></div>
+              <div class="rounded-lg bg-linear-to-br from-teal-400 to-cyan-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">6</div></div>
+              <div class="rounded-lg bg-linear-to-br from-indigo-400 to-purple-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">7</div></div>
+              <div class="rounded-lg bg-linear-to-br from-orange-400 to-red-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">8</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 overflow-x-auto rounded-lg">
+          <Code
+            code={`createSlider(el, { loop: true, snap: "settle", scrollDuration: 550 });
+createSlider(el, { snap: "none" });
+// With CSS: --slides-per-view: 3; --slide-gap: 12px;`}
+            lang="typescript"
+            class="!rounded-lg !p-4 text-sm"
+          />
+        </div>
+      </div>
+
       <!-- Pagination & Navigation (minimal requirements) -->
       <div id="example-pagination-nav">
         <h3 class="mb-1 text-lg font-semibold text-slate-800">Pagination & Navigation</h3>
@@ -1623,6 +1676,11 @@ const teardown = AeroSlider.syncThumbnails(main, thumbs);
                     >A mouse or pen drag is in progress (<code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">grabbing</code> cursor)</td
                   ></tr
                 >
+                <tr class="border-b border-slate-100"
+                  ><td class="py-2 pr-4 font-mono text-xs">aero-slider--free</td><td class="py-2"
+                    ><code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">snap</code> is <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">"settle"</code> or <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">"none"</code>. Turns CSS scroll snapping off</td
+                  ></tr
+                >
                 <tr
                   ><td class="py-2 pr-4 font-mono text-xs">aero-slider--vertical</td><td class="py-2"
                     ><code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">direction</code> is <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">"ttb"</code></td
@@ -1698,6 +1756,11 @@ const teardown = AeroSlider.syncThumbnails(main, thumbs);
                   ><td class="py-2 pr-4 font-mono text-xs">direction</td><td class="py-2 pr-4"
                     >"ltr" | "rtl" | "ttb"</td
                   ><td class="py-2 pr-4">"ltr"</td><td class="py-2">Carousel direction: left-to-right, right-to-left, or top-to-bottom (vertical)</td></tr
+                >
+                <tr class="border-b border-slate-100"
+                  ><td class="py-2 pr-4 font-mono text-xs">snap</td><td class="py-2 pr-4"
+                    >"native" | "settle" | "none"</td
+                  ><td class="py-2 pr-4">"native"</td><td class="py-2">How the track comes to rest. <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">"native"</code> uses CSS scroll snapping. <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">"settle"</code> scrolls freely, then eases onto the nearest slide once scrolling stops (with <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">scrollDuration</code> / <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">scrollEasing</code>). <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">"none"</code> rests wherever the track stops</td></tr
                 >
                 <tr class="border-b border-slate-100"
                   ><td class="py-2 pr-4 font-mono text-xs">scrollDuration</td><td class="py-2 pr-4"

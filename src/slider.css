@@ -221,3 +221,9 @@
   aspect-ratio: auto;
   width: 100%;
 }
+
+/* === Free scrolling (snap: "settle" | "none") === */
+/* Doubled class so it outranks the vertical track's y snapping above. */
+.aero-slider.aero-slider--free .aero-slider__track {
+  scroll-snap-type: none;
+}

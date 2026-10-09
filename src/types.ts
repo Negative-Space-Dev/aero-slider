@@ -1,5 +1,11 @@
 export type SliderAlignment = "left" | "center" | "right";
 
+/**
+ * How the track comes to rest. `native` uses CSS scroll snapping; `settle` scrolls freely, then
+ * eases onto the nearest slide once scrolling ends; `none` leaves the track wherever it stops.
+ */
+export type SliderSnap = "native" | "settle" | "none";
+
 export interface SliderConfig {
   loop?: boolean;
   autoplay?: boolean;
@@ -14,6 +20,8 @@ export interface SliderConfig {
   /** Slides advanced per next()/prev() call. */
   perMove?: number;
   direction?: "ltr" | "rtl" | "ttb";
+  /** How the track comes to rest after scrolling. Defaults to `"native"`. */
+  snap?: SliderSnap;
   /**
    * Length of next()/prev()/goTo() scrolls in ms, eased by `scrollEasing`. 0 uses the browser's
    * native smooth scrolling. Either way, prefers-reduced-motion makes every scroll instant.
