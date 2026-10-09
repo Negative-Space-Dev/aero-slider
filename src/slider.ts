@@ -103,8 +103,11 @@ export function createSlider(
   let settleTimer = 0;
   let easeFrame = 0; // a scrollDuration animation is in flight
   let fallbackSettle = false; // a wheel or touch moved the track and scrollend may never come
-  const pressed = new Set<number>(); // pointers down on the track
-  let settleDeferred = false; // a settle arrived while a pointer was still down
+  const pressed = new Set<number>(); // mouse and pen pointers down on the track
+  // Fingers on the track, from touch events: a pan turns the pointer stream into pointercancel
+  // while the finger is still down, so pointer events can't say when it lifts.
+  const touches = new Set<number>();
+  let settleDeferred = false; // a settle arrived while a pointer or finger was still down
 
   const isVertical = () => config.direction === "ttb";
   const isRtl = () => config.direction === "rtl";
@@ -365,7 +368,7 @@ export function createSlider(
     fallbackSettle = false;
     // A pointer still down owns the track: a finger may still be scrolling it, and a teleport now
     // would swap the pressed card for its copy, so a click would miss the link. Settle on release.
-    if (pressed.size) {
+    if (pressed.size || touches.size) {
       settleDeferred = true;
       return;
     }
@@ -437,8 +440,9 @@ export function createSlider(
   function onPointerDown(event: PointerEvent): void {
     suppressNextClick = false;
     programmaticScroll = false; // a press takes over from any goTo() animation
-    pressed.add(event.pointerId);
-    // A wheel settle that was still pending waits for the pointer to lift.
+    // Fingers are counted from touch events (see touchstart below).
+    if (event.pointerType !== "touch") pressed.add(event.pointerId);
+    // A wheel settle that was still pending waits for the pointer or finger to lift.
     if (fallbackSettle) settleDeferred = true;
     fallbackSettle = false;
     clearTimeout(settleTimer);
@@ -784,17 +788,26 @@ export function createSlider(
     { passive: true, signal }
   );
   track.addEventListener("pointerdown", onPointerDown, { signal });
-  // Releases land on window wherever the pointer lifts. A settle that waited on it runs once any
-  // fling it started comes to rest (and after the click, so a teleport can't steal it).
+  track.addEventListener(
+    "touchstart",
+    (event) => {
+      for (const touch of event.changedTouches) touches.add(touch.identifier);
+    },
+    { passive: true, signal }
+  );
+  // Releases land on window wherever the pointer or finger lifts. A settle that waited on them runs
+  // once any fling they started comes to rest (and after the click, so a teleport can't steal it).
   const onRelease = (event: Event) => {
-    if (!pressed.delete((event as PointerEvent).pointerId) || pressed.size || !settleDeferred)
-      return;
+    if (event.type.startsWith("touch")) {
+      for (const touch of (event as TouchEvent).changedTouches) touches.delete(touch.identifier);
+    } else if (!pressed.delete((event as PointerEvent).pointerId)) return;
+    if (pressed.size || touches.size || !settleDeferred) return;
     settleDeferred = false;
     fallbackSettle = true;
     clearTimeout(settleTimer);
     settleTimer = window.setTimeout(onSettle, WHEEL_SETTLE_MS);
   };
-  for (const type of ["pointerup", "pointercancel"]) {
+  for (const type of ["pointerup", "pointercancel", "touchend", "touchcancel"]) {
     addEventListener(type, onRelease, { capture: true, passive: true, signal });
   }
   track.addEventListener("click", onClick, { capture: true, signal });
