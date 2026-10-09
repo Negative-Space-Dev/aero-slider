@@ -1,6 +1,6 @@
 # Aero Slider
 
-A lightweight (~6 KB gzipped), CSS-first slider library for the modern web.
+A lightweight (~8 KB gzipped), CSS-first slider library for the modern web.
 
 - **CSS-First Architecture** — Layout via custom properties, responsive via media queries
 - **Native Scroll Snapping** — Hardware-accelerated, smooth scrolling
