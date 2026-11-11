@@ -1028,6 +1028,23 @@ const offTrackRelease = await inPage(`
   await sleep(300);
   const el = document.getElementById("basic"), t = track("basic");
   check("drag.releasedOffTrack", !el.classList.contains("aero-slider--dragging") && near(t.scrollLeft, 0) && t.style.scrollSnapType === "", { pos: t.scrollLeft, dragging: el.classList.contains("aero-slider--dragging"), snap: t.style.scrollSnapType });
+  window.__stopUp = (e) => e.stopPropagation();
+  el.addEventListener("pointerup", window.__stopUp);
+`);
+
+// An ancestor that stops the pointerup from bubbling still lets the drag end.
+await press("mouseMoved", offTrack.right - 100, 0);
+await press("mousePressed", offTrack.right - 100, 1);
+for (const x of [offTrack.right - 160, offTrack.right - 220, offTrack.right - 280]) {
+  await press("mouseMoved", x, 1);
+  await sleep(16);
+}
+await press("mouseReleased", offTrack.right - 280, 0);
+const stoppedRelease = await inPage(`
+  await sleep(800);
+  const el = document.getElementById("basic"), t = track("basic");
+  el.removeEventListener("pointerup", window.__stopUp);
+  check("drag.releaseStoppedByAncestor", !el.classList.contains("aero-slider--dragging") && t.style.scrollSnapType === "" && [0, 610, 1220, 1830, 2440].some((p) => near(t.scrollLeft, p)), { pos: t.scrollLeft, dragging: el.classList.contains("aero-slider--dragging"), snap: t.style.scrollSnapType });
 `);
 
 // A finger that pans the track (the browser takes the gesture over and sends pointercancel) and
@@ -1152,6 +1169,7 @@ const failures: string[] = [
   ...tickerWheel,
   ...linkClick,
   ...offTrackRelease,
+  ...stoppedRelease,
   ...snapped,
   ...wheelSettle,
   ...wheelNone,
