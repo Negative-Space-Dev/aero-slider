@@ -305,6 +305,28 @@ export function createSlider(
     return clone;
   }
 
+  /**
+   * Steps queued faster than the track moves can run a lap or more past the clones. Head for the
+   * copy of `index` nearest the track in direction `dir` instead; extra laps would only spin past.
+   * With no copy left ahead, hop the track a lap back first: the copies look identical, and a lap
+   * from the runway's far end stays on it. Mid-move the track sits between slides, where mandatory
+   * snapping would pull the hop, so snapping stays off until the move settles.
+   */
+  function headFor(index: number, dir: number): number {
+    const copiesAhead = (position: number) =>
+      Array.from(track.children, (child, domIndex) =>
+        indexOfDom(domIndex) === index ? snapPositionOf(child) : NaN
+      ).filter((p) => (dir > 0 ? p > position + 1 : p < position - 1));
+    let ahead = copiesAhead(scrollPosition());
+    if (!ahead.length) {
+      cancelEase();
+      track.style.scrollSnapType = "none";
+      scrollTo(scrollPosition() - dir * cycleWidth());
+      ahead = copiesAhead(scrollPosition());
+    }
+    return dir > 0 ? Math.min(...ahead) : Math.max(...ahead);
+  }
+
   // ── Navigation ───────────────────────────────────────────────────────
 
   /** `towards` is the sign of a next()/prev() step: it picks the way round when both are equally short. */
@@ -322,19 +344,12 @@ export function createSlider(
       const inFlight = programmaticScroll;
       if (!inFlight) teleportToRealSlides();
       const from = inFlight ? scrollTarget : scrollPosition();
-      let fromDom = domIndexAt(from);
+      const fromDom = domIndexAt(from);
       const forward = wrap(logical - indexOfDom(fromDom));
       const back = forward * 2 > slideCount || (forward * 2 === slideCount && towards < 0);
       const steps = back ? forward - slideCount : forward;
-      if (!track.children[fromDom + steps]) {
-        // Repeated steps ran out of clones: hop onto the real copies, which look identical.
-        // Mid-move the track sits between slides, where mandatory snapping would pull the hop.
-        const shift = shiftToRealCopy(fromDom);
-        track.style.scrollSnapType = "none";
-        scrollTo(scrollPosition() + shift);
-        fromDom = domIndexAt(from + shift);
-      }
-      target = snapPositionOf(track.children[fromDom + steps]!);
+      const queued = track.children[fromDom + steps];
+      target = queued ? snapPositionOf(queued) : headFor(logical, Math.sign(steps));
     } else {
       target = restPositionOf(logical);
     }

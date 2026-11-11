@@ -160,6 +160,17 @@ const scenario = `(async () => {
     s.prev();
     const back = await frames("loopPair", 1400); await settled("loopPair");
     check("loopPair.prevGoesBack", Math.min(...back) <= back[0] - lap / 4, { from: back[0], min: Math.min(...back) });
+    // A burst of steps before the track moves runs a lap past the clones. Any hop the track makes
+    // meanwhile must be whole laps (identical copies); a hop clamped at the runway's edge is not.
+    s.goTo(0, { instant: true }); await settled("loopPair");
+    const offsets = [t.scrollLeft];
+    for (let k = 0; k < 5; k++) { s.next(); offsets.push(t.scrollLeft); }
+    const hops = offsets.slice(1).map((p, i) => p - offsets[i]).filter((d) => Math.abs(d) > 1 && Math.abs(d / lap - Math.round(d / lap)) > 0.01);
+    const burst = await frames("loopPair", 1500); await settled("loopPair");
+    const jumps = burst.slice(1).map((p, i) => p - burst[i]).filter((d) => d < -1 && Math.abs(d + lap) > 2);
+    const landed = [...t.children].find((c) => near(c.offsetLeft - t.scrollLeft, 0, 2));
+    check("loopPair.burstStaysOnRunway", hops.length === 0 && jumps.length === 0, { offsets, hops, jumps });
+    check("loopPair.burstLands", s.currentIndex === 1 && landed?.textContent === "1", { i: s.currentIndex, landed: landed?.textContent });
   }
 
   // Loop: clones, wrapping both ways, teleport back onto real slides, drag wrap
