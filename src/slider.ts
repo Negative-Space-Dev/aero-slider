@@ -543,10 +543,14 @@ export function createSlider(
       play.release("drag");
     }
 
+    // On window: until the drag threshold captures the pointer, a move or release off the track
+    // never reaches it, and a gesture left open would drag on the next hover.
     const options = { signal: gesture.signal };
-    track.addEventListener("pointermove", onMove, options);
-    track.addEventListener("pointerup", onUp, options);
-    track.addEventListener("pointercancel", onUp, options);
+    const own = (handler: (e: PointerEvent) => void) => (e: PointerEvent) =>
+      e.pointerId === event.pointerId && handler(e);
+    addEventListener("pointermove", own(onMove), options);
+    addEventListener("pointerup", own(onUp), options);
+    addEventListener("pointercancel", own(onUp), options);
     signal.addEventListener("abort", () => gesture.abort(), options);
   }
 
