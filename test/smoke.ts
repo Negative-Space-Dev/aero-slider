@@ -52,6 +52,8 @@ ${slider("freeLoop", 4, "--slides-per-view:3;--slide-gap:10px")}
 ${slider("settleFrac", 4, "--slides-per-view:1.5;--slide-gap:8px")}
 ${slider("settleRm", 5, "--slide-gap:10px")}
 <div id="cards" class="aero-slider" style="width:600px"><div class="aero-slider__viewport"><div class="aero-slider__track">${Array.from({ length: 3 }, (_, i) => `<a href="#card${i}" id="card${i}">${i}</a>`).join("")}</div></div></div>
+${slider("outer", 3).replace("<div><div>0</div></div>", `<div>${slider("inner", 3, "height:300px")}</div>`)}
+<div style="display:flex">${slider("edge", 3)}<iframe id="edgeFrame" srcdoc="<body style='margin:0;height:200px'></body>" style="width:200px;height:200px;border:0;flex:none"></iframe></div>
 <script type="module">
   import { createSlider } from "/dist/aero-slider.min.js";
   window.sliders = {
@@ -78,6 +80,9 @@ ${slider("settleRm", 5, "--slide-gap:10px")}
     settleLoop: createSlider(document.getElementById("settleLoop"), { loop: true, snap: "settle", scrollDuration: 300 }),
     free: createSlider(document.getElementById("free"), { snap: "none", scrollDuration: 300 }),
     settleTtb: createSlider(document.getElementById("settleTtb"), { direction: "ttb", snap: "settle" }),
+    inner: createSlider(document.getElementById("inner"), { direction: "ttb" }),
+    outer: createSlider(document.getElementById("outer")),
+    edge: createSlider(document.getElementById("edge")),
     ticker: createSlider(document.getElementById("ticker"), { autoplay: "continuous", autoplaySpeed: 600 }),
     tickerRtl: createSlider(document.getElementById("tickerRtl"), { autoplay: "continuous", autoplaySpeed: 600, direction: "rtl" }),
     tickerLinks: createSlider(document.getElementById("tickerLinks"), { autoplay: "continuous", autoplaySpeed: 36, draggable: false }),
@@ -1076,6 +1081,70 @@ const preThresholdRelease = await inPage(`
   check("drag.releasedBeforeThreshold", !el.classList.contains("aero-slider--dragging") && near(t.scrollLeft, 0) && t.style.scrollSnapType === "", { pos: t.scrollLeft, dragging: el.classList.contains("aero-slider--dragging"), snap: t.style.scrollSnapType });
 `);
 
+// A vertical slider inside a horizontal one: once the outer slider captures the pointer for a
+// sideways drag, the inner one must not start its own drag on the same pointer.
+const nestAt = (
+  await send("Runtime.evaluate", {
+    expression: `(() => {
+      const el = document.getElementById("inner");
+      el.scrollIntoView({ block: "center" });
+      const r = el.querySelector(".aero-slider__track").getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    })()`,
+    returnByValue: true,
+  })
+).result.value;
+await sleep(200);
+const at = (type: string, x: number, y: number, buttons: number) =>
+  send("Input.dispatchMouseEvent", {
+    type,
+    x,
+    y,
+    button: type === "mouseMoved" && !buttons ? "none" : "left",
+    buttons,
+    clickCount: type === "mouseMoved" ? 0 : 1,
+  });
+await at("mouseMoved", nestAt.x, nestAt.y, 0);
+await at("mousePressed", nestAt.x, nestAt.y, 1);
+await at("mouseMoved", nestAt.x - 70, nestAt.y, 1);
+await sleep(32);
+await at("mouseMoved", nestAt.x - 130, nestAt.y - 90, 1);
+await sleep(32);
+const nestedMidDrag = await inPage(`
+  const inner = document.getElementById("inner");
+  check("drag.nestedLeavesCapturedPointer", !inner.classList.contains("aero-slider--dragging") && near(track("inner").scrollTop, 0) && document.getElementById("outer").classList.contains("aero-slider--dragging"), { innerTop: track("inner").scrollTop, innerDragging: inner.classList.contains("aero-slider--dragging") });
+`);
+await at("mouseReleased", nestAt.x - 130, nestAt.y - 90, 0);
+await sleep(600);
+
+// Released over an iframe beside the track: the release never reaches this window. A move with
+// no button held means the press is over, so hovering back must not drag.
+const edgeAt = (
+  await send("Runtime.evaluate", {
+    expression: `(() => {
+      const el = document.getElementById("edge");
+      el.scrollIntoView({ block: "center" });
+      const r = el.querySelector(".aero-slider__track").getBoundingClientRect();
+      return { right: r.right, y: r.top + 50 };
+    })()`,
+    returnByValue: true,
+  })
+).result.value;
+await sleep(200);
+await at("mouseMoved", edgeAt.right - 2, edgeAt.y, 0);
+await at("mousePressed", edgeAt.right - 2, edgeAt.y, 1);
+await at("mouseMoved", edgeAt.right + 2, edgeAt.y, 1);
+await at("mouseReleased", edgeAt.right + 2, edgeAt.y, 0);
+for (const x of [edgeAt.right - 100, edgeAt.right - 300]) {
+  await at("mouseMoved", x, edgeAt.y, 0);
+  await sleep(50);
+}
+const iframeRelease = await inPage(`
+  await sleep(300);
+  const el = document.getElementById("edge"), t = track("edge");
+  check("drag.releasedOverIframe", !el.classList.contains("aero-slider--dragging") && near(t.scrollLeft, 0) && t.style.scrollSnapType === "", { pos: t.scrollLeft, dragging: el.classList.contains("aero-slider--dragging"), snap: t.style.scrollSnapType });
+`);
+
 // A finger that pans the track (the browser takes the gesture over and sends pointercancel) and
 // then stays down is still a finger on the track: no easing under it until it lifts.
 await inPage(`S.settleLoop.goTo(1, { instant: true });`);
@@ -1200,6 +1269,8 @@ const failures: string[] = [
   ...offTrackRelease,
   ...stoppedRelease,
   ...preThresholdRelease,
+  ...nestedMidDrag,
+  ...iframeRelease,
   ...snapped,
   ...wheelSettle,
   ...wheelNone,
