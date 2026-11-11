@@ -1117,6 +1117,37 @@ const nestedMidDrag = await inPage(`
 await at("mouseReleased", nestAt.x - 130, nestAt.y - 90, 0);
 await sleep(600);
 
+// Content that captures the pointer on press (as a browser's implicit capture does for pen and
+// touch) still lets the slider drag: only another slider's track claiming it ends the gesture.
+const grabAt = (
+  await send("Runtime.evaluate", {
+    expression: `(() => {
+      const el = document.getElementById("basic"), t = el.querySelector(".aero-slider__track");
+      el.scrollIntoView({ block: "center" });
+      window.sliders.basic.goTo(0, { instant: true });
+      window.__grab = (e) => e.target.setPointerCapture(e.pointerId);
+      t.children[0].firstElementChild.addEventListener("pointerdown", window.__grab);
+      const r = t.children[0].firstElementChild.getBoundingClientRect();
+      return { x: r.left + 300, y: r.top + r.height / 2 };
+    })()`,
+    returnByValue: true,
+  })
+).result.value;
+await sleep(200);
+await at("mouseMoved", grabAt.x, grabAt.y, 0);
+await at("mousePressed", grabAt.x, grabAt.y, 1);
+for (const dx of [20, 60, 100]) {
+  await at("mouseMoved", grabAt.x - dx, grabAt.y, 1);
+  await sleep(16);
+}
+const capturedContentDrag = await inPage(`
+  const el = document.getElementById("basic");
+  check("drag.contentCaptureStillDrags", el.classList.contains("aero-slider--dragging") && track("basic").scrollLeft > 50, { pos: track("basic").scrollLeft, dragging: el.classList.contains("aero-slider--dragging") });
+  track("basic").children[0].firstElementChild.removeEventListener("pointerdown", window.__grab);
+`);
+await at("mouseReleased", grabAt.x - 100, grabAt.y, 0);
+await sleep(600);
+
 // Released over an iframe beside the track: the release never reaches this window. A move with
 // no button held means the press is over, so hovering back must not drag.
 const edgeAt = (
@@ -1271,6 +1302,7 @@ const failures: string[] = [
   ...preThresholdRelease,
   ...nestedMidDrag,
   ...iframeRelease,
+  ...capturedContentDrag,
   ...snapped,
   ...wheelSettle,
   ...wheelNone,
