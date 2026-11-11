@@ -24,6 +24,7 @@ const page = `<!doctype html><html><head><link rel="stylesheet" href="/dist/aero
 ${slider("basic", 5, "--slide-gap:10px")}
 ${slider("loop", 4, "--slides-per-view:1.5;--slide-gap:8px")}
 ${slider("loopPair", 2)}
+${slider("loopWide", 4, "--slides-per-view:3")}
 <div style="width:1000px">${slider("breakout", 5, "width:1000px;--aero-layout-width:600px;--slides-per-view:1.2;--slide-gap:20px", "aero-slider--breakout")}</div>
 ${slider("rtl", 4)}
 ${slider("dots", 12, "--slides-per-view:3;--slide-gap:6px")}
@@ -61,6 +62,7 @@ ${slider("outer", 3).replace("<div><div>0</div></div>", `<div>${slider("inner", 
     basic: createSlider(document.getElementById("basic")),
     loop: createSlider(document.getElementById("loop"), { loop: true }),
     loopPair: createSlider(document.getElementById("loopPair"), { loop: true, scrollDuration: 1200 }),
+    loopWide: createSlider(document.getElementById("loopWide"), { loop: true, scrollDuration: 1200 }),
     breakout: createSlider(document.getElementById("breakout"), { alignment: "left" }),
     rtl: createSlider(document.getElementById("rtl"), { direction: "rtl" }),
     dots: createSlider(document.getElementById("dots"), { loop: true, perMove: 2, maxDots: 5 }),
@@ -171,6 +173,17 @@ const scenario = `(async () => {
     const landed = [...t.children].find((c) => near(c.offsetLeft - t.scrollLeft, 0, 2));
     check("loopPair.burstStaysOnRunway", hops.length === 0 && jumps.length === 0, { offsets, hops, jumps });
     check("loopPair.burstLands", s.currentIndex === 1 && landed?.textContent === "1", { i: s.currentIndex, landed: landed?.textContent });
+  }
+
+  // Several slides in view: the last clones sit past the scrollable range, so a queued step that
+  // lands on one can't be reached. Eight quick steps from slide 0 must still end on slide 0.
+  {
+    const s = S.loopWide, t = track("loopWide");
+    for (let k = 0; k < 8; k++) s.next();
+    await settled("loopWide");
+    const slideW = t.clientWidth / 3, mid = t.scrollLeft + t.clientWidth / 2;
+    const centered = [...t.children].find((c) => near(c.offsetLeft + slideW / 2, mid, 2));
+    check("loopWide.burstReachesTarget", s.currentIndex === 0 && centered?.textContent === "0", { i: s.currentIndex, centered: centered?.textContent });
   }
 
   // Loop: clones, wrapping both ways, teleport back onto real slides, drag wrap

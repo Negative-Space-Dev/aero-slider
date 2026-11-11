@@ -305,8 +305,11 @@ export function createSlider(
     return clone;
   }
 
+  /** With several slides in view, the outermost clones rest past the scrollable range. */
+  const reachable = (position: number) => position >= -1 && position <= maxScroll + 1;
+
   /**
-   * Steps queued faster than the track moves can run a lap or more past the clones. Head for the
+   * Steps queued faster than the track moves can run a lap or more past the reachable clones. Head for the
    * copy of `index` nearest the track in direction `dir` instead; extra laps would only spin past.
    * With no copy left ahead, hop the track a lap back first: the copies look identical, and a lap
    * from the runway's far end stays on it. Mid-move the track sits between slides, where mandatory
@@ -316,7 +319,7 @@ export function createSlider(
     const copiesAhead = (position: number) =>
       Array.from(track.children, (child, domIndex) =>
         indexOfDom(domIndex) === index ? snapPositionOf(child) : NaN
-      ).filter((p) => (dir > 0 ? p > position + 1 : p < position - 1));
+      ).filter((p) => reachable(p) && (dir > 0 ? p > position + 1 : p < position - 1));
     let ahead = copiesAhead(scrollPosition());
     if (!ahead.length) {
       cancelEase();
@@ -349,7 +352,8 @@ export function createSlider(
       const back = forward * 2 > slideCount || (forward * 2 === slideCount && towards < 0);
       const steps = back ? forward - slideCount : forward;
       const queued = track.children[fromDom + steps];
-      target = queued ? snapPositionOf(queued) : headFor(logical, Math.sign(steps));
+      const queuedAt = queued ? snapPositionOf(queued) : NaN;
+      target = reachable(queuedAt) ? queuedAt : headFor(logical, Math.sign(steps));
     } else {
       target = restPositionOf(logical);
     }
