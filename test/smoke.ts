@@ -1056,6 +1056,24 @@ const stoppedRelease = await inPage(`
   el.removeEventListener("pointerup", window.__stopUp);
   check("drag.stoppedReleaseStartsDrag", ${stoppedStarted}, {});
   check("drag.releaseStoppedByAncestor", !el.classList.contains("aero-slider--dragging") && t.style.scrollSnapType === "" && [0, 610, 1220, 1830, 2440].some((p) => near(t.scrollLeft, p)), { pos: t.scrollLeft, dragging: el.classList.contains("aero-slider--dragging"), snap: t.style.scrollSnapType });
+  S.basic.goTo(0, { instant: true });
+`);
+
+// Released off the track before the drag threshold: no capture ever happens, so only a listener
+// off the track hears the release. Hovering back afterwards must not drag.
+await sleep(200);
+await press("mouseMoved", offTrack.right - 2, 0);
+await press("mousePressed", offTrack.right - 2, 1);
+await press("mouseMoved", offTrack.right + 2, 1);
+await press("mouseReleased", offTrack.right + 2, 0);
+for (const x of [offTrack.right - 100, offTrack.right - 300]) {
+  await press("mouseMoved", x, 0);
+  await sleep(50);
+}
+const preThresholdRelease = await inPage(`
+  await sleep(300);
+  const el = document.getElementById("basic"), t = track("basic");
+  check("drag.releasedBeforeThreshold", !el.classList.contains("aero-slider--dragging") && near(t.scrollLeft, 0) && t.style.scrollSnapType === "", { pos: t.scrollLeft, dragging: el.classList.contains("aero-slider--dragging"), snap: t.style.scrollSnapType });
 `);
 
 // A finger that pans the track (the browser takes the gesture over and sends pointercancel) and
@@ -1181,6 +1199,7 @@ const failures: string[] = [
   ...linkClick,
   ...offTrackRelease,
   ...stoppedRelease,
+  ...preThresholdRelease,
   ...snapped,
   ...wheelSettle,
   ...wheelNone,
