@@ -992,6 +992,44 @@ const linkClick = await inPage(`
   check("ticker.linkClickSurvivesHandBack", window.__clicks.length === 1, { clicks: window.__clicks });
 `);
 
+// A press whose first move already lands off the track, released off it, is over: hovering back
+// over the track with no button held must not drag it.
+const offTrack = (
+  await send("Runtime.evaluate", {
+    expression: `(() => {
+      const el = document.getElementById("basic");
+      el.scrollIntoView({ block: "center" });
+      window.sliders.basic.goTo(0, { instant: true });
+      const r = el.querySelector(".aero-slider__track").getBoundingClientRect();
+      return { right: r.right, y: r.top + 50 };
+    })()`,
+    returnByValue: true,
+  })
+).result.value;
+await sleep(200);
+const press = (type: string, x: number, buttons: number) =>
+  send("Input.dispatchMouseEvent", {
+    type,
+    x,
+    y: offTrack.y,
+    button: type === "mouseMoved" && !buttons ? "none" : "left",
+    buttons,
+    clickCount: type === "mouseMoved" ? 0 : 1,
+  });
+await press("mouseMoved", offTrack.right - 20, 0);
+await press("mousePressed", offTrack.right - 20, 1);
+await press("mouseMoved", offTrack.right + 60, 1);
+await press("mouseReleased", offTrack.right + 60, 0);
+for (const x of [offTrack.right - 100, offTrack.right - 300]) {
+  await press("mouseMoved", x, 0);
+  await sleep(50);
+}
+const offTrackRelease = await inPage(`
+  await sleep(300);
+  const el = document.getElementById("basic"), t = track("basic");
+  check("drag.releasedOffTrack", !el.classList.contains("aero-slider--dragging") && near(t.scrollLeft, 0) && t.style.scrollSnapType === "", { pos: t.scrollLeft, dragging: el.classList.contains("aero-slider--dragging"), snap: t.style.scrollSnapType });
+`);
+
 // A finger that pans the track (the browser takes the gesture over and sends pointercancel) and
 // then stays down is still a finger on the track: no easing under it until it lifts.
 await inPage(`S.settleLoop.goTo(1, { instant: true });`);
@@ -1113,6 +1151,7 @@ const failures: string[] = [
   ...tickerFocus,
   ...tickerWheel,
   ...linkClick,
+  ...offTrackRelease,
   ...snapped,
   ...wheelSettle,
   ...wheelNone,
