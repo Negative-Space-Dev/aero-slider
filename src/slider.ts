@@ -316,10 +316,17 @@ export function createSlider(
    * snapping would pull the hop, so snapping stays off until the move settles.
    */
   function headFor(index: number, dir: number): number {
-    const copiesAhead = (position: number) =>
+    const copies = () =>
       Array.from(track.children, (child, domIndex) =>
         indexOfDom(domIndex) === index ? snapPositionOf(child) : NaN
-      ).filter((p) => reachable(p) && (dir > 0 ? p > position + 1 : p < position - 1));
+      ).filter(reachable);
+    // No direction (a zero step onto an unreachable copy): the nearest reachable copy will do.
+    if (!dir) {
+      const position = scrollPosition();
+      return copies().reduce((a, b) => (Math.abs(b - position) < Math.abs(a - position) ? b : a));
+    }
+    const copiesAhead = (position: number) =>
+      copies().filter((p) => (dir > 0 ? p > position + 1 : p < position - 1));
     let ahead = copiesAhead(scrollPosition());
     if (!ahead.length) {
       cancelEase();
