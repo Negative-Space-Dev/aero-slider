@@ -52,6 +52,8 @@ ${slider("freeLoop", 4, "--slides-per-view:3;--slide-gap:10px")}
 ${slider("settleFrac", 4, "--slides-per-view:1.5;--slide-gap:8px")}
 ${slider("settleRm", 5, "--slide-gap:10px")}
 <div id="cards" class="aero-slider" style="width:600px"><div class="aero-slider__viewport"><div class="aero-slider__track">${Array.from({ length: 3 }, (_, i) => `<a href="#card${i}" id="card${i}">${i}</a>`).join("")}</div></div></div>
+${slider("outer", 3).replace("<div><div>0</div></div>", `<div>${slider("inner", 3, "height:300px")}</div>`)}
+<div style="display:flex">${slider("edge", 3)}<iframe id="edgeFrame" srcdoc="<body style='margin:0;height:200px'></body>" style="width:200px;height:200px;border:0;flex:none"></iframe></div>
 <script type="module">
   import { createSlider } from "/dist/aero-slider.min.js";
   window.sliders = {
@@ -78,6 +80,9 @@ ${slider("settleRm", 5, "--slide-gap:10px")}
     settleLoop: createSlider(document.getElementById("settleLoop"), { loop: true, snap: "settle", scrollDuration: 300 }),
     free: createSlider(document.getElementById("free"), { snap: "none", scrollDuration: 300 }),
     settleTtb: createSlider(document.getElementById("settleTtb"), { direction: "ttb", snap: "settle" }),
+    inner: createSlider(document.getElementById("inner"), { direction: "ttb" }),
+    outer: createSlider(document.getElementById("outer")),
+    edge: createSlider(document.getElementById("edge")),
     ticker: createSlider(document.getElementById("ticker"), { autoplay: "continuous", autoplaySpeed: 600 }),
     tickerRtl: createSlider(document.getElementById("tickerRtl"), { autoplay: "continuous", autoplaySpeed: 600, direction: "rtl" }),
     tickerLinks: createSlider(document.getElementById("tickerLinks"), { autoplay: "continuous", autoplaySpeed: 36, draggable: false }),
@@ -992,6 +997,185 @@ const linkClick = await inPage(`
   check("ticker.linkClickSurvivesHandBack", window.__clicks.length === 1, { clicks: window.__clicks });
 `);
 
+// A press whose first move already lands off the track, released off it, is over: hovering back
+// over the track with no button held must not drag it.
+const offTrack = (
+  await send("Runtime.evaluate", {
+    expression: `(() => {
+      const el = document.getElementById("basic");
+      el.scrollIntoView({ block: "center" });
+      window.sliders.basic.goTo(0, { instant: true });
+      const r = el.querySelector(".aero-slider__track").getBoundingClientRect();
+      return { right: r.right, y: r.top + 50 };
+    })()`,
+    returnByValue: true,
+  })
+).result.value;
+await sleep(200);
+const press = (type: string, x: number, buttons: number) =>
+  send("Input.dispatchMouseEvent", {
+    type,
+    x,
+    y: offTrack.y,
+    button: type === "mouseMoved" && !buttons ? "none" : "left",
+    buttons,
+    clickCount: type === "mouseMoved" ? 0 : 1,
+  });
+await press("mouseMoved", offTrack.right - 20, 0);
+await press("mousePressed", offTrack.right - 20, 1);
+await press("mouseMoved", offTrack.right + 60, 1);
+const draggingBasic = async () =>
+  (
+    await send("Runtime.evaluate", {
+      expression: `document.getElementById("basic").classList.contains("aero-slider--dragging")`,
+      returnByValue: true,
+    })
+  ).result.value;
+const offTrackStarted = await draggingBasic();
+await press("mouseReleased", offTrack.right + 60, 0);
+for (const x of [offTrack.right - 100, offTrack.right - 300]) {
+  await press("mouseMoved", x, 0);
+  await sleep(50);
+}
+const offTrackRelease = await inPage(`
+  await sleep(300);
+  const el = document.getElementById("basic"), t = track("basic");
+  check("drag.offTrackMoveStartsDrag", ${offTrackStarted}, {});
+  check("drag.releasedOffTrack", !el.classList.contains("aero-slider--dragging") && near(t.scrollLeft, 0) && t.style.scrollSnapType === "", { pos: t.scrollLeft, dragging: el.classList.contains("aero-slider--dragging"), snap: t.style.scrollSnapType });
+  window.__stopUp = (e) => e.stopPropagation();
+  el.addEventListener("pointerup", window.__stopUp);
+`);
+
+// An ancestor that stops the pointerup from bubbling still lets the drag end.
+await press("mouseMoved", offTrack.right - 100, 0);
+await press("mousePressed", offTrack.right - 100, 1);
+for (const x of [offTrack.right - 160, offTrack.right - 220, offTrack.right - 280]) {
+  await press("mouseMoved", x, 1);
+  await sleep(16);
+}
+const stoppedStarted = await draggingBasic();
+await press("mouseReleased", offTrack.right - 280, 0);
+const stoppedRelease = await inPage(`
+  await sleep(800);
+  const el = document.getElementById("basic"), t = track("basic");
+  el.removeEventListener("pointerup", window.__stopUp);
+  check("drag.stoppedReleaseStartsDrag", ${stoppedStarted}, {});
+  check("drag.releaseStoppedByAncestor", !el.classList.contains("aero-slider--dragging") && t.style.scrollSnapType === "" && [0, 610, 1220, 1830, 2440].some((p) => near(t.scrollLeft, p)), { pos: t.scrollLeft, dragging: el.classList.contains("aero-slider--dragging"), snap: t.style.scrollSnapType });
+  S.basic.goTo(0, { instant: true });
+`);
+
+// Released off the track before the drag threshold: no capture ever happens, so only a listener
+// off the track hears the release. Hovering back afterwards must not drag.
+await sleep(200);
+await press("mouseMoved", offTrack.right - 2, 0);
+await press("mousePressed", offTrack.right - 2, 1);
+await press("mouseMoved", offTrack.right + 2, 1);
+await press("mouseReleased", offTrack.right + 2, 0);
+for (const x of [offTrack.right - 100, offTrack.right - 300]) {
+  await press("mouseMoved", x, 0);
+  await sleep(50);
+}
+const preThresholdRelease = await inPage(`
+  await sleep(300);
+  const el = document.getElementById("basic"), t = track("basic");
+  check("drag.releasedBeforeThreshold", !el.classList.contains("aero-slider--dragging") && near(t.scrollLeft, 0) && t.style.scrollSnapType === "", { pos: t.scrollLeft, dragging: el.classList.contains("aero-slider--dragging"), snap: t.style.scrollSnapType });
+`);
+
+// A vertical slider inside a horizontal one: once the outer slider captures the pointer for a
+// sideways drag, the inner one must not start its own drag on the same pointer.
+const nestAt = (
+  await send("Runtime.evaluate", {
+    expression: `(() => {
+      const el = document.getElementById("inner");
+      el.scrollIntoView({ block: "center" });
+      const r = el.querySelector(".aero-slider__track").getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    })()`,
+    returnByValue: true,
+  })
+).result.value;
+await sleep(200);
+const at = (type: string, x: number, y: number, buttons: number) =>
+  send("Input.dispatchMouseEvent", {
+    type,
+    x,
+    y,
+    button: type === "mouseMoved" && !buttons ? "none" : "left",
+    buttons,
+    clickCount: type === "mouseMoved" ? 0 : 1,
+  });
+await at("mouseMoved", nestAt.x, nestAt.y, 0);
+await at("mousePressed", nestAt.x, nestAt.y, 1);
+await at("mouseMoved", nestAt.x - 70, nestAt.y, 1);
+await sleep(32);
+await at("mouseMoved", nestAt.x - 130, nestAt.y - 90, 1);
+await sleep(32);
+const nestedMidDrag = await inPage(`
+  const inner = document.getElementById("inner");
+  check("drag.nestedLeavesCapturedPointer", !inner.classList.contains("aero-slider--dragging") && near(track("inner").scrollTop, 0) && document.getElementById("outer").classList.contains("aero-slider--dragging"), { innerTop: track("inner").scrollTop, innerDragging: inner.classList.contains("aero-slider--dragging") });
+`);
+await at("mouseReleased", nestAt.x - 130, nestAt.y - 90, 0);
+await sleep(600);
+
+// Content that captures the pointer on press (as a browser's implicit capture does for pen and
+// touch) still lets the slider drag: only another slider's track claiming it ends the gesture.
+const grabAt = (
+  await send("Runtime.evaluate", {
+    expression: `(() => {
+      const el = document.getElementById("basic"), t = el.querySelector(".aero-slider__track");
+      el.scrollIntoView({ block: "center" });
+      window.sliders.basic.goTo(0, { instant: true });
+      window.__grab = (e) => e.target.setPointerCapture(e.pointerId);
+      t.children[0].firstElementChild.addEventListener("pointerdown", window.__grab);
+      const r = t.children[0].firstElementChild.getBoundingClientRect();
+      return { x: r.left + 300, y: r.top + r.height / 2 };
+    })()`,
+    returnByValue: true,
+  })
+).result.value;
+await sleep(200);
+await at("mouseMoved", grabAt.x, grabAt.y, 0);
+await at("mousePressed", grabAt.x, grabAt.y, 1);
+for (const dx of [20, 60, 100]) {
+  await at("mouseMoved", grabAt.x - dx, grabAt.y, 1);
+  await sleep(16);
+}
+const capturedContentDrag = await inPage(`
+  const el = document.getElementById("basic");
+  check("drag.contentCaptureStillDrags", el.classList.contains("aero-slider--dragging") && track("basic").scrollLeft > 50, { pos: track("basic").scrollLeft, dragging: el.classList.contains("aero-slider--dragging") });
+  track("basic").children[0].firstElementChild.removeEventListener("pointerdown", window.__grab);
+`);
+await at("mouseReleased", grabAt.x - 100, grabAt.y, 0);
+await sleep(600);
+
+// Released over an iframe beside the track: the release never reaches this window. A move with
+// no button held means the press is over, so hovering back must not drag.
+const edgeAt = (
+  await send("Runtime.evaluate", {
+    expression: `(() => {
+      const el = document.getElementById("edge");
+      el.scrollIntoView({ block: "center" });
+      const r = el.querySelector(".aero-slider__track").getBoundingClientRect();
+      return { right: r.right, y: r.top + 50 };
+    })()`,
+    returnByValue: true,
+  })
+).result.value;
+await sleep(200);
+await at("mouseMoved", edgeAt.right - 2, edgeAt.y, 0);
+await at("mousePressed", edgeAt.right - 2, edgeAt.y, 1);
+await at("mouseMoved", edgeAt.right + 2, edgeAt.y, 1);
+await at("mouseReleased", edgeAt.right + 2, edgeAt.y, 0);
+for (const x of [edgeAt.right - 100, edgeAt.right - 300]) {
+  await at("mouseMoved", x, edgeAt.y, 0);
+  await sleep(50);
+}
+const iframeRelease = await inPage(`
+  await sleep(300);
+  const el = document.getElementById("edge"), t = track("edge");
+  check("drag.releasedOverIframe", !el.classList.contains("aero-slider--dragging") && near(t.scrollLeft, 0) && t.style.scrollSnapType === "", { pos: t.scrollLeft, dragging: el.classList.contains("aero-slider--dragging"), snap: t.style.scrollSnapType });
+`);
+
 // A finger that pans the track (the browser takes the gesture over and sends pointercancel) and
 // then stays down is still a finger on the track: no easing under it until it lifts.
 await inPage(`S.settleLoop.goTo(1, { instant: true });`);
@@ -1113,6 +1297,12 @@ const failures: string[] = [
   ...tickerFocus,
   ...tickerWheel,
   ...linkClick,
+  ...offTrackRelease,
+  ...stoppedRelease,
+  ...preThresholdRelease,
+  ...nestedMidDrag,
+  ...iframeRelease,
+  ...capturedContentDrag,
   ...snapped,
   ...wheelSettle,
   ...wheelNone,

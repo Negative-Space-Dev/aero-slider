@@ -463,6 +463,18 @@ export function createSlider(
     let frame = 0;
 
     function onMove(move: PointerEvent): void {
+      // No button held: the release landed where this window can't hear it (an iframe).
+      if (!(move.buttons & 1)) return onUp(move);
+      // Another slider (a parent or a child) captured this pointer for its own drag. Content that
+      // holds it (a browser's implicit capture for pen) still drags this one.
+      const target = move.target as Element;
+      if (
+        target !== track &&
+        target.matches?.(".aero-slider__track") &&
+        target.hasPointerCapture(move.pointerId)
+      ) {
+        return onUp(move);
+      }
       const coord = move[axis];
       if (!dragging) {
         if (Math.abs(coord - startCoord) < DRAG_THRESHOLD_PX) return;
@@ -543,10 +555,16 @@ export function createSlider(
       play.release("drag");
     }
 
+    // On window: until the drag threshold captures the pointer, a move or release off the track
+    // never reaches it, and a gesture left open would drag on the next hover. Capture phase, so
+    // an ancestor that stops the event can't keep it from us either.
     const options = { signal: gesture.signal };
-    track.addEventListener("pointermove", onMove, options);
-    track.addEventListener("pointerup", onUp, options);
-    track.addEventListener("pointercancel", onUp, options);
+    const windowOptions = { ...options, capture: true };
+    const own = (handler: (e: PointerEvent) => void) => (e: PointerEvent) =>
+      e.pointerId === event.pointerId && handler(e);
+    addEventListener("pointermove", own(onMove), windowOptions);
+    addEventListener("pointerup", own(onUp), windowOptions);
+    addEventListener("pointercancel", own(onUp), windowOptions);
     signal.addEventListener("abort", () => gesture.abort(), options);
   }
 
