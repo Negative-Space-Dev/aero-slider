@@ -544,13 +544,15 @@ export function createSlider(
     }
 
     // On window: until the drag threshold captures the pointer, a move or release off the track
-    // never reaches it, and a gesture left open would drag on the next hover.
+    // never reaches it, and a gesture left open would drag on the next hover. Capture phase, so
+    // an ancestor that stops the event can't keep it from us either.
     const options = { signal: gesture.signal };
+    const windowOptions = { ...options, capture: true };
     const own = (handler: (e: PointerEvent) => void) => (e: PointerEvent) =>
       e.pointerId === event.pointerId && handler(e);
-    addEventListener("pointermove", own(onMove), options);
-    addEventListener("pointerup", own(onUp), options);
-    addEventListener("pointercancel", own(onUp), options);
+    addEventListener("pointermove", own(onMove), windowOptions);
+    addEventListener("pointerup", own(onUp), windowOptions);
+    addEventListener("pointercancel", own(onUp), windowOptions);
     signal.addEventListener("abort", () => gesture.abort(), options);
   }
 
