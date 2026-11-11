@@ -465,9 +465,16 @@ export function createSlider(
     function onMove(move: PointerEvent): void {
       // No button held: the release landed where this window can't hear it (an iframe).
       if (!(move.buttons & 1)) return onUp(move);
-      // Another slider (a parent or a child) captured this pointer for its own drag.
+      // Another slider (a parent or a child) captured this pointer for its own drag. Content that
+      // holds it (a browser's implicit capture for pen) still drags this one.
       const target = move.target as Element;
-      if (target !== track && target.hasPointerCapture?.(move.pointerId)) return onUp(move);
+      if (
+        target !== track &&
+        target.matches?.(".aero-slider__track") &&
+        target.hasPointerCapture(move.pointerId)
+      ) {
+        return onUp(move);
+      }
       const coord = move[axis];
       if (!dragging) {
         if (Math.abs(coord - startCoord) < DRAG_THRESHOLD_PX) return;
