@@ -1019,6 +1019,14 @@ const press = (type: string, x: number, buttons: number) =>
 await press("mouseMoved", offTrack.right - 20, 0);
 await press("mousePressed", offTrack.right - 20, 1);
 await press("mouseMoved", offTrack.right + 60, 1);
+const draggingBasic = async () =>
+  (
+    await send("Runtime.evaluate", {
+      expression: `document.getElementById("basic").classList.contains("aero-slider--dragging")`,
+      returnByValue: true,
+    })
+  ).result.value;
+const offTrackStarted = await draggingBasic();
 await press("mouseReleased", offTrack.right + 60, 0);
 for (const x of [offTrack.right - 100, offTrack.right - 300]) {
   await press("mouseMoved", x, 0);
@@ -1027,6 +1035,7 @@ for (const x of [offTrack.right - 100, offTrack.right - 300]) {
 const offTrackRelease = await inPage(`
   await sleep(300);
   const el = document.getElementById("basic"), t = track("basic");
+  check("drag.offTrackMoveStartsDrag", ${offTrackStarted}, {});
   check("drag.releasedOffTrack", !el.classList.contains("aero-slider--dragging") && near(t.scrollLeft, 0) && t.style.scrollSnapType === "", { pos: t.scrollLeft, dragging: el.classList.contains("aero-slider--dragging"), snap: t.style.scrollSnapType });
   window.__stopUp = (e) => e.stopPropagation();
   el.addEventListener("pointerup", window.__stopUp);
@@ -1039,11 +1048,13 @@ for (const x of [offTrack.right - 160, offTrack.right - 220, offTrack.right - 28
   await press("mouseMoved", x, 1);
   await sleep(16);
 }
+const stoppedStarted = await draggingBasic();
 await press("mouseReleased", offTrack.right - 280, 0);
 const stoppedRelease = await inPage(`
   await sleep(800);
   const el = document.getElementById("basic"), t = track("basic");
   el.removeEventListener("pointerup", window.__stopUp);
+  check("drag.stoppedReleaseStartsDrag", ${stoppedStarted}, {});
   check("drag.releaseStoppedByAncestor", !el.classList.contains("aero-slider--dragging") && t.style.scrollSnapType === "" && [0, 610, 1220, 1830, 2440].some((p) => near(t.scrollLeft, p)), { pos: t.scrollLeft, dragging: el.classList.contains("aero-slider--dragging"), snap: t.style.scrollSnapType });
 `);
 
