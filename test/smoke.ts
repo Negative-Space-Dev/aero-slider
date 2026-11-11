@@ -1056,8 +1056,9 @@ for (const x of [offTrack.right - 160, offTrack.right - 220, offTrack.right - 28
 const stoppedStarted = await draggingBasic();
 await press("mouseReleased", offTrack.right - 280, 0);
 const stoppedRelease = await inPage(`
-  await sleep(800);
   const el = document.getElementById("basic"), t = track("basic");
+  // A flick can carry to the last slide, a smooth scroll of about 800 ms; wait for it to land.
+  for (let n = 0; n < 50 && t.style.scrollSnapType !== ""; n++) await sleep(50);
   el.removeEventListener("pointerup", window.__stopUp);
   check("drag.stoppedReleaseStartsDrag", ${stoppedStarted}, {});
   check("drag.releaseStoppedByAncestor", !el.classList.contains("aero-slider--dragging") && t.style.scrollSnapType === "" && [0, 610, 1220, 1830, 2440].some((p) => near(t.scrollLeft, p)), { pos: t.scrollLeft, dragging: el.classList.contains("aero-slider--dragging"), snap: t.style.scrollSnapType });
