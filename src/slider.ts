@@ -307,7 +307,8 @@ export function createSlider(
 
   // ── Navigation ───────────────────────────────────────────────────────
 
-  function goTo(index: number, options: GoToOptions = {}): void {
+  /** `towards` is the sign of a next()/prev() step: it picks the way round when both are equally short. */
+  function goTo(index: number, options: GoToOptions = {}, towards = 0): void {
     if (destroyed || !slideCount) return;
     // Continuous autoplay hands its lap back to the scroll offset before we measure from it.
     play.interrupt();
@@ -316,10 +317,23 @@ export function createSlider(
     if (!slideStride) return; // no layout yet (display: none); relayout() lands here once shown
     let target: number;
     if (loop()) {
-      teleportToRealSlides();
-      const fromDom = domIndexAt(scrollPosition());
+      // Step from where a move in flight is headed, not from where it has got to: with few slides,
+      // a move short of halfway still rounds to the slide it is leaving, which can be the new target.
+      const inFlight = programmaticScroll;
+      if (!inFlight) teleportToRealSlides();
+      const from = inFlight ? scrollTarget : scrollPosition();
+      let fromDom = domIndexAt(from);
       const forward = wrap(logical - indexOfDom(fromDom));
-      const steps = forward > slideCount / 2 ? forward - slideCount : forward;
+      const back = forward * 2 > slideCount || (forward * 2 === slideCount && towards < 0);
+      const steps = back ? forward - slideCount : forward;
+      if (!track.children[fromDom + steps]) {
+        // Repeated steps ran out of clones: hop onto the real copies, which look identical.
+        // Mid-move the track sits between slides, where mandatory snapping would pull the hop.
+        const shift = shiftToRealCopy(fromDom);
+        track.style.scrollSnapType = "none";
+        scrollTo(scrollPosition() + shift);
+        fromDom = domIndexAt(from + shift);
+      }
       target = snapPositionOf(track.children[fromDom + steps]!);
     } else {
       target = restPositionOf(logical);
@@ -337,7 +351,7 @@ export function createSlider(
   /** Steps from the slide that's showing: a continuous lap hands back first, so sync to it. */
   function stepBy(delta: number): void {
     if (play.interrupt()) setCurrent(indexAt(scrollPosition()));
-    goTo(current + delta);
+    goTo(current + delta, {}, delta);
   }
   const next = () => stepBy(step());
   const prev = () => stepBy(-step());

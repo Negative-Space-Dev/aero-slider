@@ -23,6 +23,7 @@ const slider = (id: string, n: number, style = "", extra = "") =>
 const page = `<!doctype html><html><head><link rel="stylesheet" href="/dist/aero-slider.min.css"></head><body style="margin:0">
 ${slider("basic", 5, "--slide-gap:10px")}
 ${slider("loop", 4, "--slides-per-view:1.5;--slide-gap:8px")}
+${slider("loopPair", 2)}
 <div style="width:1000px">${slider("breakout", 5, "width:1000px;--aero-layout-width:600px;--slides-per-view:1.2;--slide-gap:20px", "aero-slider--breakout")}</div>
 ${slider("rtl", 4)}
 ${slider("dots", 12, "--slides-per-view:3;--slide-gap:6px")}
@@ -59,6 +60,7 @@ ${slider("outer", 3).replace("<div><div>0</div></div>", `<div>${slider("inner", 
   window.sliders = {
     basic: createSlider(document.getElementById("basic")),
     loop: createSlider(document.getElementById("loop"), { loop: true }),
+    loopPair: createSlider(document.getElementById("loopPair"), { loop: true, scrollDuration: 1200 }),
     breakout: createSlider(document.getElementById("breakout"), { alignment: "left" }),
     rtl: createSlider(document.getElementById("rtl"), { direction: "rtl" }),
     dots: createSlider(document.getElementById("dots"), { loop: true, perMove: 2, maxDots: 5 }),
@@ -141,6 +143,23 @@ const scenario = `(async () => {
     check("basic.userScroll", s.currentIndex === 0, { i: s.currentIndex });
     check("basic.events", changes.join() === "1,4,3,2,0", changes);
     check("basic.dots", [...el.querySelectorAll(".aero-slider__dot")].map((d) => d.classList.contains("aero-slider__dot--active")).join() === "true,false,false,false,false", {});
+  }
+
+  // Loop with two slides: a next() before the last move is halfway still moves forward.
+  // Stepping from the live offset found the slide being left, which is the new target, so the
+  // track stood still (or turned back) while the index and dots advanced.
+  {
+    const s = S.loopPair, t = track("loopPair"), lap = 2 * t.clientWidth;
+    s.next(); await sleep(30); s.next();
+    const path = await frames("loopPair", 1500); await settled("loopPair");
+    const backward = path.slice(1).map((p, i) => p - path[i]).filter((d) => d < -1 && Math.abs(d + lap) > 2);
+    const centered = [...t.children].find((c) => near(c.offsetLeft - t.scrollLeft, 0, 2));
+    check("loopPair.fastNextMovesForward", backward.length === 0 && Math.max(...path) - path[0] >= lap * 0.75, { backward, travel: Math.max(...path) - path[0], lap });
+    check("loopPair.fastNextLands", s.currentIndex === 0 && centered?.textContent === "0", { i: s.currentIndex, centered: centered?.textContent });
+    // Both ways round are one slide here; prev() should still go back, not forward.
+    s.prev();
+    const back = await frames("loopPair", 1400); await settled("loopPair");
+    check("loopPair.prevGoesBack", Math.min(...back) <= back[0] - lap / 4, { from: back[0], min: Math.min(...back) });
   }
 
   // Loop: clones, wrapping both ways, teleport back onto real slides, drag wrap
