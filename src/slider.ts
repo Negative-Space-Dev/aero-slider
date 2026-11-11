@@ -305,9 +305,42 @@ export function createSlider(
     return clone;
   }
 
+  /** With several slides in view, the outermost clones rest past the scrollable range. */
+  const reachable = (position: number) => position >= -1 && position <= maxScroll + 1;
+
+  /**
+   * Steps queued faster than the track moves can run a lap or more past the reachable clones. Head for the
+   * copy of `index` nearest the track in direction `dir` instead; extra laps would only spin past.
+   * With no copy left ahead, hop the track a lap back first: the copies look identical, and a lap
+   * from the runway's far end stays on it. Mid-move the track sits between slides, where mandatory
+   * snapping would pull the hop, so snapping stays off until the move settles.
+   */
+  function headFor(index: number, dir: number): number {
+    const copies = () =>
+      Array.from(track.children, (child, domIndex) =>
+        indexOfDom(domIndex) === index ? snapPositionOf(child) : NaN
+      ).filter(reachable);
+    // No direction (a zero step onto an unreachable copy): the nearest reachable copy will do.
+    if (!dir) {
+      const position = scrollPosition();
+      return copies().reduce((a, b) => (Math.abs(b - position) < Math.abs(a - position) ? b : a));
+    }
+    const copiesAhead = (position: number) =>
+      copies().filter((p) => (dir > 0 ? p > position + 1 : p < position - 1));
+    let ahead = copiesAhead(scrollPosition());
+    if (!ahead.length) {
+      cancelEase();
+      track.style.scrollSnapType = "none";
+      scrollTo(scrollPosition() - dir * cycleWidth());
+      ahead = copiesAhead(scrollPosition());
+    }
+    return dir > 0 ? Math.min(...ahead) : Math.max(...ahead);
+  }
+
   // ── Navigation ───────────────────────────────────────────────────────
 
-  function goTo(index: number, options: GoToOptions = {}): void {
+  /** `towards` is the sign of a next()/prev() step: it picks the way round when both are equally short. */
+  function goTo(index: number, options: GoToOptions = {}, towards = 0): void {
     if (destroyed || !slideCount) return;
     // Continuous autoplay hands its lap back to the scroll offset before we measure from it.
     play.interrupt();
@@ -316,11 +349,18 @@ export function createSlider(
     if (!slideStride) return; // no layout yet (display: none); relayout() lands here once shown
     let target: number;
     if (loop()) {
-      teleportToRealSlides();
-      const fromDom = domIndexAt(scrollPosition());
+      // Step from where a move in flight is headed, not from where it has got to: with few slides,
+      // a move short of halfway still rounds to the slide it is leaving, which can be the new target.
+      const inFlight = programmaticScroll;
+      if (!inFlight) teleportToRealSlides();
+      const from = inFlight ? scrollTarget : scrollPosition();
+      const fromDom = domIndexAt(from);
       const forward = wrap(logical - indexOfDom(fromDom));
-      const steps = forward > slideCount / 2 ? forward - slideCount : forward;
-      target = snapPositionOf(track.children[fromDom + steps]!);
+      const back = forward * 2 > slideCount || (forward * 2 === slideCount && towards < 0);
+      const steps = back ? forward - slideCount : forward;
+      const queued = track.children[fromDom + steps];
+      const queuedAt = queued ? snapPositionOf(queued) : NaN;
+      target = reachable(queuedAt) ? queuedAt : headFor(logical, Math.sign(steps));
     } else {
       target = restPositionOf(logical);
     }
@@ -337,7 +377,7 @@ export function createSlider(
   /** Steps from the slide that's showing: a continuous lap hands back first, so sync to it. */
   function stepBy(delta: number): void {
     if (play.interrupt()) setCurrent(indexAt(scrollPosition()));
-    goTo(current + delta);
+    goTo(current + delta, {}, delta);
   }
   const next = () => stepBy(step());
   const prev = () => stepBy(-step());
