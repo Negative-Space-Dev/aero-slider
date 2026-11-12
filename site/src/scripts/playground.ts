@@ -1,6 +1,8 @@
 import { createSlider, syncThumbnails } from "aero-slider";
 import type { SliderConfig, SliderInstance } from "aero-slider";
 import { getRequiredElementById } from "../lib/dom";
+import { highlight, type LiveLang } from "../lib/highlight";
+import { playgroundCode, type PlaygroundSettings } from "../lib/playground-code";
 import { createSlideElement, heroToneFor } from "../lib/slide";
 
 // Discrete steps for slidesPerView with exponential curve
@@ -51,7 +53,6 @@ function formatOutputValue(name: string, value: string): string {
 
 // ── Hero interactive slider ───────────────────────────────────────────
 const form = getRequiredElementById<HTMLFormElement>("config-form");
-const logList = getRequiredElementById<HTMLTableSectionElement>("event-log");
 const heroSliderEl = getRequiredElementById<HTMLElement>("hero-slider");
 const heroThumbsWrapper = getRequiredElementById<HTMLElement>("hero-thumbs-wrapper");
 
@@ -303,30 +304,6 @@ function applyLayoutFromFormToContainer(container: HTMLElement): void {
   container.toggleAttribute("data-flush", gap === 0);
 }
 
-const eventLogEmpty = document.getElementById("event-log-empty");
-const eventLogTable = document.getElementById("event-log-table");
-
-function logEvent(name: string, data: { index?: number; fromIndex?: number } | undefined): void {
-  // Hide empty state, show table
-  if (eventLogEmpty && eventLogTable) {
-    eventLogEmpty.classList.add("hidden");
-    eventLogTable.classList.remove("hidden");
-  }
-
-  const row = document.createElement("tr");
-  row.className = "border-t border-line";
-  const time = new Date().toLocaleTimeString();
-  const dataStr =
-    data?.fromIndex !== undefined && data.index !== undefined
-      ? `${data.fromIndex}→${data.index}`
-      : data?.index !== undefined
-        ? `index=${data.index}`
-        : "{}";
-  row.innerHTML = `<td class="truncate px-5 py-1.5 text-ink">${name}</td><td class="truncate px-5 py-1.5 text-muted">${dataStr}</td><td class="px-5 py-1.5 text-faint tabular-nums">${time}</td>`;
-  logList.prepend(row);
-  while (logList.children.length > 30) logList.lastElementChild?.remove();
-}
-
 function updateThumbnailState(show: boolean): void {
   heroThumbsWrapper.hidden = !show;
   if (show) {
@@ -349,8 +326,6 @@ function updateThumbnailState(show: boolean): void {
   }
 }
 
-let heroEventController: AbortController | null = null;
-
 function rebuildHero(): void {
   if (syncTeardown) {
     syncTeardown();
@@ -363,8 +338,6 @@ function rebuildHero(): void {
   if (heroSlider) {
     heroSlider.destroy();
   }
-  heroEventController?.abort();
-  heroEventController = new AbortController();
 
   const config = readConfig();
   const targetCount = config.slideCount ?? 5;
@@ -373,28 +346,6 @@ function rebuildHero(): void {
   applyLayoutFromFormToContainer(heroSliderEl);
   ensureHeroNavAndPagination();
   heroSlider = createSlider(heroSliderEl, config);
-
-  const events = [
-    "ready",
-    "slideChange",
-    "dragStart",
-    "dragEnd",
-    "autoplayStart",
-    "autoplayStop",
-    "destroy",
-    "resize",
-    "resized",
-    "visible",
-    "hidden",
-  ] as const;
-
-  for (const event of events) {
-    heroSliderEl.addEventListener(
-      `aero:${event}`,
-      (e) => logEvent(event, (e as CustomEvent<{ index?: number; fromIndex?: number }>).detail),
-      { signal: heroEventController!.signal }
-    );
-  }
 
   updateThumbnailState(config.thumbnails ?? false);
 }
@@ -506,27 +457,53 @@ const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0;
 const draggableInput = form.querySelector<HTMLInputElement>('input[name="draggable"]');
 const draggableLabel = draggableInput?.closest("label");
 
-// ── Mobile Event Log Collapse ─────────────────────────────────────────
-const eventLogToggle = document.getElementById("event-log-toggle");
-const eventLogContent = document.getElementById("event-log-content");
-const eventLogIcon = document.getElementById("event-log-icon");
+// ── Generated code ────────────────────────────────────────────────────
+const codeBlock = getRequiredElementById<HTMLElement>("playground-code");
 
-if (eventLogToggle && eventLogContent && eventLogIcon) {
-  const icon = (path: string) =>
-    `<svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="${path}" /></svg>`;
-  const MINUS = icon("M20 12H4");
-  const PLUS = icon("M12 4v16m8-8H4");
-
-  let isExpanded = true;
-  eventLogIcon.innerHTML = MINUS;
-
-  eventLogToggle.addEventListener("click", () => {
-    if (window.innerWidth >= 640) return; // Only collapsible on mobile
-    isExpanded = !isExpanded;
-    eventLogContent.classList.toggle("max-sm:hidden", !isExpanded);
-    eventLogIcon.innerHTML = isExpanded ? MINUS : PLUS;
-  });
+function readSettings(): PlaygroundSettings {
+  const config = readConfig();
+  const fd = new FormData(form);
+  return {
+    slideCount: config.slideCount ?? 5,
+    slidesPerView: spvIndexToValue(Number(fd.get("slidesPerView")) || 0),
+    gap: Number(fd.get("gap")) || 0,
+    perMove: config.perMove ?? 1,
+    maxDots: config.maxDots,
+    autoplayInterval: config.autoplayInterval ?? 4000,
+    alignment: config.alignment ?? "center",
+    direction: config.direction ?? "ltr",
+    loop: config.loop ?? false,
+    pagination: getFormBool("pagination"),
+    navigation: getFormBool("navigation"),
+    draggable: config.draggable ?? true,
+    autoplay: config.autoplay === true,
+    thumbnails: config.thumbnails ?? false,
+  };
 }
+
+const LIVE_LANGS = { html: "html", css: "css", js: "js" } as const;
+
+function renderCode(): void {
+  const code = playgroundCode(readSettings());
+  for (const [key, lang] of Object.entries(LIVE_LANGS) as [keyof typeof LIVE_LANGS, LiveLang][]) {
+    const panel = codeBlock.querySelector<HTMLElement>(`[data-panel="${key}"]`);
+    if (panel) panel.innerHTML = highlight(code[key], lang);
+  }
+}
+
+form.addEventListener("input", renderCode);
+form.addEventListener("change", renderCode);
+renderCode();
+
+const codeToggle = getRequiredElementById<HTMLButtonElement>("code-toggle");
+const codeContent = getRequiredElementById<HTMLElement>("code-content");
+const codeToggleIcon = getRequiredElementById<HTMLElement>("code-toggle-icon");
+codeToggle.addEventListener("click", () => {
+  const expanded = codeToggle.getAttribute("aria-expanded") !== "true";
+  codeToggle.setAttribute("aria-expanded", String(expanded));
+  codeContent.classList.toggle("max-sm:hidden", !expanded);
+  codeToggleIcon.textContent = expanded ? "−" : "+";
+});
 
 if (isTouchDevice && draggableLabel) {
   // Create tooltip element

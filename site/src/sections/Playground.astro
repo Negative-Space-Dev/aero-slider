@@ -2,6 +2,9 @@
 import Pagination from "../components/Pagination.astro";
 import SliderNav from "../components/SliderNav.astro";
 import Slides from "../components/Slides.astro";
+import CodeTabs from "../components/CodeTabs.astro";
+import type { CodeTab } from "../lib/code";
+import { playgroundCode } from "../lib/playground-code";
 import { heroToneFor, type SlideContent } from "../lib/slide";
 
 // Playground controls. Ids and names are read by the inline script below and
@@ -35,6 +38,29 @@ const heroSlides: SlideContent[] = ORDINALS.map((ordinal, i) => ({
   label: `Slide ${ordinal}`,
   tone: heroToneFor(i + 1),
 }));
+// Matches the form defaults above, so the code panel is right before the script runs.
+const initialCode = playgroundCode({
+  slideCount: 5,
+  slidesPerView: 1,
+  gap: 10,
+  perMove: 1,
+  maxDots: 9,
+  autoplayInterval: 4000,
+  alignment: "center",
+  direction: "ltr",
+  loop: false,
+  pagination: true,
+  navigation: true,
+  draggable: true,
+  autoplay: false,
+  thumbnails: false,
+});
+const initialTabs = [
+  { label: "HTML", key: "html", lang: "html", code: initialCode.html },
+  { label: "CSS", key: "css", lang: "css", code: initialCode.css },
+  { label: "JS", key: "js", lang: "javascript", code: initialCode.js },
+] satisfies CodeTab[];
+
 const heroThumbs: SlideContent[] = heroSlides.map(({ num, tone }) => ({ num, tone }));
 ---
 
@@ -75,32 +101,19 @@ const heroThumbs: SlideContent[] = heroSlides.map(({ num, tone }) => ({ num, ton
         </div>
       </div>
 
-      <!-- Event Log -->
-      <div id="event-log-container" class="flex flex-1 flex-col border-t border-line">
+      <div class="flex flex-1 flex-col border-t border-line">
         <button
           type="button"
-          id="event-log-toggle"
-          class="flex w-full items-center justify-between px-5 py-3 text-left sm:cursor-default"
+          id="code-toggle"
+          aria-expanded="true"
+          aria-controls="code-content"
+          class="flex w-full items-center justify-between px-5 py-3 text-left sm:hidden"
         >
-          <span class="caption">Event log</span>
-          <span id="event-log-icon" class="text-faint sm:hidden"></span>
+          <span class="caption">Code</span>
+          <span id="code-toggle-icon" class="font-mono text-faint" aria-hidden="true">−</span>
         </button>
-        <div id="event-log-content" class="relative min-h-44 flex-1 border-t border-line">
-          <div class="absolute inset-0 overflow-auto">
-            <div id="event-log-empty" class="flex h-full items-center justify-center px-4 text-center">
-              <p class="text-sm text-faint">Interact with the slider to see events</p>
-            </div>
-            <table class="hidden w-full min-w-[300px] font-mono text-xs" id="event-log-table">
-              <thead>
-                <tr class="text-left">
-                  <th class="caption px-5 pt-3 pb-2">Event</th>
-                  <th class="caption px-5 pt-3 pb-2">Data</th>
-                  <th class="caption px-5 pt-3 pb-2">Time</th>
-                </tr>
-              </thead>
-              <tbody id="event-log"></tbody>
-            </table>
-          </div>
+        <div id="code-content" class="flex-1 max-sm:border-t max-sm:border-line">
+          <CodeTabs id="playground-code" class="code-tabs--flush" tabs={initialTabs} />
         </div>
       </div>
     </div>

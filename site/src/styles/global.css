@@ -515,6 +515,18 @@ body {
     tab-size: 2;
   }
 
+  /* Flush variant: sits inside another panel, which supplies the frame. */
+  .code-tabs--flush {
+    border: 0;
+    border-radius: 0;
+  }
+  .code-tabs--flush .code-tabs__bar {
+    padding-inline: 0.75rem 0.5rem;
+  }
+  .code-tabs--flush pre {
+    padding-inline: 1.25rem;
+  }
+
   /* Collapsed content behind a real <details>, so it works from the keyboard. */
   .disclosure > summary {
     display: inline-flex;
