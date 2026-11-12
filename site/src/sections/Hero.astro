@@ -1,0 +1,137 @@
+---
+import SparklesIcon from "../components/icons/SparklesIcon.astro";
+import ZapIcon from "../components/icons/ZapIcon.astro";
+import BoxIcon from "../components/icons/BoxIcon.astro";
+import WrenchIcon from "../components/icons/WrenchIcon.astro";
+import TargetIcon from "../components/icons/TargetIcon.astro";
+import HandIcon from "../components/icons/HandIcon.astro";
+import AccessibilityIcon from "../components/icons/AccessibilityIcon.astro";
+import InfinityIcon from "../components/icons/InfinityIcon.astro";
+import PlayIcon from "../components/icons/PlayIcon.astro";
+import ColumnsIcon from "../components/icons/ColumnsIcon.astro";
+import RulerIcon from "../components/icons/RulerIcon.astro";
+import MoreHorizontalIcon from "../components/icons/MoreHorizontalIcon.astro";
+import ImageIcon from "../components/icons/ImageIcon.astro";
+import ActivityIcon from "../components/icons/ActivityIcon.astro";
+import AnchorIcon from "../components/icons/AnchorIcon.astro";
+import KeyboardIcon from "../components/icons/KeyboardIcon.astro";
+import { REPO } from "../lib/site";
+
+// Two marquee rows; the second runs in the opposite direction.
+const featureRows = [
+  [
+    { icon: SparklesIcon, label: "CSS-First Architecture" },
+    { icon: ZapIcon, label: "~8 KB gzipped" },
+    { icon: BoxIcon, label: "Zero Dependencies" },
+    { icon: WrenchIcon, label: "Highly Extensible" },
+    { icon: TargetIcon, label: "Native Scroll Snapping" },
+    { icon: HandIcon, label: "Touch & Swipe Friendly" },
+    { icon: AccessibilityIcon, label: "Accessible" },
+    { icon: InfinityIcon, label: "Infinite Looping" },
+  ],
+  [
+    { icon: PlayIcon, label: "Smooth Autoplay" },
+    { icon: ColumnsIcon, label: "Multi-Slide Views" },
+    { icon: RulerIcon, label: "Responsive API" },
+    { icon: MoreHorizontalIcon, label: "Custom Pagination" },
+    { icon: ImageIcon, label: "Thumbnail Syncing" },
+    { icon: ActivityIcon, label: "Event Callbacks" },
+    { icon: AnchorIcon, label: "Zero CLS" },
+    { icon: KeyboardIcon, label: "Keyboard Nav" },
+  ],
+];
+
+const packageManagers = ["bun", "npm", "yarn", "pnpm"];
+---
+
+<section class="container-page pt-12 text-center sm:pt-20">
+  <div class="mb-6 flex flex-wrap items-center justify-center gap-3">
+    <span class="caption inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5">
+      <span class="size-1.5 rounded-full bg-accent shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_18%,transparent)]"></span>
+      V1 coming soon
+    </span>
+    <span class="caption inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5">
+      <BoxIcon class="size-3.5 text-accent" />
+      ~8 KB gzipped
+    </span>
+  </div>
+
+  <h1 class="mx-auto max-w-2xl text-[clamp(1.75rem,9.3vw,4.25rem)] leading-[1.05] font-medium tracking-[-0.02em] text-balance">
+    CSS-first slider for the modern web
+  </h1>
+
+  <!-- Feature marquee: each row holds three identical sets, shifted by one set per loop -->
+  <div class="-mx-4 mt-8 mb-10 flex flex-col gap-3 overflow-hidden py-3 [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)] sm:mx-0 md:gap-4">
+    {
+      featureRows.map((row, rowIndex) => (
+        <div class:list={["flex w-max", rowIndex % 2 ? "animate-marquee-reverse" : "animate-marquee"]}>
+          {[0, 1, 2].map((set) => (
+            <ul class="flex shrink-0 gap-3 pr-3 md:gap-4 md:pr-4" aria-hidden={set > 0 ? "true" : undefined}>
+              {row.map(({ icon: Icon, label }) => (
+                <li
+                  class:list={[
+                    "inline-flex items-center gap-2 rounded-full border border-line px-4 py-2.5 text-sm font-medium whitespace-nowrap text-muted",
+                    rowIndex % 2 ? "bg-paper" : "bg-surface",
+                  ]}
+                >
+                  <Icon class="size-4 shrink-0 text-faint" />
+                  {label}
+                </li>
+              ))}
+            </ul>
+          ))}
+        </div>
+      ))
+    }
+  </div>
+
+  <!-- Install Widget -->
+  <div id="install-widget" class="mx-auto max-w-md rounded-xl border border-line bg-surface text-left">
+    <div class="flex items-center justify-between border-b border-line pr-2 pl-1.5">
+      <div class="flex">
+        {
+          packageManagers.map((pm) => (
+            <button
+              type="button"
+              data-pm={pm}
+              class="install-tab -mb-px border-b border-transparent px-2.5 py-2.5 font-mono text-xs text-faint transition-colors hover:text-ink data-[active]:border-accent data-[active]:text-ink"
+            >
+              {pm}
+            </button>
+          ))
+        }
+      </div>
+      <a
+        href={`${REPO}/releases/latest`}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="flex items-center gap-1.5 rounded-md px-2 py-1 font-mono text-xs text-faint transition-colors hover:text-ink"
+        title="Download .zip"
+      >
+        <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+        </svg>
+        .zip
+      </a>
+    </div>
+    <div class="flex items-center justify-between gap-3 py-2.5 pr-2.5 pl-4">
+      <p class="min-w-0 truncate font-mono text-sm text-ink">
+        <span class="text-faint select-none" aria-hidden="true">$ </span><span id="install-command">bun add aero-slider</span>
+      </p>
+      <button
+        id="copy-install"
+        type="button"
+        class="rounded-md p-2 text-faint transition-colors hover:bg-line hover:text-ink"
+        aria-label="Copy to clipboard"
+      >
+        <svg id="copy-icon" class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+        <svg id="check-icon" class="hidden size-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </button>
+    </div>
+  </div>
+</section>

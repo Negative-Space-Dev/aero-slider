@@ -1,0 +1,287 @@
+---
+import CodeBlock from "../components/CodeBlock.astro";
+import DocTable from "../components/DocTable.astro";
+import Entry from "../components/Entry.astro";
+import { REPO } from "../lib/site";
+
+// ── API reference tables. Cells are HTML strings. ─────────────────────
+const globalRows = [
+  ["AeroSlider.createSlider", "Same as the module <code>createSlider</code> — creates a slider instance"],
+  ["AeroSlider.syncThumbnails", "Same as the module <code>syncThumbnails</code> — syncs primary and thumbnail sliders"],
+];
+
+const cssPropertyRows = [
+  ["--slides-per-view", "1", "Number of visible slides (supports fractional, e.g. 1.5)"],
+  ["--slide-gap", "0px", "Gap between slides"],
+  ["--slide-aspect", "5 / 3", "Aspect ratio for slides"],
+  ["--aero-layout-width", "100%", "Content column width for <code>aero-slider--breakout</code> sliders. Slides size to this column while the track spans the full width; edge gutters are derived automatically."],
+  ["data-aero-defer-visibility", "—", "Prevents layout shift before JS init in loop mode by reserving space for prepended clones. Pair it with <code>data-aero-alignment</code> in HTML when mirroring a non-default pre-init alignment; center is assumed otherwise."],
+];
+
+const stateClassRows = [
+  ["aero-slider--ready", "The slider has initialized"],
+  ["aero-slider--draggable", "<code>draggable</code> is on. The track shows the <code>grab</code> cursor only then"],
+  ["aero-slider--dragging", "A mouse or pen drag is in progress (<code>grabbing</code> cursor)"],
+  ["aero-slider--free", '<code>snap</code> is <code>"settle"</code> or <code>"none"</code>. Turns CSS scroll snapping off'],
+  ["aero-slider--vertical", '<code>direction</code> is <code>"ttb"</code>'],
+];
+
+const configRows = [
+  ["loop", "boolean", "false", "Infinite looping"],
+  ["alignment", '"left" | "center" | "right"', '"center"', "Align the active slide to the left, center, or right when possible. At non-loop edges the scroll position clamps, but <code>currentIndex</code> still reflects the focused slide."],
+  ["draggable", "boolean", "true", "Enable mouse and pen dragging. Touch always swipes natively"],
+  ["autoplay", 'boolean | "continuous"', "false", '<code>true</code> advances one move every <code>autoplayInterval</code>. <code>"continuous"</code> drifts the track smoothly like a ticker at <code>autoplaySpeed</code>; it implies <code>loop</code> and <code>snap: "none"</code>'],
+  ["autoplaySpeed", "number", "40", "Continuous autoplay speed in pixels per second. <code>0</code> or less keeps the track still"],
+  ["autoplayInterval", "number", "5000", "Delay between auto-advances (ms). Restarts after any manual change, and holds while the slider is pressed"],
+  ["maxDots", "number", "0", "Max pagination dots (0 = unlimited); shows iOS-style sliding window when exceeded"],
+  ["noDrag", "string", '""', 'CSS selector for elements inside slides that should not trigger drag (e.g. <code>"a, button, input"</code>)'],
+  ["perMove", "number", "1", "Number of slides to advance per <code>next()</code> / <code>prev()</code> call"],
+  ["direction", '"ltr" | "rtl" | "ttb"', '"ltr"', "Carousel direction: left-to-right, right-to-left, or top-to-bottom (vertical)"],
+  ["snap", '"native" | "settle" | "none"', '"native"', 'How the track comes to rest. <code>"native"</code> uses CSS scroll snapping. <code>"settle"</code> scrolls freely, then eases onto the nearest slide once scrolling stops (with <code>scrollDuration</code> / <code>scrollEasing</code>). <code>"none"</code> rests wherever the track stops'],
+  ["scrollDuration", "number", "0", "Length of <code>next()</code> / <code>prev()</code> / <code>goTo()</code> scrolls in ms, eased by <code>scrollEasing</code>, so they move the same way in every browser. <code>0</code> uses the browser's native smooth scrolling. Reduced motion makes every scroll instant either way"],
+  ["scrollEasing", "(t: number) =&gt; number", "ease-out cubic", "Maps linear progress 0–1 to eased progress for <code>scrollDuration</code> scrolls, e.g. <code>(t) =&gt; t</code> for linear"],
+];
+
+const instanceRows = [
+  [".next()", "Go to next slide"],
+  [".prev()", "Go to previous slide"],
+  [".goTo(index, options?)", "Scroll to a specific slide index. Pass <code>{ instant: true }</code> to jump there with no animation"],
+  [".pause()", "Hold autoplay until <code>.resume()</code>. Hover, focus and drag pauses still apply on top"],
+  [".resume()", "Release a <code>.pause()</code> and restart the autoplay countdown"],
+  [".update(config?)", "Update config and re-render"],
+  [".destroy()", "Tear down and clean up"],
+  [".refresh()", "Re-read slides from DOM and rebuild (call after external DOM changes)"],
+  [".add(slides, index?)", "Insert one or more slides into the track; calls refresh() automatically"],
+  [".remove(index)", "Remove slide(s) by index (number or array); calls refresh() automatically"],
+  [".element", "The container element the slider is attached to (read-only)"],
+  [".currentIndex", "Current active slide index (read-only)"],
+  [".slideCount", "Total number of slides (read-only)"],
+];
+
+const eventRows = [
+  ["aero:ready", "{}", "Fired once after initialization (listen before <code>createSlider</code>)"],
+  ["aero:slideChange", "{ index: number }", "Fired when the active slide changes"],
+  ["aero:dragStart", "{ index: number }", "Fired when a mouse or pen drag starts (touch scrolls natively and doesn't fire drag events)"],
+  ["aero:dragEnd", "{ index: number; fromIndex: number }", "Fired when a mouse or pen drag is released, after the target slide is chosen"],
+  ["aero:autoplayStart", "{}", "Fired when autoplay starts or resumes"],
+  ["aero:autoplayStop", "{}", "Fired when autoplay pauses"],
+  ["aero:visible", "{ index: number }", "Fired per slide when it enters the visible range"],
+  ["aero:hidden", "{ index: number }", "Fired per slide when it leaves the visible range"],
+  ["aero:resize", "{}", "Fired when the track or slide size changes, e.g. a window resize or a CSS variable such as <code>--slides-per-view</code> changing (before re-measuring)"],
+  ["aero:resized", "{}", "Fired after the slider finishes updating from a resize"],
+  ["aero:destroy", "{}", "Fired at the start of <code>destroy()</code>, before teardown"],
+];
+---
+
+<section id="api" class="container-page py-12 sm:py-16">
+  <h2 class="mb-10 text-3xl font-medium tracking-[-0.025em] sm:mb-14 sm:text-4xl">API Reference</h2>
+
+  <div class="space-y-14 sm:space-y-16">
+    <!-- createSlider -->
+    <Entry tag="Function" title="createSlider(element, config?)" mono>
+      <div class="copy">
+        <p>
+          Creates a new slider instance on the given container element. Pagination and
+          navigation are configured via DOM structure, not JavaScript—see the
+          <a href="#example-pagination-nav">Pagination &amp; Navigation example</a>
+          for required HTML.
+        </p>
+      </div>
+      <CodeBlock
+        lang="typescript"
+        code={`import { createSlider } from "aero-slider";
+import "aero-slider/slider.css";
+
+const slider = createSlider(document.getElementById("my-slider"), {
+  loop: true,
+  draggable: true,
+});`}
+      />
+      <div class="copy">
+        <p>
+          <strong>Without a bundler:</strong> Use the global script — see
+          <a href="#aeroslider-global">window.AeroSlider</a>.
+        </p>
+      </div>
+    </Entry>
+
+    <!-- Global script (window.AeroSlider) -->
+    <Entry tag="Global" title="window.AeroSlider (global script)" mono id="aeroslider-global">
+      <div class="copy">
+        <p>
+          When using the standalone script (no bundler), the library attaches an
+          <code>AeroSlider</code>
+          object to <code>window</code>
+          with two methods: <code>createSlider</code> and
+          <code>syncThumbnails</code>. Include the CSS and JS files, then call
+          <code>AeroSlider.createSlider()</code> and optionally
+          <code>AeroSlider.syncThumbnails()</code>.
+        </p>
+        <p>
+          Use <code>aero-slider.min.js</code> with
+          <code>type="module"</code>
+          from
+          <a href="https://unpkg.com/aero-slider/dist/" target="_blank" rel="noopener noreferrer">unpkg</a>
+          or the
+          <a href={`${REPO}/releases`} target="_blank" rel="noopener noreferrer">releases</a> page.
+        </p>
+      </div>
+      <CodeBlock
+        lang="html"
+        code={`<link rel="stylesheet" href="https://unpkg.com/aero-slider/dist/aero-slider.min.css" />
+<script type="module" src="https://unpkg.com/aero-slider/dist/aero-slider.min.js"></script>
+<script type="module">
+  // AeroSlider is on window after the module loads
+  const slider = AeroSlider.createSlider(document.getElementById("my-slider"), { loop: true });
+</script>`}
+      />
+      <CodeBlock
+        label="With thumbnails"
+        lang="javascript"
+        code={`const main = AeroSlider.createSlider(mainEl);
+const thumbs = AeroSlider.createSlider(thumbsEl);
+const teardown = AeroSlider.syncThumbnails(main, thumbs);
+
+// On unmount: teardown(); main.destroy(); thumbs.destroy();`}
+      />
+      <DocTable
+        minWidth={400}
+        columns={[{ label: "Property", mono: true, nowrap: true }, { label: "Description" }]}
+        rows={globalRows}
+      />
+    </Entry>
+
+    <!-- CSS Custom Properties -->
+    <Entry tag="CSS" title="CSS Custom Properties">
+      <div class="copy">
+        <p>Layout is controlled via CSS custom properties on the container.</p>
+      </div>
+      <DocTable
+        columns={[
+          { label: "Property", mono: true, nowrap: true },
+          { label: "Default", mono: "soft", nowrap: true },
+          { label: "Description" },
+        ]}
+        rows={cssPropertyRows}
+      />
+    </Entry>
+
+    <!-- State classes -->
+    <Entry tag="CSS" title="State Classes">
+      <div class="copy">
+        <p>The slider toggles these classes on the container, so you can style each state.</p>
+      </div>
+      <DocTable
+        columns={[{ label: "Class", mono: true, nowrap: true }, { label: "Present when" }]}
+        rows={stateClassRows}
+      />
+    </Entry>
+
+    <!-- Config -->
+    <Entry tag="Options" title="SliderConfig" mono>
+      <div class="copy">
+        <p>All configuration options (all optional with sensible defaults).</p>
+      </div>
+      <DocTable
+        minWidth={820}
+        columns={[
+          { label: "Option", mono: true, nowrap: true },
+          { label: "Type", mono: "soft", nowrap: true },
+          { label: "Default", mono: "soft", nowrap: true },
+          { label: "Description" },
+        ]}
+        rows={configRows}
+      />
+    </Entry>
+
+    <!-- Instance Methods -->
+    <Entry tag="Instance" title="SliderInstance" mono>
+      <div class="copy">
+        <p>Returned by <code>createSlider()</code>.</p>
+      </div>
+      <p class="note">
+        The instance is also attached to the container element. You can access it via
+        <code>container.aeroSlider</code> when you have a reference to the DOM element.
+      </p>
+      <DocTable
+        columns={[{ label: "Method / Property", mono: true, nowrap: true }, { label: "Description" }]}
+        rows={instanceRows}
+      />
+      <div class="copy">
+        <p>
+          For syncing a main slider with a thumbnail strip, use the standalone
+          <code>syncThumbnails(primary, thumbnail)</code>
+          function (see below).
+        </p>
+      </div>
+    </Entry>
+
+    <!-- syncThumbnails -->
+    <Entry tag="Function" title="syncThumbnails(primary, thumbnail, options?)" mono>
+      <div class="copy">
+        <p>
+          Syncs a primary slider with a thumbnail slider. Clicking a thumbnail navigates the
+          primary to that slide; when the primary changes (drag, arrows, etc.), the thumbnail
+          slider scrolls to keep the active thumbnail in view and adds
+          <code>aero-slider__thumb--active</code>
+          to it. The function does not force thumbnail alignment; set
+          <code>alignment: "center"</code>
+          on the thumbnail slider if you want the active thumb centered when possible. Both
+          sliders must have the same number of slides. Pass an optional third argument
+          <code>{"{ loop }"}</code>
+          to control whether the thumbnail strip loops (defaults to
+          <code>true</code>). Returns a teardown function — call it before destroying the
+          sliders.
+        </p>
+      </div>
+      <CodeBlock
+        lang="typescript"
+        code={`import { createSlider, syncThumbnails } from "aero-slider";
+
+const main = createSlider(mainEl);
+const thumbs = createSlider(thumbsEl, {
+  alignment: "center",
+});
+const teardown = syncThumbnails(main, thumbs);
+
+// On unmount:
+// teardown();
+// main.destroy();
+// thumbs.destroy();`}
+      />
+    </Entry>
+
+    <!-- Events -->
+    <Entry tag="DOM events" title="Events">
+      <div class="copy">
+        <p>
+          Aero Slider dispatches native DOM events on the container element, prefixed with
+          <code>aero:</code>. Event data is available via <code>event.detail</code>.
+        </p>
+      </div>
+      <p class="note">
+        Listen with <code>addEventListener</code>
+        on the container. Access the slider instance via
+        <code>event.currentTarget.aeroSlider</code> in any handler.
+      </p>
+      <CodeBlock
+        lang="typescript"
+        code={`const el = document.getElementById("my-slider");
+const slider = createSlider(el, { loop: true });
+
+el.addEventListener("aero:slideChange", (event) => {
+  console.log("active slide:", event.detail.index);
+});`}
+      />
+      <DocTable
+        minWidth={720}
+        columns={[
+          { label: "Event", mono: true, nowrap: true },
+          { label: "Data (event.detail, TS type)", mono: "soft" },
+          { label: "Description" },
+        ]}
+        rows={eventRows}
+      />
+    </Entry>
+  </div>
+</section>

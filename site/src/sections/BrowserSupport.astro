@@ -1,0 +1,36 @@
+---
+import DocTable from "../components/DocTable.astro";
+
+const browserRows = [
+  ["CSS Variables", "49+", "9.1+", "31+", "Configuring layout and gap size."],
+  ["Scroll Snapping", "69+", "11+", "68+", "Locking slides into place after scrolling."],
+  ["aspect-ratio", "88+", "15+", "89+", "Maintaining proper height for the slider track."],
+  ["contain: paint", "52+", "15.4+", "69+", "Performance optimization for painting slides."],
+  ["overscroll-behavior-x", "63+", "16+", "59+", "Preventing rubber-banding when hitting the edge."],
+];
+---
+
+<section id="browser-support" class="container-page py-12 sm:py-16">
+  <h2 class="mb-6 text-3xl font-medium tracking-[-0.025em] sm:text-4xl">Browser Support</h2>
+  <div class="space-y-8">
+    <div class="copy">
+      <p>
+        Aero Slider relies on modern CSS features to achieve a lightweight, JS-free layout. It
+        degrades gracefully on older browsers, but for the optimal experience, the following
+        minimum versions are recommended:
+      </p>
+    </div>
+    <div class="border-t border-line pt-8">
+      <DocTable
+        columns={[
+          { label: "CSS Feature", mono: true, nowrap: true },
+          { label: "Chrome", mono: "soft" },
+          { label: "Safari", mono: "soft" },
+          { label: "Firefox", mono: "soft" },
+          { label: "Used For" },
+        ]}
+        rows={browserRows}
+      />
+    </div>
+  </div>
+</section>

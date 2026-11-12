@@ -1,0 +1,610 @@
+---
+import CodeBlock from "../components/CodeBlock.astro";
+import Entry from "../components/Entry.astro";
+import Pagination from "../components/Pagination.astro";
+import SliderNav from "../components/SliderNav.astro";
+import Slides from "../components/Slides.astro";
+import type { SlideContent } from "../lib/slide";
+
+const letters = (list: string): SlideContent[] => [...list].map((num) => ({ num }));
+
+const breakoutSlides: SlideContent[] = [
+  { num: 1, label: "Aligned", text: "The active card is still positioned from the main content column." },
+  { num: 2, label: "Bleed", text: "The scroll area reaches the page edge, but slide sizing still keys off the content width." },
+  { num: 3, label: "Viewport", text: "That makes the next and previous slides feel like they continue off-screen." },
+  { num: 4, label: "Host Layout", text: "The site still owns the breakout wrapper and gutter math around the slider." },
+  { num: 5, label: "Edges", text: "The edge gutter is derived from the track width, so it stays scrollbar-correct on its own." },
+];
+
+const responsiveSlides: SlideContent[] = ["Mobile", "Tablet", "Desktop", "Wide", "Extra"].map(
+  (label, i) => ({ num: i + 1, label })
+);
+
+const autoplaySlides: SlideContent[] = [
+  { num: "Night", label: "01", tone: 1 },
+  { num: "Sunset", label: "02", tone: 3 },
+  { num: "Day", label: "03", tone: 2 },
+  { num: "Dawn", label: "04", tone: 5 },
+];
+
+const thumbnailMainSlides: SlideContent[] = [1, 2, 3, 4].map((num) => ({ num, label: "Main slide" }));
+
+const alignments = ["left", "center", "right"];
+---
+
+<section id="examples" class="container-page py-12 sm:py-16">
+  <h2 class="mb-10 text-3xl font-medium tracking-[-0.025em] sm:mb-14 sm:text-4xl">Examples</h2>
+
+  <div class="space-y-14 sm:space-y-20">
+    <!-- Multi-slide -->
+    <Entry tag="01" title="Multi-Slide View">
+      <div class="copy">
+        <p>Show multiple slides at once with gap spacing.</p>
+      </div>
+      <div id="multi" class="aero-slider" style="--slides-per-view: 2.25; --slide-gap: 16px;">
+        <div class="aero-slider__viewport relative">
+          <SliderNav />
+          <div class="aero-slider__track">
+            <Slides items={letters("ABCDEF")} />
+          </div>
+        </div>
+        <Pagination />
+      </div>
+    </Entry>
+
+    <!-- Breakout / bleed -->
+    <Entry tag="02" title="Viewport Breakout">
+      <div class="copy">
+        <p>
+          Let slides overflow past the content column while the scroll track spans the full
+          viewport. The active card's left edge stays locked to the normal content column, and
+          the neighboring slides bleed off toward the screen edges.
+        </p>
+        <p>
+          Set the outer wrapper to full bleed, add the library's
+          <code>aero-slider--breakout</code>
+          class, and tie slide sizing to the content column with
+          <code>--aero-layout-width</code>. The library derives the edge gutter automatically,
+          so the first and last cards land on the column. This demo uses
+          <code>alignment: "left"</code>
+          for the Apple-style left-flush layout.
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="caption">Alignment</span>
+        <div id="breakout-align" class="segmented" role="group" aria-label="Breakout alignment">
+          <button type="button" data-align="left">Left</button>
+          <button type="button" data-align="center">Center</button>
+          <button type="button" data-align="right">Right</button>
+        </div>
+      </div>
+      <div class="docs-breakout-guide">
+        <div class="docs-breakout-guide-column">
+          <p class="mx-3 rounded-lg border border-dashed border-line-strong px-4 py-3 text-sm text-muted sm:mx-4">
+            The dashed lines mark the content column the active card aligns to. Nearby slides
+            bleed past it to the screen edges.
+          </p>
+        </div>
+      </div>
+      <div class="docs-breakout-clip">
+        <div
+          id="breakout-bleed"
+          class="aero-slider aero-slider--breakout aero-slider--viewport-breakout-demo"
+        >
+          <div class="aero-slider__viewport relative">
+            <SliderNav />
+            <div class="aero-slider__track">
+              <Slides items={breakoutSlides} />
+            </div>
+          </div>
+          <Pagination />
+        </div>
+      </div>
+      <CodeBlock
+        lang="css"
+        code={`:root {
+  --page-gutter: 1.5rem;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+/* Full-bleed wrapper lets slides reach the screen edges */
+.breakout-clip {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+}
+
+/* Size slides off the content column; the library aligns the active
+   card to that column and derives the edge gutter automatically. */
+.my-breakout {
+  --slides-per-view: 1.35;
+  --slide-gap: 18px;
+  --aero-layout-width: min(72rem, calc(100vw - var(--page-gutter) * 2));
+}
+
+/* createSlider(el, { alignment: "left" }); */`}
+      />
+    </Entry>
+
+    <!-- Alignment -->
+    <Entry tag="03" title="Alignment">
+      <div class="copy">
+        <p>
+          Use <code>alignment</code>
+          to snap the active slide to the left, center, or right side of the viewport. Center
+          is the default.
+        </p>
+      </div>
+      <div class="grid gap-6 lg:grid-cols-3">
+        {
+          alignments.map((alignment) => (
+            <div class="min-w-0">
+              <p class="caption mb-2">{alignment}</p>
+              <div
+                id={`alignment-${alignment}`}
+                class="aero-slider"
+                data-aero-defer-visibility
+                data-aero-alignment={alignment}
+                style="--slides-per-view: 1.5; --slide-gap: 12px;"
+              >
+                <div class="aero-slider__viewport">
+                  <div class="aero-slider__track">
+                    <Slides items={letters("ABCD")} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+      <CodeBlock
+        lang="typescript"
+        code={`createSlider(leftEl, { alignment: "left", loop: true });
+createSlider(centerEl, { alignment: "center", loop: true });
+createSlider(rightEl, { alignment: "right", loop: true });`}
+      />
+    </Entry>
+
+    <!-- Responsive (media queries) -->
+    <Entry tag="04" title="Responsive with Media Queries">
+      <div class="copy">
+        <p>
+          Layout adapts to viewport: 1 slide on mobile, 2 on tablet, 3 on desktop. Resize the
+          window to see the slider re-read
+          <code>--slides-per-view</code>
+          from CSS.
+        </p>
+      </div>
+      <div id="responsive" class="aero-slider aero-slider--responsive">
+        <div class="aero-slider__viewport relative">
+          <SliderNav />
+          <div class="aero-slider__track">
+            <Slides items={responsiveSlides} />
+          </div>
+        </div>
+        <Pagination />
+      </div>
+      <CodeBlock
+        lang="css"
+        code={`/* 1 slide on mobile, 2 on tablet, 3 on desktop */
+.aero-slider--responsive {
+  --slides-per-view: 1;
+  --slide-gap: 8px;
+}
+@media (min-width: 640px) {
+  .aero-slider--responsive {
+    --slides-per-view: 2;
+    --slide-gap: 12px;
+  }
+}
+@media (min-width: 1024px) {
+  .aero-slider--responsive {
+    --slides-per-view: 3;
+    --slide-gap: 16px;
+  }
+}`}
+      />
+    </Entry>
+
+    <!-- Autoplay -->
+    <Entry tag="05" title="Autoplay + Loop">
+      <div class="copy">
+        <p>
+          Auto-advances every 3 seconds with infinite looping. The countdown restarts after any
+          manual change. Pauses on hover, keyboard focus, press, drag, and hidden tabs, and
+          stops whenever prefers-reduced-motion is on.
+        </p>
+      </div>
+      <div id="autoplay" class="aero-slider" style="--slide-aspect: 21/9;">
+        <div class="aero-slider__viewport relative">
+          <SliderNav />
+          <div class="aero-slider__track">
+            <Slides items={autoplaySlides} />
+          </div>
+        </div>
+        <Pagination />
+      </div>
+    </Entry>
+
+    <!-- Thumbnail Sync -->
+    <Entry tag="06" title="Thumbnail Sync">
+      <div class="copy">
+        <p>
+          A main slider plus a thumbnail strip: clicking a thumbnail navigates the main slider,
+          and when you change slides (drag, arrows, etc.), the thumbnail strip scrolls to keep
+          the active thumb in view. Use the
+          <code>syncThumbnails()</code>
+          function — both sliders must have the same number of slides. If you want the active
+          thumb centered, set
+          <code>alignment: "center"</code>
+          on the thumbnail slider.
+        </p>
+      </div>
+      <div class="max-w-3xl space-y-2">
+        <!-- Main slider -->
+        <div id="thumbnail-main" class="aero-slider" style="--slide-aspect: 16/9;">
+          <div class="aero-slider__viewport relative">
+            <SliderNav />
+            <div class="aero-slider__track">
+              <Slides items={thumbnailMainSlides} />
+            </div>
+          </div>
+        </div>
+        <!-- Thumbnail strip -->
+        <div
+          id="thumbnail-thumbs"
+          class="aero-slider aero-slider--thumbnails"
+          style="--slide-aspect: 16/9; --slides-per-view: 4; --slide-gap: 8px;"
+        >
+          <div class="aero-slider__viewport">
+            <div class="aero-slider__track">
+              <Slides items={4} />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="copy">
+        <h4 class="text-sm font-medium text-ink">How it works</h4>
+        <p>
+          Create two sliders: the main (primary) slider and a thumbnail slider with the same
+          number of slides. Call
+          <code>syncThumbnails(primary, thumbnail)</code>
+          to wire them up. The function adds click handlers to thumbnails, listens to
+          <code>slideChange</code> events on the primary, scrolls the thumbnail strip to keep the
+          active one in view, and adds
+          <code>aero-slider__thumb--active</code>
+          to the active thumbnail. It returns a teardown function — call it before destroying
+          the sliders.
+        </p>
+      </div>
+      <div class="grid gap-5 sm:grid-cols-2">
+        <CodeBlock
+          label="HTML — main slider"
+          lang="html"
+          code={`<div id="main-slider" class="aero-slider">
+  <div class="aero-slider__viewport relative">
+    <button type="button" class="aero-slider__nav--prev" aria-label="Previous">…</button>
+    <button type="button" class="aero-slider__nav--next" aria-label="Next">…</button>
+    <div class="aero-slider__track">
+      <div>Slide 1</div>
+      <div>Slide 2</div>
+      <div>Slide 3</div>
+    </div>
+  </div>
+</div>`}
+        />
+        <CodeBlock
+          label="HTML — thumbnail slider"
+          lang="html"
+          code={`<div id="thumb-slider" class="aero-slider" style="--slides-per-view: 3; --slide-gap: 8px;">
+  <div class="aero-slider__viewport">
+    <div class="aero-slider__track">
+      <div>Thumb 1</div>
+      <div>Thumb 2</div>
+      <div>Thumb 3</div>
+    </div>
+  </div>
+</div>`}
+        />
+      </div>
+      <CodeBlock
+        label="JavaScript"
+        lang="typescript"
+        code={`import { createSlider, syncThumbnails } from "aero-slider";
+
+const main = createSlider(document.getElementById("main-slider"));
+const thumbs = createSlider(document.getElementById("thumb-slider"), {
+  alignment: "center",
+});
+const teardown = syncThumbnails(main, thumbs);
+
+// On unmount:
+// teardown();
+// main.destroy();
+// thumbs.destroy();`}
+      />
+    </Entry>
+
+    <!-- Direction (RTL + Vertical) -->
+    <Entry tag="07" title="Direction">
+      <div class="copy">
+        <p>
+          Set <code>direction</code>
+          to <code>"rtl"</code> for right-to-left or
+          <code>"ttb"</code> for vertical (top-to-bottom). Keyboard arrows, drag axis, and scroll
+          axis all adapt automatically.
+        </p>
+      </div>
+      <div class="grid gap-6 sm:grid-cols-2">
+        <div class="min-w-0">
+          <p class="caption mb-2">RTL</p>
+          <div id="direction-rtl" class="aero-slider" style="--slides-per-view: 1;">
+            <div class="aero-slider__viewport relative">
+              <SliderNav />
+              <div class="aero-slider__track">
+                <Slides items={letters("אבגד")} />
+              </div>
+            </div>
+            <Pagination />
+          </div>
+        </div>
+        <div class="min-w-0">
+          <p class="caption mb-2">Vertical (ttb)</p>
+          <div id="direction-vertical" class="aero-slider" style="--slides-per-view: 1;">
+            <div class="aero-slider__viewport relative">
+              <div class="aero-slider__track">
+                <Slides items={3} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <CodeBlock
+        lang="typescript"
+        code={`// RTL
+createSlider(rtlEl, { direction: "rtl" });
+
+// Vertical
+createSlider(verticalEl, { direction: "ttb" });`}
+      />
+    </Entry>
+
+    <!-- Dynamic Slides -->
+    <Entry tag="08" title="Dynamic Slides">
+      <div class="copy">
+        <p>
+          Use <code>add()</code> and
+          <code>remove()</code> to dynamically insert or remove slides. The slider rebuilds
+          pagination, navigation, and loop clones automatically.
+        </p>
+      </div>
+      <div class="flex gap-2">
+        <button id="dynamic-add" type="button" class="btn">Add slide</button>
+        <button id="dynamic-remove" type="button" class="btn">Remove last</button>
+      </div>
+      <div id="dynamic-slides" class="aero-slider" style="--slides-per-view: 2.25; --slide-gap: 12px;">
+        <div class="aero-slider__viewport relative">
+          <SliderNav />
+          <div class="aero-slider__track">
+            <Slides items={3} />
+          </div>
+        </div>
+        <Pagination />
+      </div>
+      <CodeBlock
+        lang="typescript"
+        code={`const slider = createSlider(el);
+
+// Add a new slide at the end
+const slide = document.createElement("div");
+slide.textContent = "New";
+slider.add(slide);
+
+// Add at a specific position
+slider.add(slide, 2);
+
+// Remove the last slide
+slider.remove(slider.slideCount - 1);
+
+// Remove multiple slides
+slider.remove([0, 1]);`}
+      />
+    </Entry>
+
+    <!-- perMove -->
+    <Entry tag="09" title="Per-Move">
+      <div class="copy">
+        <p>
+          Set <code>perMove</code>
+          to control how many slides advance per arrow/keyboard press. Here, 3 slides are
+          visible but each press moves by 2, with looping enabled.
+        </p>
+      </div>
+      <div id="per-move" class="aero-slider" style="--slides-per-view: 3; --slide-gap: 12px;">
+        <div class="aero-slider__viewport relative">
+          <SliderNav />
+          <div class="aero-slider__track">
+            <Slides items={12} />
+          </div>
+        </div>
+        <Pagination />
+      </div>
+      <CodeBlock
+        lang="typescript"
+        code={`createSlider(el, { perMove: 2, loop: true });
+// With CSS: --slides-per-view: 3; --slide-gap: 12px;`}
+      />
+    </Entry>
+
+    <!-- Continuous autoplay -->
+    <Entry tag="10" title="Continuous Autoplay">
+      <div class="copy">
+        <p>
+          <code>autoplay: "continuous"</code> drifts the track like a ticker at
+          <code>autoplaySpeed</code> pixels per second, looping seamlessly. It's a single CSS
+          animation with no per-frame JavaScript, so browsers can run it off the main thread.
+          It keeps drifting under the pointer, holds while the slider is pressed or keyboard
+          focus is inside, and
+          <code>pause()</code> / <code>resume()</code> apply on top. Wheel and trackpad scrolling
+          add to the drift. Under <code>prefers-reduced-motion</code> the track stays still.
+          <code>currentIndex</code> catches up whenever the drift pauses.
+        </p>
+      </div>
+      <div id="continuous" class="aero-slider" style="--slides-per-view: 4; --slide-gap: 12px;">
+        <div class="aero-slider__viewport relative">
+          <div class="aero-slider__track">
+            <Slides items={8} />
+          </div>
+        </div>
+      </div>
+      <CodeBlock
+        lang="typescript"
+        code={`createSlider(el, { autoplay: "continuous", autoplaySpeed: 36, draggable: false });
+// With CSS: --slides-per-view: 4; --slide-gap: 12px;`}
+      />
+    </Entry>
+
+    <!-- Snap modes -->
+    <Entry tag="11" title="Snap Modes">
+      <div class="copy">
+        <p>
+          By default the track uses native CSS scroll snapping. With
+          <code>snap: "settle"</code> it scrolls freely under a drag, swipe or trackpad, then
+          eases onto the nearest slide once scrolling stops, using <code>scrollDuration</code>
+          and <code>scrollEasing</code>. On a loop it eases onto whichever slide is nearest on
+          screen. Try a slow trackpad scroll on the first slider.
+        </p>
+      </div>
+      <div id="snap-settle" class="aero-slider" style="--slides-per-view: 3; --slide-gap: 12px;">
+        <div class="aero-slider__viewport relative">
+          <div class="aero-slider__track">
+            <Slides items={8} />
+          </div>
+        </div>
+      </div>
+      <div class="copy">
+        <p>
+          With <code>snap: "none"</code> the track rests wherever it stops, and a mouse drag
+          coasts on its release speed.
+        </p>
+      </div>
+      <div id="snap-none" class="aero-slider" style="--slides-per-view: 3; --slide-gap: 12px;">
+        <div class="aero-slider__viewport relative">
+          <div class="aero-slider__track">
+            <Slides items={8} />
+          </div>
+        </div>
+      </div>
+      <CodeBlock
+        lang="typescript"
+        code={`createSlider(el, { loop: true, snap: "settle", scrollDuration: 550 });
+createSlider(el, { snap: "none" });
+// With CSS: --slides-per-view: 3; --slide-gap: 12px;`}
+      />
+    </Entry>
+
+    <!-- Pagination & Navigation (minimal requirements) -->
+    <Entry tag="12" title="Pagination & Navigation" id="example-pagination-nav">
+      <p class="note">
+        <strong>Pagination and navigation are not configured through JavaScript.</strong> You
+        create the DOM elements yourself. If they exist inside the container, the slider
+        discovers and wires them automatically.
+      </p>
+
+      <!-- Pagination example -->
+      <div class="grid gap-6 rounded-2xl border border-line bg-surface p-5 lg:grid-cols-2">
+        <div class="min-w-0 space-y-4">
+          <h4 class="text-sm font-medium text-ink">Pagination</h4>
+          <div class="copy">
+            <p>
+              A container with class
+              <code>aero-slider__pagination</code>
+              and <strong>one</strong> dot template with class
+              <code>aero-slider__dot</code>. The slider clones the dot for each slide and
+              manages active state via
+              <code>aero-slider__dot--active</code>.
+            </p>
+          </div>
+          <CodeBlock
+            lang="html"
+            code={`<div class="aero-slider">
+  <div class="aero-slider__viewport relative">
+    <div class="aero-slider__track">
+      <div>Slide 1</div>
+      <div>Slide 2</div>
+      <div>Slide 3</div>
+    </div>
+  </div>
+  <div class="aero-slider__pagination">
+    <span class="aero-slider__dot"></span>
+  </div>
+</div>`}
+          />
+        </div>
+        <div class="min-w-0">
+          <div id="pagination-minimal" class="aero-slider" style="--slides-per-view: 1;">
+            <div class="aero-slider__viewport relative">
+              <div class="aero-slider__track">
+                <Slides items={3} />
+              </div>
+            </div>
+            <Pagination />
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation example -->
+      <div class="grid gap-6 rounded-2xl border border-line bg-surface p-5 lg:grid-cols-2">
+        <div class="min-w-0 space-y-4">
+          <h4 class="text-sm font-medium text-ink">Navigation</h4>
+          <div class="copy">
+            <p>
+              Two buttons inside the viewport (before the track): one with
+              <code>aero-slider__nav--prev</code>
+              and one with
+              <code>aero-slider__nav--next</code>. Include
+              <code>aria-label</code>
+              for accessibility. The slider enables/disables them based on loop mode and
+              current index.
+            </p>
+          </div>
+          <p class="note">
+            Placing the buttons before the track in the DOM improves keyboard
+            navigation—users reach the prev/next controls before tabbing through slide content.
+          </p>
+          <CodeBlock
+            lang="html"
+            code={`<div class="aero-slider">
+  <div class="aero-slider__viewport relative">
+    <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">‹</button>
+    <button type="button" class="aero-slider__nav--next" aria-label="Next slide">›</button>
+    <div class="aero-slider__track">
+      <div>Slide 1</div>
+      <div>Slide 2</div>
+      <div>Slide 3</div>
+    </div>
+  </div>
+</div>`}
+          />
+        </div>
+        <div class="min-w-0">
+          <div id="nav-minimal" class="aero-slider" style="--slides-per-view: 1;">
+            <div class="aero-slider__viewport relative">
+              <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">‹</button>
+              <button type="button" class="aero-slider__nav--next" aria-label="Next slide">›</button>
+              <div class="aero-slider__track">
+                <Slides items={3} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Entry>
+  </div>
+</section>
+
+<script>
+  import "../scripts/examples.ts";
+</script>
