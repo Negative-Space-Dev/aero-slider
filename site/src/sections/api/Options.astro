@@ -1,0 +1,17 @@
+---
+import Entry from "../../components/Entry.astro";
+import RefList from "../../components/RefList.astro";
+import { optionRefGroups } from "../../data/api";
+---
+
+<Entry tag="Options" title="SliderConfig" mono id="api-options">
+  <div class="copy">
+    <p>
+      The second argument to <code>createSlider</code>. Every option is optional. Change them later
+      with <a href="#api-methods"><code>slider.update()</code></a>.
+    </p>
+  </div>
+  <div class="api-ref-columns">
+    <RefList groups={optionRefGroups} />
+  </div>
+</Entry>

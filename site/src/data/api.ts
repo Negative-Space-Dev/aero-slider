@@ -47,28 +47,30 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     group: "Layout",
     type: "boolean",
     default: "false",
-    description: "Infinite looping",
+    description:
+      "Wraps from the last slide back to the first. Clones of the slides sit on both sides of the track, so scrolling never hits an end.",
   },
   alignment: {
     group: "Layout",
     type: '"left" | "center" | "right"',
     default: '"center"',
     description:
-      "Align the active slide to the left, center, or right when possible. At non-loop edges the scroll position clamps, but <code>currentIndex</code> still reflects the focused slide.",
+      "Where the active slide rests in the viewport. At the ends of a non-looping track the scroll clamps, but <code>currentIndex</code> still names the focused slide.",
     example: "ex-alignment",
   },
   direction: {
     group: "Layout",
     type: '"ltr" | "rtl" | "ttb"',
     default: '"ltr"',
-    description: "Carousel direction: left-to-right, right-to-left, or top-to-bottom (vertical)",
+    description: "Left to right, right to left, or top to bottom (vertical).",
     example: "ex-direction",
   },
   perMove: {
     group: "Layout",
     type: "number",
     default: "1",
-    description: "Number of slides to advance per <code>next()</code> / <code>prev()</code> call",
+    description:
+      "Slides advanced by each <code>next()</code> and <code>prev()</code>, and so by the arrows and autoplay.",
     example: "ex-per-move",
   },
   autoplay: {
@@ -76,7 +78,7 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     type: 'boolean | "continuous"',
     default: "false",
     description:
-      '<code>true</code> advances one move every <code>autoplayInterval</code>. <code>"continuous"</code> drifts the track smoothly like a ticker at <code>autoplaySpeed</code>; it implies <code>loop</code> and <code>snap: "none"</code>',
+      '<code>true</code> advances one move every <code>autoplayInterval</code>. <code>"continuous"</code> drifts the track like a ticker at <code>autoplaySpeed</code>, and implies <code>loop</code> and <code>snap: "none"</code>. Neither runs under reduced motion.',
     example: "ex-autoplay",
   },
   autoplayInterval: {
@@ -84,7 +86,7 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     type: "number",
     default: "5000",
     description:
-      "Delay between auto-advances (ms). Restarts after any manual change, and holds while the slider is pressed",
+      "Milliseconds between advances. Any slide change restarts the countdown, and it holds while the slider is hovered, focused or pressed.",
     example: "ex-autoplay",
   },
   autoplaySpeed: {
@@ -92,21 +94,21 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     type: "number",
     default: "40",
     description:
-      "Continuous autoplay speed in pixels per second. <code>0</code> or less keeps the track still",
+      'Speed of <code>"continuous"</code> autoplay in pixels per second. <code>0</code> or less keeps the track still.',
     example: "ex-ticker",
   },
   draggable: {
     group: "Interaction",
     type: "boolean",
     default: "true",
-    description: "Enable mouse and pen dragging. Touch always swipes natively",
+    description: "Lets a mouse or pen drag the track. Touch always swipes natively.",
   },
   noDrag: {
     group: "Interaction",
     type: "string",
     default: '""',
     description:
-      'CSS selector for elements inside slides that should not trigger drag (e.g. <code>"a, button, input"</code>)',
+      'A selector for elements inside slides where a mouse drag should not start, e.g. <code>"a, button, input"</code>.',
     example: "ex-no-drag",
   },
   snap: {
@@ -114,7 +116,7 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     type: '"native" | "settle" | "none"',
     default: '"native"',
     description:
-      'How the track comes to rest. <code>"native"</code> uses CSS scroll snapping. <code>"settle"</code> scrolls freely, then eases onto the nearest slide once scrolling stops (with <code>scrollDuration</code> / <code>scrollEasing</code>). <code>"none"</code> rests wherever the track stops',
+      'How the track comes to rest. <code>"native"</code> uses CSS scroll snapping. <code>"settle"</code> scrolls freely, then eases onto the nearest slide. <code>"none"</code> stops wherever the scroll ends.',
     example: "ex-snap",
   },
   scrollDuration: {
@@ -122,22 +124,22 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     type: "number",
     default: "0",
     description:
-      "Length of <code>next()</code> / <code>prev()</code> / <code>goTo()</code> scrolls in ms, eased by <code>scrollEasing</code>, so they move the same way in every browser. <code>0</code> uses the browser's native smooth scrolling. Reduced motion makes every scroll instant either way",
+      "Length in ms of the scroll that <code>next()</code>, <code>prev()</code> and <code>goTo()</code> run, eased by <code>scrollEasing</code>, so it moves the same in every browser. <code>0</code> uses native smooth scrolling. Reduced motion makes every scroll instant.",
     example: "ex-snap",
   },
   scrollEasing: {
     group: "Motion",
-    type: "(t: number) =&gt; number",
+    type: "(t: number) => number",
     default: "ease-out cubic",
     description:
-      "Maps linear progress 0–1 to eased progress for <code>scrollDuration</code> scrolls, e.g. <code>(t) =&gt; t</code> for linear",
+      "Maps progress from 0 to 1 onto eased progress for <code>scrollDuration</code> scrolls. <code>(t) =&gt; t</code> is linear.",
   },
   maxDots: {
     group: "Pagination",
     type: "number",
     default: "0",
     description:
-      "Max pagination dots (0 = unlimited); shows iOS-style sliding window when exceeded",
+      "Shows at most this many pagination dots and slides the window along, iOS style. <code>0</code> shows them all.",
     example: "ex-max-dots",
   },
 };
@@ -259,15 +261,21 @@ export const cssVariables: RefEntry[] = [
   {
     name: "--slides-per-view",
     default: "1",
-    description: "Number of visible slides (supports fractional, e.g. 1.5)",
+    description:
+      "How many slides fit the viewport. Fractions such as <code>1.5</code> show a peek of the next slide.",
+    example: "ex-responsive",
   },
-  { name: "--slide-gap", default: "0px", description: "Gap between slides" },
-  { name: "--slide-aspect", default: "5 / 3", description: "Aspect ratio for slides" },
+  { name: "--slide-gap", default: "0px", description: "Space between slides." },
+  {
+    name: "--slide-aspect",
+    default: "5 / 3",
+    description: "Aspect ratio of each slide, so the slider has its height before JavaScript runs.",
+  },
   {
     name: "--aero-layout-width",
     default: "100%",
     description:
-      "Content column width for <code>aero-slider--breakout</code> sliders. Slides size to this column while the track spans the full width; edge gutters are derived automatically.",
+      "The content column for an <code>aero-slider--breakout</code> slider. Slides size to this column while the track runs to the edges of the screen.",
     example: "ex-edge-to-edge",
   },
 ];
@@ -276,14 +284,14 @@ export const attributes: RefEntry[] = [
   {
     name: "data-aero-defer-visibility",
     description:
-      "Prevents layout shift before JS init in loop mode by reserving space for prepended clones. Pair it with <code>data-aero-alignment</code> in HTML when mirroring a non-default pre-init alignment; center is assumed otherwise.",
+      "Reserves the space that loop clones will take before the slider starts, so a looping slider doesn't shift when JavaScript runs. Removed once it starts.",
     example: "ex-no-shift",
   },
   {
     name: "data-aero-alignment",
     type: '"left" | "center" | "right"',
     description:
-      "Mirrors the <code>alignment</code> option, which the slider sets at init. Set it in HTML as well so snapping and the <code>data-aero-defer-visibility</code> spacer match before JavaScript runs.",
+      "The slider sets this from <code>alignment</code>. Write it in your HTML too when you use a non-center alignment, so snapping and the reserved space match before JavaScript runs.",
     example: "ex-no-shift",
   },
 ];

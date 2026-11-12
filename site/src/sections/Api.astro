@@ -1,27 +1,16 @@
 ---
 import CodeBlock from "../components/CodeBlock.astro";
 import Create from "./api/Create.astro";
+import Css from "./api/Css.astro";
+import Options from "./api/Options.astro";
 import "../styles/api.css";
 import DocTable from "../components/DocTable.astro";
 import Entry from "../components/Entry.astro";
 import {
-  attributes,
-  cssVariables,
   eventRefGroups,
   instanceRefGroups,
-  optionRefGroups,
-  stateClasses,
 } from "../data/api";
 
-const cssPropertyRows = [...cssVariables, ...attributes].map((entry) => [
-  entry.name,
-  entry.default ?? "—",
-  entry.description,
-]);
-const stateClassRows = stateClasses.map((entry) => [entry.name, entry.description]);
-const configRows = optionRefGroups
-  .flatMap((group) => group.entries)
-  .map((entry) => [entry.name, entry.type ?? "", entry.default ?? "", entry.description]);
 const instanceRows = instanceRefGroups
   .flatMap((group) => group.entries)
   .map((entry) => [entry.name, entry.description]);
@@ -36,48 +25,9 @@ const eventRows = eventRefGroups
   <div class="space-y-14 sm:space-y-16">
     <Create />
 
-    <!-- CSS Custom Properties -->
-    <Entry tag="CSS" title="CSS Custom Properties" id="api-css">
-      <div class="copy">
-        <p>Layout is controlled via CSS custom properties on the container.</p>
-      </div>
-      <DocTable
-        columns={[
-          { label: "Property", mono: true, nowrap: true },
-          { label: "Default", mono: "soft", nowrap: true },
-          { label: "Description" },
-        ]}
-        rows={cssPropertyRows}
-      />
-    </Entry>
+    <Options />
 
-    <!-- State classes -->
-    <Entry tag="CSS" title="State Classes">
-      <div class="copy">
-        <p>The slider toggles these classes on the container, so you can style each state.</p>
-      </div>
-      <DocTable
-        columns={[{ label: "Class", mono: true, nowrap: true }, { label: "Present when" }]}
-        rows={stateClassRows}
-      />
-    </Entry>
-
-    <!-- Config -->
-    <Entry tag="Options" title="SliderConfig" mono id="api-options">
-      <div class="copy">
-        <p>All configuration options (all optional with sensible defaults).</p>
-      </div>
-      <DocTable
-        minWidth={820}
-        columns={[
-          { label: "Option", mono: true, nowrap: true },
-          { label: "Type", mono: "soft", nowrap: true },
-          { label: "Default", mono: "soft", nowrap: true },
-          { label: "Description" },
-        ]}
-        rows={configRows}
-      />
-    </Entry>
+    <Css />
 
     <!-- Instance Methods -->
     <Entry tag="Instance" title="SliderInstance" mono id="api-methods">

@@ -46,3 +46,12 @@
     font-size: 0.75rem;
   }
 }
+
+/* Reference groups pair up side by side on wide screens. */
+@media (min-width: 1024px) {
+  .api-ref-columns .ref-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2.5rem 3rem;
+    align-items: start;
+  }
+}
