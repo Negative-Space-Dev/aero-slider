@@ -202,6 +202,17 @@ const scenario = `(async () => {
     const changes = []; el.addEventListener("aero:slideChange", (e) => changes.push(e.detail.index));
     t.scrollLeft = restOf(before + n + 1); await sleep(20); s.next(); await settled("loop");
     check("loop.navFromRunway", s.currentIndex === 2 && near(t.scrollLeft, restOf(before + 2)) && changes.join() === "1,2", { i: s.currentIndex, changes });
+
+    // A drag onto a clone shifts a lap within the pointermove itself. Scroll-driven animations
+    // read the offset before rAF runs, so a lap jump made in rAF painted them a lap away for a frame.
+    s.goTo(0, { instant: true }); await settled("loop");
+    const home = t.scrollLeft, stride = restOf(before + 1) - restOf(before), lap = restOf(before + n) - restOf(before);
+    const r = t.getBoundingClientRect(), x0 = r.left + 300, y = r.top + 50;
+    const pe = (type, x, extra = {}) => t.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: "mouse", isPrimary: true, button: 0, buttons: 1, clientX: x, clientY: y, ...extra }));
+    pe("pointerdown", x0); pe("pointermove", x0 + 20); pe("pointermove", x0 + stride);
+    const atMove = t.scrollLeft;
+    pe("pointerup", x0 + stride, { buttons: 0 }); await settled("loop");
+    check("loop.dragSeamShiftsInMove", near(atMove, home - stride + lap), { atMove, want: home - stride + lap, home });
   }
 
   // Drag: threshold, live tracking, flick advances one slide, no index flicker
@@ -212,8 +223,8 @@ const scenario = `(async () => {
     const pe = (type, x, extra = {}) => t.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 1, pointerType: "mouse", isPrimary: true, button: 0, buttons: 1, clientX: x, clientY: y, ...extra }));
     pe("pointerdown", x0); pe("pointermove", x0 - 3); await sleep(16);
     check("drag.threshold", !el.classList.contains("aero-slider--dragging"), {});
-    // Drag moves apply on the next frame, so wait for it. That also leaves the scroll's index read
-    // queued at release, which used to flicker the index 1 → 0 → 1. The 16 ms floor keeps headless
+    // Waiting a frame per move leaves the scroll's index read queued at release, which used to
+    // flicker the index 1 → 0 → 1. The 16 ms floor keeps headless
     // frames that land back to back from reading as a much faster flick that moves two slides.
     for (let i = 1; i <= 6; i++) { pe("pointermove", x0 - i * 20); await sleep(16); await new Promise(requestAnimationFrame); }
     check("drag.tracks", el.classList.contains("aero-slider--dragging") && near(t.scrollLeft, 120) && t.style.scrollSnapType === "none", { pos: t.scrollLeft });

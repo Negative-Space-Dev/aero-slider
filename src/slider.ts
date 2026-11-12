@@ -496,11 +496,9 @@ export function createSlider(
     const fromIndex = current;
     const gesture = new AbortController();
     let startScroll = scrollPosition();
-    let pending = startScroll;
     let lastCoord = startCoord;
     let lastTime = event.timeStamp;
     let velocity = 0; // px per ms along the logical axis
-    let frame = 0;
 
     function onMove(move: PointerEvent): void {
       // No button held: the release landed where this window can't hear it (an iframe).
@@ -533,21 +531,18 @@ export function createSlider(
         lastCoord = coord;
         lastTime = move.timeStamp;
       }
-      pending = startScroll + (startCoord - coord) * direction;
+      let position = startScroll + (startCoord - coord) * direction;
       if (loop()) {
-        const domIndex = domIndexAt(pending);
+        const domIndex = domIndexAt(position);
         if (!isRealDomIndex(domIndex)) {
           const shift = shiftToRealCopy(domIndex);
-          pending += shift;
+          position += shift;
           startScroll += shift;
         }
       }
-      if (!frame) {
-        frame = requestAnimationFrame(() => {
-          frame = 0;
-          scrollTo(pending);
-        });
-      }
+      // Scroll now, not in rAF: scroll-driven animations sample the offset before rAF callbacks,
+      // so a lap shift scrolled from rAF would paint them a lap away for one frame.
+      scrollTo(position);
     }
 
     function onUp(up: PointerEvent): void {
@@ -555,11 +550,6 @@ export function createSlider(
       if (!dragging) return;
       dragging = false;
       container.classList.remove("aero-slider--dragging");
-      if (frame) {
-        cancelAnimationFrame(frame);
-        frame = 0;
-        scrollTo(pending);
-      }
       const idle = up.timeStamp - lastTime;
       if (idle > 50) velocity *= Math.max(0, 1 - idle / 200);
 
