@@ -460,8 +460,11 @@ export function createSlider(
     if (!programmaticScroll && !scrollFrame) {
       scrollFrame = requestAnimationFrame(() => {
         scrollFrame = 0;
-        // A goTo() since this frame was queued (a drag's release) has already set the index.
-        if (!programmaticScroll) setCurrent(indexAt(scrollPosition()));
+        // A goTo() since this frame was queued (a drag's release) has already set the index. A
+        // resize can clamp the offset before the observer re-measures; relayout() places it then.
+        if (!programmaticScroll && observedSize() === measuredSize) {
+          setCurrent(indexAt(scrollPosition()));
+        }
       });
     }
     if (!("onscrollend" in track) || fallbackSettle) {
