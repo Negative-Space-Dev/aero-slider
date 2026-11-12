@@ -701,7 +701,8 @@ export function createSlider(
     const children = Array.from(track.children);
     const nowVisible = new Set<number>();
     for (const [el, isIn] of intersecting) {
-      if (isIn) nowVisible.add(indexOfDom(children.indexOf(el)));
+      // The slide itself (or the one a clone copies), not the clamped index navigation would use.
+      if (isIn) nowVisible.add(wrap(children.indexOf(el) - clonesBefore));
     }
     for (const index of visibleIndices) if (!nowVisible.has(index)) emit("hidden", { index });
     for (const index of nowVisible) if (!visibleIndices.has(index)) emit("visible", { index });
