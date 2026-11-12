@@ -1,5 +1,6 @@
 import type { SliderInstance } from "./types.ts";
-import { SLIDE_INDEX_ATTR } from "./slider.ts";
+import { SLIDE_INDEX_ATTR, cores } from "./slider.ts";
+import { pressable } from "./features.ts";
 
 const ACTIVE_CLASS = "aero-slider__thumb--active";
 
@@ -18,11 +19,13 @@ export function syncThumbnails(
   options: SyncThumbnailsOptions = {}
 ): () => void {
   const track = thumbnails.element.querySelector<HTMLElement>(".aero-slider__track");
-  if (!track) return () => {};
+  const core = cores.get(thumbnails);
+  if (!track || !core) return () => {};
   const controller = new AbortController();
   const { signal } = controller;
 
-  // Drag would swallow clicks, and clicks alone drive the strip.
+  // Thumbnails become buttons. Drag would swallow clicks, and clicks alone drive the strip.
+  core.picker = true;
   thumbnails.update({ draggable: false, loop: options.loop ?? true });
   track.style.cursor = "pointer";
 
@@ -37,8 +40,12 @@ export function syncThumbnails(
   };
 
   const activate = (index: number): void => {
-    for (const child of track.children)
-      child.classList.toggle(ACTIVE_CLASS, indexOf(child) === index);
+    for (const child of track.children) {
+      const active = indexOf(child) === index;
+      child.classList.toggle(ACTIVE_CLASS, active);
+      if (child.hasAttribute(SLIDE_INDEX_ATTR))
+        core.attr(child, "aria-current", active ? "true" : null);
+    }
     thumbnails.goTo(index);
   };
 
@@ -55,17 +62,22 @@ export function syncThumbnails(
     "aero:slideChange",
     (event) => {
       // A slider nested inside a primary slide bubbles its own changes through here.
-      if (event.target === primary.element) {
-        activate((event as CustomEvent<{ index: number }>).detail.index);
-      }
+      if (event.target === primary.element) activate(event.detail.index);
     },
     { signal }
   );
+  pressable(track, (target) => core.written.get(target)?.role === "button", signal);
 
   activate(primary.currentIndex);
   return () => {
     controller.abort();
     track.style.cursor = "";
-    for (const child of track.children) child.classList.remove(ACTIVE_CLASS);
+    if (!track.getAttribute("style")) track.removeAttribute("style");
+    for (const child of track.children) {
+      child.classList.remove(ACTIVE_CLASS);
+      core.attr(child, "aria-current", null);
+    }
+    core.picker = false;
+    thumbnails.refresh();
   };
 }

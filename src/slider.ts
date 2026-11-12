@@ -4,16 +4,25 @@ import type {
   SliderEvent,
   SliderEventData,
   SliderInstance,
+  SliderLabels,
 } from "./types.ts";
 import { autoplay, keyboard, navigation, pagination } from "./features.ts";
 
 export const SLIDE_INDEX_ATTR = "data-aero-slider-index";
 export const CLONE_ATTR = "data-aero-slider-clone";
 const SLIDE_CLASS = "aero-slider__slide";
+const FOCUSABLE =
+  "a, area, button, input, select, textarea, iframe, summary, audio[controls], video[controls], embed, object, [contenteditable], [tabindex]";
+
+/** Each slider's core, for syncThumbnails. */
+export const cores = new WeakMap<SliderInstance, SliderCore>();
 
 const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
 
-const DEFAULTS: Required<SliderConfig> = {
+/** The config as the slider holds it: every option set, every label filled in. */
+export type Config = Required<SliderConfig> & { labels: Required<SliderLabels> };
+
+const DEFAULTS: Config = {
   loop: false,
   autoplay: false,
   autoplayInterval: 5000,
@@ -27,6 +36,15 @@ const DEFAULTS: Required<SliderConfig> = {
   snap: "native",
   scrollDuration: 0,
   scrollEasing: easeOutCubic,
+  labels: {
+    carousel: "carousel",
+    slide: "slide",
+    slidePosition: "{index} of {count}",
+    dot: "Go to slide {index}",
+    pagination: "Slides",
+    pause: "Pause autoplay",
+    play: "Start autoplay",
+  },
 };
 
 const CHOICES = {
@@ -49,7 +67,7 @@ const NUMBERS = {
  * non-finite number or an unknown string falls back to the default; numbers are raised to their
  * minimum. Never throws: a bad option shouldn't take the page down.
  */
-function configure(config: Required<SliderConfig>, changes: SliderConfig = {}): void {
+function configure(config: Config, changes: SliderConfig = {}): void {
   const target = config as Record<string, unknown>;
   for (const [key, value] of Object.entries(changes ?? {})) {
     if (value !== undefined) target[key] = value;
@@ -68,6 +86,11 @@ function configure(config: Required<SliderConfig>, changes: SliderConfig = {}): 
     }
   }
   if (typeof config.scrollEasing !== "function") config.scrollEasing = DEFAULTS.scrollEasing;
+  const labels = { ...DEFAULTS.labels };
+  for (const [key, value] of Object.entries(Object(config.labels))) {
+    if (key in labels && typeof value === "string") labels[key as keyof SliderLabels] = value;
+  }
+  config.labels = labels;
 }
 
 const DRAG_THRESHOLD_PX = 5;
@@ -80,7 +103,7 @@ const WHEEL_SETTLE_MS = 200; // Firefox can skip scrollend after wheel scrolling
 export interface SliderCore {
   container: HTMLElement;
   track: HTMLElement;
-  config: Required<SliderConfig>;
+  config: Config;
   signal: AbortSignal;
   reducedMotion: MediaQueryList;
   /** A scrollDuration animation is in flight. */
@@ -97,6 +120,17 @@ export interface SliderCore {
   prev(): void;
   goTo(index: number, options?: GoToOptions): void;
   emit<E extends SliderEvent>(event: E, data: SliderEventData<E>): void;
+  /**
+   * Sets an attribute, or removes it when `value` is null, unless the author set it. Returns
+   * whether the attribute is the library's. destroy() removes every one still holding our value.
+   */
+  attr(el: Element, name: string, value?: string | null): boolean;
+  /** The attribute values attr() wrote, per element. Any other value there is the author's. */
+  written: Map<Element, Record<string, string>>;
+  /** Slides are buttons that pick a slide (a synced thumbnail strip), not slides in a carousel. */
+  picker: boolean;
+  /** `labels[key]` with its placeholders filled in for slide `index`. */
+  label(key: keyof SliderLabels, index?: number): string;
   // What continuous autoplay needs to drive the track by hand.
   isVertical(): boolean;
   isRtl(): boolean;
@@ -188,6 +222,24 @@ export function createSlider(
       : continuous()
         ? slideCount + Math.ceil(slidesPerView) + 2
         : Math.max(slideCount, Math.ceil(slidesPerView) + 2);
+
+  const written = new Map<Element, Record<string, string>>();
+  function attr(el: Element, name: string, value: string | null = ""): boolean {
+    const mine = written.get(el) ?? {};
+    written.set(el, mine);
+    const now = el.getAttribute(name);
+    if (now !== null && now !== mine[name]) return false;
+    if (value === null) {
+      el.removeAttribute(name);
+      delete mine[name];
+    } else el.setAttribute(name, (mine[name] = value));
+    return true;
+  }
+
+  const label = (key: keyof SliderLabels, index = 0) =>
+    config.labels[key]
+      .replaceAll("{index}", String(index + 1))
+      .replaceAll("{count}", String(slideCount));
 
   function emit<E extends SliderEvent>(event: E, detail: SliderEventData<E>): void {
     container.dispatchEvent(new CustomEvent(`aero:${event}`, { detail, bubbles: true }));
@@ -372,11 +424,11 @@ export function createSlider(
     clone.removeAttribute(SLIDE_INDEX_ATTR);
     clone.setAttribute(CLONE_ATTR, "");
     clone.setAttribute("aria-hidden", "true");
-    for (const el of [clone, ...clone.querySelectorAll("[id]")]) el.removeAttribute("id");
-    // The slide itself can be the link (a card), so it leaves the tab order too.
-    const focusable = "a, button, input, select, textarea, [tabindex]";
-    for (const el of [clone, ...clone.querySelectorAll<HTMLElement>(focusable)]) {
-      if (el.matches(focusable)) el.tabIndex = -1;
+    // A clone looks, plays and clicks like its slide but stays out of the tab order, forms and
+    // labels; an image map in it is only a picture. The slide itself can be a link (a card).
+    for (const el of [clone, ...clone.querySelectorAll<HTMLElement>("*")]) {
+      for (const name of ["id", "name", "for", "form", "usemap"]) el.removeAttribute(name);
+      if (el.matches(FOCUSABLE)) el.tabIndex = -1;
     }
     return clone;
   }
@@ -787,6 +839,14 @@ export function createSlider(
       if (!slide.classList.contains(SLIDE_CLASS)) classed.add(slide);
       slide.classList.add(SLIDE_CLASS);
       slide.setAttribute(SLIDE_INDEX_ATTR, String(i));
+      // A slide that is a link or button (a card) keeps its own role.
+      const { picker } = core;
+      if (!slide.matches("a[href], button") && attr(slide, "role", picker ? "button" : "group")) {
+        attr(slide, "aria-roledescription", picker ? null : label("slide"));
+        attr(slide, "tabindex", picker ? "0" : null);
+        if (!slide.hasAttribute("aria-labelledby"))
+          attr(slide, "aria-label", label(picker ? "dot" : "slidePosition", i));
+      }
     });
 
     container.classList.toggle("aero-slider--vertical", isVertical());
@@ -797,6 +857,8 @@ export function createSlider(
     } else restoreDir();
     rtl = !isVertical() && getComputedStyle(container).direction === "rtl";
     container.setAttribute("data-aero-alignment", config.alignment);
+    attr(container, "role", "region");
+    attr(container, "aria-roledescription", label("carousel"));
     container.classList.toggle("aero-slider--draggable", config.draggable);
     container.classList.toggle("aero-slider--free", snapMode() !== "native");
 
@@ -877,10 +939,14 @@ export function createSlider(
       "aero-slider--draggable",
       "aero-slider--free",
       "aero-slider--vertical",
-      "aero-slider--ready"
+      "aero-slider--ready",
+      "aero-slider--paused"
     );
-    for (const attr of ["aria-roledescription", "data-aero-alignment"]) {
-      container.removeAttribute(attr);
+    container.removeAttribute("data-aero-alignment");
+    for (const [el, mine] of written) {
+      for (const [name, value] of Object.entries(mine)) {
+        if (el.getAttribute(name) === value) el.removeAttribute(name);
+      }
     }
     restoreDir();
     if (container.aeroSlider === api) delete container.aeroSlider;
@@ -926,6 +992,10 @@ export function createSlider(
     prev,
     goTo,
     emit,
+    attr,
+    written,
+    picker: false,
+    label,
     isVertical,
     isRtl,
     position: scrollPosition,
@@ -949,7 +1019,6 @@ export function createSlider(
 
   container.removeAttribute("data-aero-defer-visibility");
   container.classList.add("aero-slider");
-  container.setAttribute("aria-roledescription", "carousel");
   track.classList.add("aero-slider__track");
 
   track.addEventListener("scroll", onScroll, { passive: true, signal });
@@ -1025,10 +1094,33 @@ export function createSlider(
   for (const type of releases) {
     addEventListener(type, onRelease, { capture: true, passive: true, signal });
   }
+  // Keyboard focus in a slide that isn't fully shown brings the slide into view. It waits a frame
+  // for any scroll the browser makes to show the focused element, so the two never compete.
+  track.addEventListener(
+    "focusin",
+    ({ target }) =>
+      requestAnimationFrame(() => {
+        const index = slides.findIndex((slide) => slide.contains(target as Node));
+        if (index < 0 || !(target as Element).matches(":focus-visible")) return;
+        const box = slides[index]!.getBoundingClientRect();
+        const view = track.getBoundingClientRect();
+        // A slide spans the track across its axis, so all four sides can be checked at once.
+        if (
+          box.left < view.left - 1 ||
+          box.top < view.top - 1 ||
+          box.right > view.right + 1 ||
+          box.bottom > view.bottom + 1
+        ) {
+          goTo(index);
+        }
+      }),
+    { signal }
+  );
   track.addEventListener("click", onClick, { capture: true, signal });
   track.addEventListener("dragstart", (e) => config.draggable && e.preventDefault(), { signal });
 
   rebuild();
+  cores.set(api, core);
   container.aeroSlider = api;
   container.classList.add("aero-slider--ready");
   emit("ready", {});

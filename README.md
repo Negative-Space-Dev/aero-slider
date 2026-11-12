@@ -1,6 +1,6 @@
 # Aero Slider
 
-A lightweight (about 7 KB of JavaScript and 1 KB of CSS, gzipped), CSS-first slider library for the modern web.
+A lightweight (about 9 KB of JavaScript and 1 KB of CSS, gzipped), CSS-first slider library for the modern web.
 
 - **CSS-First Architecture** — Layout via custom properties, responsive via media queries
 - **Native Scroll Snapping** — Hardware-accelerated, smooth scrolling
@@ -55,6 +55,34 @@ const teardown = AeroSlider.syncThumbnails(main, thumbs);
 ```
 
 The bundler entry (`import ... from "aero-slider"`) sets no global, so bundlers can drop what you don't import.
+
+## Accessibility
+
+By default the container is a carousel region and the slider's one tab stop. Arrow keys, Home and End move it while the container, its nav buttons or its dots have focus. Keys pressed inside slide content stay with that content. Each slide is a group named by its position ("2 of 5"). Dots are a group of buttons with the current one marked, and loop clones are hidden from screen readers and the tab order. The track announces slide changes politely, and stays quiet while autoplay runs. Keyboard focus in a slide that is only partly shown brings it into view.
+
+You provide:
+
+- A name for the slider: `aria-label` or `aria-labelledby` on the container.
+- A label on each nav button, such as `aria-label="Previous slide"`.
+- A pause button whenever autoplay runs for more than five seconds. Add a `<button class="aero-slider__autoplay">` inside the container. The slider names it, keeps `aria-pressed` in step, hides it while autoplay is off, and adds `aero-slider--paused` to the container while it is paused.
+
+Use a `<button>` as the dot template. A `<span>` still works, and the slider makes it a keyboard button:
+
+```html
+<div class="aero-slider__pagination">
+  <button class="aero-slider__dot"></button>
+</div>
+```
+
+The slider writes English strings. Pass `labels` to translate them; `{index}` and `{count}` are filled in:
+
+```js
+createSlider(el, {
+  labels: { carousel: "Karussell", slide: "Folie", slidePosition: "{index} von {count}" },
+});
+```
+
+The slider never replaces a role, label or `tabindex` you set yourself. Text inside a slide can't be selected while a mouse drag would move the slider; list it in `noDrag` (for example `noDrag: "p, h2"`) to keep it selectable.
 
 ## TypeScript
 

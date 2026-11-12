@@ -9,21 +9,34 @@ export function navigation(core: SliderCore) {
   prevButton?.addEventListener("click", core.prev, { signal });
   nextButton?.addEventListener("click", core.next, { signal });
 
+  const buttons = [prevButton, nextButton];
+  const initial = buttons.map((button) => button?.disabled);
+  signal.addEventListener("abort", () =>
+    buttons.forEach((button, i) => button && (button.disabled = initial[i]!))
+  );
+
   return {
     refresh(): void {
       const last = core.stopCount() - 1;
       const stop = core.stop();
       const hasEdges = !core.loop();
-      if (prevButton) prevButton.disabled = last < 1 || (hasEdges && stop <= 0);
-      if (nextButton) nextButton.disabled = last < 1 || (hasEdges && stop >= last);
+      const off = [last < 1 || (hasEdges && stop <= 0), last < 1 || (hasEdges && stop >= last)];
+      buttons.forEach((button, i) => {
+        if (!button) return;
+        // A focused button that disables would drop focus to the page.
+        if (off[i] && button === document.activeElement) {
+          ((!off[1 - i] && buttons[1 - i]) || container).focus();
+        }
+        button.disabled = off[i]!;
+      });
     },
   };
 }
 
 // ── Pagination dots ────────────────────────────────────────────────────
-// The markup supplies one .aero-slider__dot as a template; we clone it per
-// stop. With maxDots set, the dots sit in a sliding track and only a window
-// of them shows, iOS style.
+// The markup supplies one .aero-slider__dot as a template. It leaves the page while the slider runs,
+// and a copy of it stands in per stop. With maxDots set, the dots sit in a sliding track and only a
+// window of them shows, iOS style.
 
 export function pagination(core: SliderCore) {
   const box = core.container.querySelector<HTMLElement>(".aero-slider__pagination");
@@ -32,49 +45,69 @@ export function pagination(core: SliderCore) {
   return createPagination(core, box, template);
 }
 
+/** Enter and Space click a target that `is` accepts, the way they press a native button. */
+export function pressable(
+  root: HTMLElement,
+  is: (target: Element) => boolean,
+  signal: AbortSignal
+): void {
+  root.addEventListener(
+    "keydown",
+    (event) => {
+      const target = event.target as HTMLElement;
+      if ((event.key === "Enter" || event.key === " ") && is(target)) {
+        event.preventDefault();
+        target.click();
+      }
+    },
+    { signal }
+  );
+}
+
 function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElement) {
   const { config, signal } = core;
+  const parent = template.parentNode!;
+  const anchor = template.nextSibling;
   let dots: HTMLElement[] = [];
   let windowed = false;
   let dotTrack: HTMLElement | null = null;
   let dotPitch = 0; // distance between neighbouring dots; negative in RTL
 
   function clear(): void {
-    for (const dot of dots) if (dot !== template) dot.remove();
+    for (const dot of dots) dot.remove();
     dotTrack?.remove();
     dotTrack = null;
     dots = [];
-    template.style.display = "";
     box.classList.remove("aero-slider__pagination--windowed");
     box.style.removeProperty("--pagination-width");
   }
 
   function build(): void {
     clear();
+    core.attr(box, "role", "group");
+    core.attr(box, "aria-label", core.label("pagination"));
     const count = core.stopCount();
     const { maxDots } = config;
     windowed = maxDots > 0 && count > maxDots;
-    if (windowed) {
-      dotTrack = document.createElement("div");
-      dotTrack.className = "aero-slider__pagination-track";
-    }
-    const parent = dotTrack ?? box;
-
+    const holder = windowed ? document.createElement("div") : new DocumentFragment();
     for (let i = 0; i < count; i++) {
-      const dot = !windowed && i === 0 ? template : (template.cloneNode(true) as HTMLElement);
-      dot.setAttribute("role", "tab");
+      const dot = template.cloneNode(true) as HTMLElement;
+      if (dot.localName !== "button") {
+        if (!dot.hasAttribute("role")) dot.setAttribute("role", "button");
+        if (!dot.hasAttribute("tabindex")) dot.tabIndex = 0;
+      }
       const slide = core.slideOfStop(i);
-      dot.setAttribute("aria-label", `Go to slide ${slide + 1}`);
+      dot.setAttribute("aria-label", core.label("dot", slide));
       dot.dataset.slideIndex = String(slide);
-      if (dot !== template) parent.append(dot);
+      holder.append(dot);
       dots.push(dot);
     }
-
-    if (dotTrack || !count) template.style.display = "none";
-    if (dotTrack) {
+    if (windowed) {
+      dotTrack = holder as HTMLElement;
+      dotTrack.className = "aero-slider__pagination-track";
       box.classList.add("aero-slider__pagination--windowed");
-      box.append(dotTrack);
     }
+    parent.insertBefore(holder, anchor);
     measure();
   }
 
@@ -102,7 +135,8 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
     dots.forEach((dot, i) => {
       const active = i === current;
       dot.classList.toggle("aero-slider__dot--active", active);
-      dot.setAttribute("aria-selected", String(active));
+      if (active) dot.setAttribute("aria-current", "true");
+      else dot.removeAttribute("aria-current");
       if (!windowed) return;
 
       const slot = i - firstShown;
@@ -120,10 +154,13 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
         "aero-slider__dot--near-edge"
       );
       if (size) dot.classList.add(`aero-slider__dot--${size}`);
+      // A dot about to leave the tab order hands focus to the current one.
+      if (size === "hidden" && dot === document.activeElement) dots[current]!.focus();
+      dot.inert = size === "hidden";
     });
   }
 
-  box.setAttribute("role", "tablist");
+  template.remove();
   box.addEventListener(
     "click",
     (event) => {
@@ -132,7 +169,12 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
     },
     { signal }
   );
-  signal.addEventListener("abort", clear);
+  pressable(box, (target) => dots.includes(target as HTMLElement), signal);
+  signal.addEventListener("abort", () => {
+    clear();
+    if (!box.getAttribute("style")) box.removeAttribute("style");
+    parent.insertBefore(template, anchor);
+  });
 
   return { build, measure, refresh };
 }
@@ -140,23 +182,34 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
 // ── Keyboard ───────────────────────────────────────────────────────────
 
 export function keyboard(core: SliderCore): void {
-  const { container, signal } = core;
-  if (!container.hasAttribute("tabindex")) {
-    container.tabIndex = 0;
-    signal.addEventListener("abort", () => container.removeAttribute("tabindex"));
-  }
+  const { container, track, signal } = core;
+  core.attr(container, "tabindex", "0");
+  core.attr(track, "tabindex", "-1"); // a scroller is otherwise a second, unnamed tab stop
   container.addEventListener(
     "keydown",
     (event) => {
-      if ((event.target as Element).closest("input, textarea, select, [contenteditable]")) return;
+      // Keys belong to whatever has focus inside a slide, and to a nested slider's own controls.
+      const target = event.target as Element;
+      const own =
+        target === container ||
+        target === track ||
+        (target.matches(".aero-slider__nav--prev, .aero-slider__nav--next, .aero-slider__dot") &&
+          target.closest(".aero-slider") === container);
+      if (!own || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+      if (event.shiftKey) return;
       const [back, forward] = core.isVertical()
         ? ["ArrowUp", "ArrowDown"]
         : core.isRtl()
           ? ["ArrowRight", "ArrowLeft"]
           : ["ArrowLeft", "ArrowRight"];
+      const stop = core.stop();
+      const last = core.stopCount() - 1;
+      const to = { [back]: stop - 1, [forward]: stop + 1, Home: 0, End: last }[event.key];
+      // Off a loop, a key with nowhere to go keeps its default, so the page can scroll on.
+      if (to === undefined || (!core.loop() && (to < 0 || to > last || to === stop))) return;
       if (event.key === back) core.prev();
       else if (event.key === forward) core.next();
-      else return;
+      else core.goTo(core.slideOfStop(to));
       event.preventDefault();
     },
     { signal }
@@ -193,6 +246,13 @@ export function autoplay(core: SliderCore) {
   let running = false; // autoplayStart has been announced; a lap swapped on resize doesn't re-announce
   let settleFallback = 0;
   const pressed = new Set<number>(); // pointerIds currently down on the track
+
+  /** The track speaks slide changes only while nothing moves it on its own. */
+  const announce = (on: boolean) => {
+    core.attr(track, "aria-live", on ? "off" : "polite");
+    core.emit(on ? "autoplayStart" : "autoplayStop", {});
+  };
+  core.attr(track, "aria-live", "polite");
 
   const blocked = () =>
     signal.aborted ||
@@ -243,7 +303,7 @@ export function autoplay(core: SliderCore) {
     lap = { ...cycle, duration, animations };
     if (!running) {
       running = true;
-      core.emit("autoplayStart", {});
+      announce(true);
     }
   }
 
@@ -253,25 +313,37 @@ export function autoplay(core: SliderCore) {
    * product link lands on the link that was pressed. Laps start inside the band and the runway
    * covers a full lap past it, so the unfolded offset is always reachable.
    */
-  function stopLap(handBack: boolean, announce = true): void {
+  function stopLap(handBack: boolean, loud = true): void {
     if (!lap) return;
     const current = lap;
     lap = null;
     const position = handBack ? core.position() + travelled(current) : null;
     for (const animation of current.animations) animation.cancel();
     if (position !== null) core.jumpTo(position);
-    if (announce && running) {
+    if (loud && running) {
       running = false;
-      core.emit("autoplayStop", {});
+      announce(false);
     }
   }
 
+  /** The optional pause button and the paused class follow the hold pause() puts on. */
+  function paint(): void {
+    const paused = holds.has("api");
+    container.classList.toggle("aero-slider--paused", paused);
+    if (!button) return;
+    core.attr(button, "hidden", config.autoplay ? null : "");
+    core.attr(button, "aria-pressed", String(paused));
+    if (!button.textContent!.trim())
+      core.attr(button, "aria-label", core.label(paused ? "play" : "pause"));
+  }
+
   function start(): void {
+    paint();
     if (blocked()) {
       // A lap reset quietly for a resize that can't restart now still owes its autoplayStop.
       if (running && !lap) {
         running = false;
-        core.emit("autoplayStop", {});
+        announce(false);
       }
       return;
     }
@@ -279,7 +351,7 @@ export function autoplay(core: SliderCore) {
       if (!lap) startLap();
     } else if (!timer) {
       countdown();
-      core.emit("autoplayStart", {});
+      announce(true);
     }
   }
 
@@ -293,7 +365,7 @@ export function autoplay(core: SliderCore) {
     if (!timer) return;
     clearInterval(timer);
     timer = 0;
-    core.emit("autoplayStop", {});
+    announce(false);
   }
 
   function stop(): void {
@@ -303,6 +375,7 @@ export function autoplay(core: SliderCore) {
 
   function hold(reason: string): void {
     holds.add(reason);
+    paint();
     stop();
   }
 
@@ -317,6 +390,9 @@ export function autoplay(core: SliderCore) {
     clearTimeout(settleFallback);
     settleFallback = window.setTimeout(() => release("settle"), SETTLE_FALLBACK_MS);
   }
+
+  const button = container.querySelector(".aero-slider__autoplay");
+  button?.addEventListener("click", () => (holds.has("api") ? release : hold)("api"), { signal });
 
   const listen = (target: EventTarget, type: string, handler: (event: Event) => void) =>
     target.addEventListener(type, handler, { passive: true, signal });
