@@ -1,13 +1,5 @@
 /** Languages the docs highlight. Each must be a bundled Shiki language. */
-export type CodeLang =
-  | "html"
-  | "css"
-  | "typescript"
-  | "javascript"
-  | "tsx"
-  | "vue"
-  | "liquid"
-  | "bash";
+export type CodeLang = "html" | "css" | "typescript" | "javascript" | "bash";
 
 export interface CodeTab {
   label: string;
