@@ -922,8 +922,8 @@ body {
   border: 1px solid var(--line-strong);
   background-color: var(--paper);
   background-image:
-    linear-gradient(color-mix(in srgb, var(--line) 28%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--line) 28%, transparent) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--line) 48%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--line) 48%, transparent) 1px, transparent 1px);
   background-size: 24px 24px;
   background-position: -1px -1px;
 }
@@ -1010,8 +1010,11 @@ body {
   text-transform: uppercase;
   color: var(--faint);
 }
-.draft-cell__meta > :first-child {
+.draft-cell__meta > :first-child:not(:only-child) {
   color: var(--accent);
+}
+.draft-cell__meta > :only-child {
+  margin-left: auto;
 }
 .draft-cell > h3 {
   font-size: 1.5rem;
