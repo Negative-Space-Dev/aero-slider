@@ -926,10 +926,18 @@ export function createSlider(
     { signal }
   );
   track.addEventListener("scrollend", onSettle, { signal });
-  // The wheel takes over from any goTo() animation; touch and mouse do so in onPointerDown.
+  // A wheel along the track takes over from any goTo() animation; one mostly across it is the page
+  // scrolling past. Touch and mouse take over in onPointerDown.
   track.addEventListener(
     "wheel",
-    () => {
+    ({ deltaX, deltaY, shiftKey }) => {
+      // Chromium and Firefox scroll sideways on Shift+wheel but still report it as deltaY.
+      const [along, across] = isVertical()
+        ? [deltaY, deltaX]
+        : shiftKey && !deltaX
+          ? [deltaY, 0]
+          : [deltaX, deltaY];
+      if (Math.abs(along) <= Math.abs(across)) return;
       programmaticScroll = false;
       fallbackSettle = true;
       cancelEase();
