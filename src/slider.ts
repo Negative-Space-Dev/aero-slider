@@ -115,6 +115,7 @@ export function createSlider(
   container: HTMLElement,
   userConfig: SliderConfig = {}
 ): SliderInstance {
+  container.aeroSlider?.destroy();
   const track = requireTrack(container);
 
   const config = { ...DEFAULTS };
