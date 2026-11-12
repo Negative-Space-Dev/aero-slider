@@ -56,6 +56,10 @@ const teardown = AeroSlider.syncThumbnails(main, thumbs);
 
 The bundler entry (`import ... from "aero-slider"`) sets no global, so bundlers can drop what you don't import.
 
+## Working with AI agents
+
+[aeroslider.md](aeroslider.md) is a compact guide for coding agents: the markup to write, the CSS variables, options, events and the accessibility split. It ships in the package, so point your agent at `node_modules/aero-slider/aeroslider.md`.
+
 ## Accessibility
 
 Roles, names and controls belong in your markup. The slider adds only what changes at runtime.
