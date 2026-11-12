@@ -417,7 +417,10 @@ export function autoplay(core: SliderCore) {
         ? ""
         : (container.dataset.aeroStatus ?? "{index} of {count}")
             .replace("{index}", String(index + 1))
-            .replace("{count}", String(track.querySelectorAll("[data-aero-slider-index]").length));
+            .replace(
+              "{count}",
+              String(track.querySelectorAll(":scope > [data-aero-slider-index]").length)
+            );
   });
   listen(document, "visibilitychange", () => (document.hidden ? stop() : start()));
   listen(reducedMotion, "change", () => {
