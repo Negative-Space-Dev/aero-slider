@@ -74,7 +74,13 @@ const heroThumbs: SlideContent[] = heroSlides.map(({ num, tone }) => ({ num, ton
     <div class="flex min-w-0 flex-col">
       <div class="p-3 sm:p-5">
         <!-- Main Hero Slider -->
-        <div id="hero-slider" class="aero-slider w-full">
+        <div
+          id="hero-slider"
+          class="aero-slider w-full"
+          role="region"
+          aria-roledescription="carousel"
+          aria-label="Playground"
+        >
           <div class="aero-slider__viewport relative">
             <SliderNav />
             <div class="aero-slider__track">
@@ -90,11 +96,13 @@ const heroThumbs: SlideContent[] = heroSlides.map(({ num, tone }) => ({ num, ton
             id="hero-thumbs"
             class="aero-slider aero-slider--thumbnails"
             style="--slide-aspect: 16/9; --slides-per-view: 5; --slide-gap: 8px;"
+            role="group"
+            aria-label="Playground thumbnails"
           >
             <div class="aero-slider__viewport relative">
               <SliderNav noun="thumbnail" />
               <div class="aero-slider__track">
-                <Slides items={heroThumbs} />
+                <Slides items={heroThumbs} thumbs />
               </div>
             </div>
           </div>

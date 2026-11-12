@@ -5,7 +5,7 @@
 
 import type { SliderConfig } from "aero-slider";
 import type { CodeTab } from "../lib/code";
-import type { SlideContent } from "../lib/slide";
+import { slideRole, thumbRole, type SlideContent } from "../lib/slide";
 import { exampleIds, type ExampleId } from "./anchors";
 import type { RefEntry } from "./api";
 
@@ -29,6 +29,10 @@ export type DemoSlide =
 export interface DemoSlider {
   /** Element id, in the page and in the code samples. */
   id: string;
+  /** The slider's accessible name, in the page and in the code samples. */
+  label: string;
+  /** A synced thumbnail strip: its slides are buttons, and it is a plain group. */
+  thumbs?: boolean;
   /** The instance's variable name in the JS sample. */
   name?: string;
   /** Shown above the slider when an example has several. */
@@ -170,6 +174,8 @@ const styledCss = `#styled .aero-slider__nav--prev,
 #styled .aero-slider__dot {
   width: 6px;
   height: 6px;
+  padding: 0;
+  border: 0;
   border-radius: 3px;
   background: #2d3036;
   transition: width 0.2s, background-color 0.2s;
@@ -188,6 +194,7 @@ export const examples: Record<ExampleId, Example> = {
     sliders: [
       {
         id: "card-row",
+        label: "Product features",
         vars: { "--slides-per-view": "2.25", "--slide-gap": "16px", "--slide-aspect": "4 / 3" },
         nav: true,
         dots: true,
@@ -217,7 +224,7 @@ export const examples: Record<ExampleId, Example> = {
     group: "layout",
     title: "Responsive breakpoints",
     lead: "Use it when the number of slides in view should change with the screen width.",
-    sliders: [{ id: "responsive", nav: true, dots: true, slides: numbered(6) }],
+    sliders: [{ id: "responsive", label: "Responsive slides", nav: true, dots: true, slides: numbered(6) }],
     css: responsiveCss,
     notes: [
       "The slider re-reads <code>--slides-per-view</code> whenever the track or a slide changes size, so a media query takes effect with no JavaScript breakpoint config.",
@@ -233,6 +240,7 @@ export const examples: Record<ExampleId, Example> = {
     layout: "row",
     sliders: (["left", "center", "right"] as const).map((alignment) => ({
       id: `align-${alignment}`,
+      label: `Aligned ${alignment}`,
       name: alignment,
       caption: alignment,
       vars: { "--slides-per-view": "1.5", "--slide-gap": "12px" },
@@ -253,6 +261,7 @@ export const examples: Record<ExampleId, Example> = {
     sliders: [
       {
         id: "edge-to-edge",
+        label: "Featured",
         className: "aero-slider--breakout",
         wrapperClass: "breakout-clip",
         config: { alignment: "left" },
@@ -285,6 +294,7 @@ export const examples: Record<ExampleId, Example> = {
     sliders: [
       {
         id: "rtl",
+        label: "Right-to-left slides",
         name: "rtl",
         caption: "rtl",
         config: { direction: "rtl" },
@@ -294,6 +304,7 @@ export const examples: Record<ExampleId, Example> = {
       },
       {
         id: "vertical",
+        label: "Vertical slides",
         name: "vertical",
         caption: "ttb",
         config: { direction: "ttb" },
@@ -317,6 +328,7 @@ export const examples: Record<ExampleId, Example> = {
     sliders: [
       {
         id: "no-shift-before",
+        label: "Without the attribute",
         caption: "Without the attribute",
         sample: false,
         vars: { "--slides-per-view": "1.5", "--slide-gap": "12px" },
@@ -325,6 +337,7 @@ export const examples: Record<ExampleId, Example> = {
       },
       {
         id: "no-shift",
+        label: "With the attribute",
         caption: "With data-aero-defer-visibility",
         attrs: { "data-aero-defer-visibility": "" },
         vars: { "--slides-per-view": "1.5", "--slide-gap": "12px" },
@@ -349,6 +362,7 @@ export const examples: Record<ExampleId, Example> = {
     sliders: [
       {
         id: "hero-banner",
+        label: "Flight phases",
         vars: { "--slide-aspect": "21 / 9" },
         config: { autoplay: true, autoplayInterval: 4000, loop: true },
         nav: true,
@@ -367,6 +381,7 @@ export const examples: Record<ExampleId, Example> = {
       "It does not run under <code>prefers-reduced-motion</code>, and stops as soon as that is turned on.",
       "<code>pause()</code> and <code>resume()</code> hold it from code, on top of those pauses.",
       "Without <code>loop</code> it returns to the first slide after the last.",
+      "Autoplay that runs for more than five seconds needs a pause control. Wire your own button to <code>pause()</code> and <code>resume()</code>.",
     ],
   },
 
@@ -377,6 +392,7 @@ export const examples: Record<ExampleId, Example> = {
     sliders: [
       {
         id: "ticker",
+        label: "Customers",
         vars: { "--slides-per-view": "4", "--slide-gap": "12px", "--slide-aspect": "5 / 2" },
         config: { autoplay: "continuous", autoplaySpeed: 36, draggable: false },
         slides: [
@@ -409,6 +425,7 @@ export const examples: Record<ExampleId, Example> = {
     sliders: [
       {
         id: "snap-settle",
+        label: "Settle snap",
         name: "settle",
         caption: 'snap: "settle"',
         vars: { "--slides-per-view": "3", "--slide-gap": "12px" },
@@ -417,6 +434,7 @@ export const examples: Record<ExampleId, Example> = {
       },
       {
         id: "snap-none",
+        label: "Free scroll",
         name: "free",
         caption: 'snap: "none"',
         vars: { "--slides-per-view": "3", "--slide-gap": "12px" },
@@ -439,6 +457,7 @@ export const examples: Record<ExampleId, Example> = {
     sliders: [
       {
         id: "per-move",
+        label: "Paged slides",
         vars: { "--slides-per-view": "3", "--slide-gap": "12px" },
         config: { alignment: "left", perMove: 3 },
         nav: true,
@@ -461,6 +480,7 @@ export const examples: Record<ExampleId, Example> = {
     sliders: [
       {
         id: "with-arrows",
+        label: "Slides with arrows",
         name: "arrows",
         caption: "Arrows",
         nav: true,
@@ -468,6 +488,7 @@ export const examples: Record<ExampleId, Example> = {
       },
       {
         id: "with-dots",
+        label: "Slides with dots",
         name: "dots",
         caption: "Dots",
         dots: true,
@@ -478,7 +499,7 @@ export const examples: Record<ExampleId, Example> = {
       "Put the buttons before the track, so keyboard users reach them before the slide content.",
       "The dot is one template. The slider clones it for each position it can scroll to and marks the current one with <code>aero-slider__dot--active</code>.",
       "Without <code>loop</code>, the slider disables the arrow at an end it cannot pass.",
-      'Give each button an <code>aria-label</code>. The slider labels the dots itself ("Go to slide 2").',
+      'Give each button an <code>aria-label</code>. Make the dot a <code>&lt;button type="button"&gt;</code> too: a <code>&lt;span&gt;</code> cannot be reached by keyboard. <code>{index}</code> in its <code>aria-label</code> becomes the slide number of each dot.',
       'The library has no styles for the arrows or the dots. See <a href="#ex-styling">Style the arrows, dots and states</a>.',
     ],
   },
@@ -491,6 +512,7 @@ export const examples: Record<ExampleId, Example> = {
     sliders: [
       {
         id: "max-dots",
+        label: "Many slides",
         vars: { "--slides-per-view": "2.5", "--slide-gap": "12px" },
         config: { maxDots: 5 },
         nav: true,
@@ -514,6 +536,7 @@ export const examples: Record<ExampleId, Example> = {
     sliders: [
       {
         id: "gallery",
+        label: "Product images",
         name: "main",
         caption: "Main slider",
         vars: { "--slide-aspect": "16 / 9" },
@@ -522,6 +545,8 @@ export const examples: Record<ExampleId, Example> = {
       },
       {
         id: "gallery-thumbs",
+        label: "Product image thumbnails",
+        thumbs: true,
         name: "thumbs",
         caption: "Thumbnail strip",
         chrome: "aero-slider--thumbnails",
@@ -543,7 +568,8 @@ export const examples: Record<ExampleId, Example> = {
       "Both sliders need the same number of slides.",
       "It turns dragging off on the strip, so a press always selects, and makes the strip loop. Pass <code>{ loop: false }</code> as the third argument to keep it from looping.",
       '<code>alignment: "center"</code> on the strip keeps the active thumbnail in the middle.',
-      "The active thumbnail gets <code>aero-slider__thumb--active</code>. Style it yourself.",
+      'Make each thumbnail a <code>&lt;button type="button"&gt;</code> with its own <code>aria-label</code>, so it can be reached and named.',
+      'The active thumbnail gets <code>aero-slider__thumb--active</code> and <code>aria-current="true"</code>. Style it yourself.',
       "It returns a teardown function. Call it before <code>destroy()</code>.",
       'Reference: <a href="#api-sync"><code>syncThumbnails</code> in the API</a>.',
     ],
@@ -557,6 +583,7 @@ export const examples: Record<ExampleId, Example> = {
     sliders: [
       {
         id: "no-drag",
+        label: "Radio settings",
         vars: { "--slides-per-view": "1.5", "--slide-gap": "12px", "--slide-aspect": "2 / 1" },
         config: { noDrag: "a, button, input" },
         dots: true,
@@ -584,6 +611,7 @@ export const examples: Record<ExampleId, Example> = {
     sliders: [
       {
         id: "styled",
+        label: "Styled controls",
         chrome: "ex-bare",
         vars: { "--slides-per-view": "1.5", "--slide-gap": "12px", "--slide-aspect": "2 / 1" },
         nav: true,
@@ -596,7 +624,7 @@ export const examples: Record<ExampleId, Example> = {
     notes: [
       "The viewport is <code>position: relative</code>, so arrows inside it can be placed with <code>position: absolute</code>.",
       "The slider sets <code>disabled</code> on an arrow that cannot go further, so <code>:disabled</code> styles the end state. With <code>loop</code> no arrow is ever disabled.",
-      'The current dot gets <code>aero-slider__dot--active</code> and <code>aria-selected="true"</code>.',
+      'The current dot gets <code>aero-slider__dot--active</code> and <code>aria-current="true"</code>.',
       "The classes below are what the slider sets, for styling any other state.",
     ],
   },
@@ -635,24 +663,36 @@ export function styleOf(vars: CssVars = {}): string | undefined {
 
 const sampled = (example: Example) => example.sliders.filter((slider) => slider.sample !== false);
 
-function slideSample(slide: DemoSlide, n: number, indent: string): string[] {
+const attrSource = (attrs: Record<string, string>) =>
+  Object.entries(attrs)
+    .map(([key, value]) => (value === "" ? ` ${key}` : ` ${key}="${value}"`))
+    .join("");
+
+/** What the page puts on the container, shared by the demo and its HTML sample. */
+export function sliderRole(slider: DemoSlider): Record<string, string> {
+  return slider.thumbs
+    ? { role: "group", "aria-label": slider.label }
+    : { role: "region", "aria-roledescription": "carousel", "aria-label": slider.label };
+}
+
+function slideSample(slider: DemoSlider, slide: DemoSlide, n: number, indent: string): string[] {
+  if (slider.thumbs) return [`${indent}<button${attrSource(thumbRole(n))}>Thumbnail ${n}</button>`];
+  const role = attrSource(slideRole(n, slider.slides.length));
   if (slide.kind === "form") {
     return [
-      `${indent}<div>`,
+      `${indent}<div${role}>`,
       `${indent}  <input type="text" aria-label="${slide.field}" />`,
       `${indent}  <button type="button">${slide.action}</button>`,
       `${indent}</div>`,
     ];
   }
-  return [`${indent}<div>Slide ${n}</div>`];
+  return [`${indent}<div${role}>Slide ${n}</div>`];
 }
 
 function sliderHtml(slider: DemoSlider): string[] {
   const indent = slider.wrapperClass ? "  " : "";
   const classes = ["aero-slider", slider.className].filter(Boolean).join(" ");
-  const attrs = Object.entries(slider.attrs ?? {})
-    .map(([key, value]) => (value === "" ? ` ${key}` : ` ${key}="${value}"`))
-    .join("");
+  const attrs = attrSource({ ...sliderRole(slider), ...slider.attrs });
   const shown = slider.slides.slice(0, SHOWN_SLIDES);
   const lines = [
     `<div id="${slider.id}" class="${classes}"${attrs}>`,
@@ -664,7 +704,7 @@ function sliderHtml(slider: DemoSlider): string[] {
         ]
       : []),
     `    <div class="aero-slider__track">`,
-    ...shown.flatMap((slide, i) => slideSample(slide, i + 1, "      ")),
+    ...shown.flatMap((slide, i) => slideSample(slider, slide, i + 1, "      ")),
     ...(slider.slides.length > shown.length
       ? [`      <!-- … ${slider.slides.length} slides in total -->`]
       : []),
@@ -672,8 +712,8 @@ function sliderHtml(slider: DemoSlider): string[] {
     `  </div>`,
     ...(slider.dots
       ? [
-          `  <div class="aero-slider__pagination">`,
-          `    <span class="aero-slider__dot"></span>`,
+          `  <div class="aero-slider__pagination" role="group" aria-label="Slides">`,
+          `    <button type="button" class="aero-slider__dot" aria-label="Go to slide {index}"></button>`,
           `  </div>`,
         ]
       : []),

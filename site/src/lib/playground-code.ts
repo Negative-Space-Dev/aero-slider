@@ -34,16 +34,16 @@ const LIBRARY_DEFAULTS = {
 const THUMBS_PER_VIEW = 5;
 const SHOWN_SLIDES = 2;
 
-function slideLines(count: number, indent: string, text: (n: number) => string): string[] {
+function slideLines(count: number, indent: string, slide: (n: number) => string): string[] {
   const shown = Array.from({ length: Math.min(count, SHOWN_SLIDES) }, (_, i) => i + 1);
-  const lines = shown.map((n) => `${indent}<div>${text(n)}</div>`);
+  const lines = shown.map((n) => indent + slide(n));
   if (count > shown.length) lines.push(`${indent}<!-- … ${count} slides in total -->`);
   return lines;
 }
 
 function html(s: PlaygroundSettings): string {
   const lines = [
-    `<div id="slider" class="aero-slider">`,
+    `<div id="slider" class="aero-slider" role="region" aria-roledescription="carousel" aria-label="Featured">`,
     `  <div class="aero-slider__viewport">`,
     ...(s.navigation
       ? [
@@ -52,13 +52,18 @@ function html(s: PlaygroundSettings): string {
         ]
       : []),
     `    <div class="aero-slider__track">`,
-    ...slideLines(s.slideCount, "      ", (n) => `Slide ${n}`),
+    ...slideLines(
+      s.slideCount,
+      "      ",
+      (n) =>
+        `<div role="group" aria-roledescription="slide" aria-label="${n} of ${s.slideCount}">Slide ${n}</div>`
+    ),
     `    </div>`,
     `  </div>`,
     ...(s.pagination
       ? [
-          `  <div class="aero-slider__pagination">`,
-          `    <span class="aero-slider__dot"></span>`,
+          `  <div class="aero-slider__pagination" role="group" aria-label="Slides">`,
+          `    <button type="button" class="aero-slider__dot" aria-label="Go to slide {index}"></button>`,
           `  </div>`,
         ]
       : []),
@@ -67,10 +72,14 @@ function html(s: PlaygroundSettings): string {
   if (s.thumbnails) {
     lines.push(
       ``,
-      `<div id="thumbs" class="aero-slider">`,
+      `<div id="thumbs" class="aero-slider" role="group" aria-label="Thumbnails">`,
       `  <div class="aero-slider__viewport">`,
       `    <div class="aero-slider__track">`,
-      ...slideLines(s.slideCount, "      ", String),
+      ...slideLines(
+        s.slideCount,
+        "      ",
+        (n) => `<button type="button" aria-label="Show slide ${n}">${n}</button>`
+      ),
       `    </div>`,
       `  </div>`,
       `</div>`

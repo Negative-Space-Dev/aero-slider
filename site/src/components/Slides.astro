@@ -5,11 +5,13 @@ import type { SlideContent } from "../lib/slide";
 interface Props {
   /** Slide contents, or a count to generate numbered slides 01..n. */
   items: SlideContent[] | number;
+  /** Thumbnails of a synced strip: buttons instead of named groups. */
+  thumbs?: boolean;
 }
 
-const { items } = Astro.props;
+const { items, thumbs = false } = Astro.props;
 const slides: SlideContent[] =
   typeof items === "number" ? Array.from({ length: items }, (_, i) => ({ num: i + 1 })) : items;
 ---
 
-{slides.map((slide, i) => <Slide position={i + 1} {...slide} />)}
+{slides.map((slide, i) => <Slide position={i + 1} total={slides.length} thumb={thumbs} {...slide} />)}

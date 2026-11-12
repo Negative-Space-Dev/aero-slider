@@ -1,12 +1,23 @@
 ---
-import { slideInnerHtml, toneFor, type SlideContent } from "../lib/slide";
+import { slideInnerHtml, slideRole, thumbRole, toneFor, type SlideContent } from "../lib/slide";
 
 interface Props extends SlideContent {
   /** 1-based position in the track, used to pick a tone when none is given. */
   position: number;
+  /** Slides in the track, for the slide's name: "2 of 5". */
+  total: number;
+  /** A thumbnail of a synced strip: a button instead of a named group. */
+  thumb?: boolean;
 }
 
-const { position, ...content } = Astro.props;
+const { position, total, thumb = false, ...content } = Astro.props;
+const tone = content.tone ?? toneFor(position);
 ---
 
-<div class="slide" data-tone={content.tone ?? toneFor(position)} set:html={slideInnerHtml(content)} />
+{
+  thumb ? (
+    <button class="slide" data-tone={tone} {...thumbRole(position)} set:html={slideInnerHtml(content)} />
+  ) : (
+    <div class="slide" data-tone={tone} {...slideRole(position, total)} set:html={slideInnerHtml(content)} />
+  )
+}

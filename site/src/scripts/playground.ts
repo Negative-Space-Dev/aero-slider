@@ -3,7 +3,7 @@ import type { SliderConfig, SliderInstance } from "aero-slider";
 import { getRequiredElementById } from "../lib/dom";
 import { highlight, type LiveLang } from "../lib/highlight";
 import { playgroundCode, type PlaygroundSettings } from "../lib/playground-code";
-import { createSlideElement, heroToneFor } from "../lib/slide";
+import { createSlideElement, heroToneFor, nameSlides } from "../lib/slide";
 
 // Discrete steps for slidesPerView with exponential curve
 const SPV_STEPS = [1, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.5, 1.75, 2, 2.5, 3, 4, 5];
@@ -182,7 +182,7 @@ function createHeroSlide(n: number): HTMLElement {
 }
 
 function createThumbSlide(n: number): HTMLElement {
-  return createSlideElement({ num: n, tone: heroToneFor(n) }, n);
+  return createSlideElement({ num: n, tone: heroToneFor(n) }, n, true);
 }
 
 function reconcileSlideCount(targetCount: number): void {
@@ -213,7 +213,9 @@ function reconcileSlideCount(targetCount: number): void {
         thumbsTrack.lastElementChild?.remove();
       }
     }
+    nameSlides(thumbsTrack);
   }
+  nameSlides(heroTrack);
 }
 
 let heroSlider: SliderInstance;
@@ -284,8 +286,12 @@ function ensureHeroNavAndPagination(): void {
     if (!pagination) {
       pagination = document.createElement("div");
       pagination.className = "aero-slider__pagination";
-      const dot = document.createElement("span");
+      pagination.setAttribute("role", "group");
+      pagination.setAttribute("aria-label", "Slides");
+      const dot = document.createElement("button");
+      dot.type = "button";
       dot.className = "aero-slider__dot";
+      dot.setAttribute("aria-label", "Go to slide {index}");
       pagination.appendChild(dot);
       heroSliderEl.appendChild(pagination);
     }

@@ -4,22 +4,22 @@ import type { CodeTab } from "../lib/code";
 
 const CDN = "https://unpkg.com/aero-slider/dist";
 
-const markup = `<div class="aero-slider">
+const markup = `<div class="aero-slider" role="region" aria-roledescription="carousel" aria-label="Featured">
   <div class="aero-slider__viewport">
     <!-- Optional: arrows, placed before the track -->
     <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">‹</button>
     <button type="button" class="aero-slider__nav--next" aria-label="Next slide">›</button>
 
     <div class="aero-slider__track">
-      <div>Slide 1</div>
-      <div>Slide 2</div>
-      <div>Slide 3</div>
+      <div role="group" aria-roledescription="slide" aria-label="1 of 3">Slide 1</div>
+      <div role="group" aria-roledescription="slide" aria-label="2 of 3">Slide 2</div>
+      <div role="group" aria-roledescription="slide" aria-label="3 of 3">Slide 3</div>
     </div>
   </div>
 
   <!-- Optional: pagination, with one dot as a template -->
-  <div class="aero-slider__pagination">
-    <span class="aero-slider__dot"></span>
+  <div class="aero-slider__pagination" role="group" aria-label="Slides">
+    <button type="button" class="aero-slider__dot" aria-label="Go to slide {index}"></button>
   </div>
 </div>`;
 

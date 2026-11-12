@@ -40,13 +40,37 @@ export function slideInnerHtml({ num, label, text }: SlideContent): string {
   const parts = [
     label ? `<span class="slide__label">${escapeHtml(label)}</span>` : "",
     `<span class="slide__num">${escapeHtml(formatNum(num))}</span>`,
-    text ? `<p class="slide__text">${escapeHtml(text)}</p>` : "",
+    text ? `<span class="slide__text">${escapeHtml(text)}</span>` : "",
   ];
-  return `<div class="slide__body">${parts.join("")}</div>`;
+  return `<span class="slide__body">${parts.join("")}</span>`;
 }
 
-export function createSlideElement(content: SlideContent, position: number): HTMLElement {
-  const el = document.createElement("div");
+/** The role and name a slide carries in the markup: "2 of 5". */
+export function slideRole(position: number, total: number): Record<string, string> {
+  return {
+    role: "group",
+    "aria-roledescription": "slide",
+    "aria-label": `${position} of ${total}`,
+  };
+}
+
+/** A thumbnail is a button named after the slide it shows. */
+export function thumbRole(position: number): Record<string, string> {
+  return { type: "button", "aria-label": `Show slide ${position}` };
+}
+
+/** Renames every slide of a track after its count changed. Loop clones are left to the slider. */
+export function nameSlides(track: HTMLElement): void {
+  const slides = [...track.children].filter((el) => !el.hasAttribute("data-aero-slider-clone"));
+  slides.forEach((el, i) => {
+    const attrs = el.matches("button") ? thumbRole(i + 1) : slideRole(i + 1, slides.length);
+    for (const [name, value] of Object.entries(attrs)) el.setAttribute(name, value);
+  });
+}
+
+/** A slide to append at runtime. Call `nameSlides` on its track once it is in place. */
+export function createSlideElement(content: SlideContent, position: number, thumb = false): HTMLElement {
+  const el = document.createElement(thumb ? "button" : "div");
   el.className = "slide";
   el.dataset.tone = String(content.tone ?? toneFor(position));
   el.innerHTML = slideInnerHtml(content);

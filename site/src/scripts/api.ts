@@ -2,7 +2,7 @@ import { createSlider } from "aero-slider";
 import type { SliderConfig } from "aero-slider";
 import { controlActions } from "../data/api";
 import { getRequiredElementById } from "../lib/dom";
-import { createSlideElement } from "../lib/slide";
+import { createSlideElement, nameSlides } from "../lib/slide";
 
 const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -55,6 +55,7 @@ function controlDemo(): void {
       slide: () => createSlideElement({ num: slider.slideCount + 1 }, slider.slideCount + 1),
     });
     if (created) slider = created;
+    nameSlides(el.querySelector<HTMLElement>(".aero-slider__track")!);
     readout("last").textContent = action.label;
     render();
   });

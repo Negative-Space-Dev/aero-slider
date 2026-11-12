@@ -2,7 +2,8 @@
 import Pagination from "./Pagination.astro";
 import Slide from "./Slide.astro";
 import SliderNav from "./SliderNav.astro";
-import { styleOf, type DemoSlider } from "../data/examples";
+import { sliderRole, styleOf, type DemoSlider } from "../data/examples";
+import { slideRole } from "../lib/slide";
 
 interface Props {
   slider: DemoSlider;
@@ -11,6 +12,7 @@ interface Props {
 const { slider } = Astro.props;
 // Examples keep to the two dark tones, so the controls and content read first.
 const quietTone = (i: number) => (i % 2 === 0 ? 1 : 4);
+const role = (i: number) => slideRole(i + 1, slider.slides.length);
 ---
 
 <figure class="ex-slider">
@@ -20,6 +22,7 @@ const quietTone = (i: number) => (i % 2 === 0 ? 1 : 4);
       id={slider.id}
       class:list={["aero-slider", slider.className, slider.chrome]}
       style={styleOf(slider.vars)}
+      {...sliderRole(slider)}
       {...slider.attrs}
     >
       <div class="aero-slider__viewport">
@@ -38,7 +41,7 @@ const quietTone = (i: number) => (i % 2 === 0 ? 1 : 4);
           {
             slider.slides.map((slide, i) =>
               slide.kind === "card" ? (
-                <div class="ex-card">
+                <div class="ex-card" {...role(i)}>
                   <div class="ex-card__body">
                     <span class="ex-card__meta">{slide.meta}</span>
                     <h4 class="ex-card__title">{slide.title}</h4>
@@ -46,11 +49,11 @@ const quietTone = (i: number) => (i % 2 === 0 ? 1 : 4);
                   </div>
                 </div>
               ) : slide.kind === "wordmark" ? (
-                <div class="ex-wordmark">
+                <div class="ex-wordmark" {...role(i)}>
                   <span>{slide.name}</span>
                 </div>
               ) : slide.kind === "form" ? (
-                <div class="ex-form">
+                <div class="ex-form" {...role(i)}>
                   <div class="ex-form__body">
                     <span class="ex-card__meta">{slide.title}</span>
                     <div class="ex-form__row">
@@ -62,7 +65,13 @@ const quietTone = (i: number) => (i % 2 === 0 ? 1 : 4);
                   </div>
                 </div>
               ) : (
-                <Slide position={i + 1} {...slide} tone={slide.tone ?? quietTone(i)} />
+                <Slide
+                  position={i + 1}
+                  total={slider.slides.length}
+                  thumb={slider.thumbs}
+                  {...slide}
+                  tone={slide.tone ?? quietTone(i)}
+                />
               )
             )
           }
