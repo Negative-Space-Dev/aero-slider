@@ -946,32 +946,162 @@ body {
   }
 }
 
-/* ── Motion ─────────────────────────────────────────────────────────── */
-/* Each marquee row holds three identical sets; shifting by one set loops seamlessly. */
-@keyframes marquee {
-  0% {
-    transform: translateX(0);
+/* ── Drafting sheet ─────────────────────────────────────────────────────
+   Benefits and anatomy are drawn like a technical drawing: one framed sheet
+   on a faint grid, cells split by hairlines, registration marks where the
+   hairlines meet. */
+.draft-sheet {
+  position: relative;
+  border: 1px solid var(--line-strong);
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--line) 70%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--line) 70%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: -1px -1px;
+}
+
+/* Registration mark: a crosshair with a ring, centred on a corner. */
+.draft-sheet::before,
+.draft-sheet::after,
+.draft-cell::before,
+.draft-cell::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  width: 15px;
+  height: 15px;
+  background:
+    linear-gradient(var(--faint), var(--faint)) center / 1px 100% no-repeat,
+    linear-gradient(var(--faint), var(--faint)) center / 100% 1px no-repeat,
+    radial-gradient(circle, transparent 3.5px, var(--faint) 3.5px 4.5px, transparent 4.5px);
+  pointer-events: none;
+}
+.draft-sheet::before {
+  top: -8px;
+  right: -8px;
+}
+.draft-sheet::after {
+  bottom: -8px;
+  left: -8px;
+}
+.draft-cell::before {
+  top: -8px;
+  left: -8px;
+}
+.draft-cell::after {
+  right: -8px;
+  bottom: -8px;
+}
+
+.draft-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 1.25rem 1.25rem 1.5rem;
+  border-color: var(--line-strong);
+}
+.draft-cell + .draft-cell {
+  border-top-width: 1px;
+}
+@media (min-width: 640px) {
+  .draft-cell {
+    padding: 1.5rem 1.75rem 1.75rem;
   }
-  100% {
-    transform: translateX(calc(-100% / 3));
+}
+@media (min-width: 1024px) {
+  .draft-cell + .draft-cell {
+    border-top-width: 0;
+  }
+  .draft-cell:nth-child(-n + 2) {
+    border-bottom-width: 1px;
+  }
+  .draft-cell:nth-child(odd) {
+    border-right-width: 1px;
   }
 }
 
-.animate-marquee {
-  animation: marquee 50s linear infinite;
+.draft-cell__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.draft-cell__meta > :first-child {
+  color: var(--accent);
+}
+.draft-cell > h3 {
+  margin-top: auto;
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+.draft-cell > p {
+  max-width: 34rem;
+  margin-top: 0.5rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--muted);
+  text-wrap: pretty;
 }
 
-.animate-marquee-reverse {
-  animation: marquee 50s linear infinite reverse;
+/* Line drawings. Strokes stay one device pixel at any scale. */
+.draft-fig {
+  display: block;
+  width: 100%;
+  max-width: 28rem;
+  height: auto;
+  margin-block: 1.5rem 1.75rem;
+  overflow: hidden;
+}
+.draft-fig :is(path, rect, circle) {
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.draft-fig :is(path, rect, circle):not([fill]) {
+  fill: none;
+}
+.draft-fig .dr-strong {
+  stroke: var(--line-strong);
+}
+.draft-fig .dr-faint {
+  stroke: var(--faint);
+}
+.draft-fig .dr-muted {
+  stroke: var(--muted);
+}
+.draft-fig .dr-accent {
+  stroke: var(--accent);
+}
+.draft-fig .dr-dashed {
+  stroke-dasharray: 3 3;
+}
+.draft-fig .dr-fill {
+  fill: var(--faint);
+}
+.draft-fig text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.01em;
+  fill: var(--faint);
+}
+.draft-fig .dr-value {
+  fill: var(--ink);
+}
+.draft-fig .dr-accent-text {
+  fill: var(--accent);
 }
 
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
-  }
-  .animate-marquee,
-  .animate-marquee-reverse {
-    animation: none;
   }
 }
 

@@ -1,45 +1,8 @@
 ---
-import SparklesIcon from "../components/icons/SparklesIcon.astro";
-import ZapIcon from "../components/icons/ZapIcon.astro";
 import BoxIcon from "../components/icons/BoxIcon.astro";
-import WrenchIcon from "../components/icons/WrenchIcon.astro";
-import TargetIcon from "../components/icons/TargetIcon.astro";
-import HandIcon from "../components/icons/HandIcon.astro";
-import AccessibilityIcon from "../components/icons/AccessibilityIcon.astro";
-import InfinityIcon from "../components/icons/InfinityIcon.astro";
-import PlayIcon from "../components/icons/PlayIcon.astro";
-import ColumnsIcon from "../components/icons/ColumnsIcon.astro";
-import RulerIcon from "../components/icons/RulerIcon.astro";
-import MoreHorizontalIcon from "../components/icons/MoreHorizontalIcon.astro";
-import ImageIcon from "../components/icons/ImageIcon.astro";
-import ActivityIcon from "../components/icons/ActivityIcon.astro";
-import AnchorIcon from "../components/icons/AnchorIcon.astro";
-import KeyboardIcon from "../components/icons/KeyboardIcon.astro";
+import Benefits from "./Benefits.astro";
+import { bundleSize } from "../lib/bundle-size";
 import { REPO } from "../lib/site";
-
-// Two marquee rows; the second runs in the opposite direction.
-const featureRows = [
-  [
-    { icon: SparklesIcon, label: "CSS-First Architecture" },
-    { icon: ZapIcon, label: "~8 KB gzipped" },
-    { icon: BoxIcon, label: "Zero Dependencies" },
-    { icon: WrenchIcon, label: "Highly Extensible" },
-    { icon: TargetIcon, label: "Native Scroll Snapping" },
-    { icon: HandIcon, label: "Touch & Swipe Friendly" },
-    { icon: AccessibilityIcon, label: "Accessible" },
-    { icon: InfinityIcon, label: "Infinite Looping" },
-  ],
-  [
-    { icon: PlayIcon, label: "Smooth Autoplay" },
-    { icon: ColumnsIcon, label: "Multi-Slide Views" },
-    { icon: RulerIcon, label: "Responsive API" },
-    { icon: MoreHorizontalIcon, label: "Custom Pagination" },
-    { icon: ImageIcon, label: "Thumbnail Syncing" },
-    { icon: ActivityIcon, label: "Event Callbacks" },
-    { icon: AnchorIcon, label: "Zero CLS" },
-    { icon: KeyboardIcon, label: "Keyboard Nav" },
-  ],
-];
 
 const packageManagers = ["bun", "npm", "yarn", "pnpm"];
 ---
@@ -52,7 +15,7 @@ const packageManagers = ["bun", "npm", "yarn", "pnpm"];
     </span>
     <span class="caption inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5">
       <BoxIcon class="size-3.5 text-accent" />
-      ~8 KB gzipped
+      ~{Math.round(bundleSize.total)} KB gzipped
     </span>
   </div>
 
@@ -60,33 +23,9 @@ const packageManagers = ["bun", "npm", "yarn", "pnpm"];
     CSS-first slider for the modern web
   </h1>
 
-  <!-- Feature marquee: each row holds three identical sets, shifted by one set per loop -->
-  <div class="-mx-4 mt-8 mb-10 flex flex-col gap-3 overflow-hidden py-3 [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)] sm:mx-0 md:gap-4">
-    {
-      featureRows.map((row, rowIndex) => (
-        <div class:list={["flex w-max", rowIndex % 2 ? "animate-marquee-reverse" : "animate-marquee"]}>
-          {[0, 1, 2].map((set) => (
-            <ul class="flex shrink-0 gap-3 pr-3 md:gap-4 md:pr-4" aria-hidden={set > 0 ? "true" : undefined}>
-              {row.map(({ icon: Icon, label }) => (
-                <li
-                  class:list={[
-                    "inline-flex items-center gap-2 rounded-full border border-line px-4 py-2.5 text-sm font-medium whitespace-nowrap text-muted",
-                    rowIndex % 2 ? "bg-paper" : "bg-surface",
-                  ]}
-                >
-                  <Icon class="size-4 shrink-0 text-faint" />
-                  {label}
-                </li>
-              ))}
-            </ul>
-          ))}
-        </div>
-      ))
-    }
-  </div>
 
   <!-- Install Widget -->
-  <div id="install-widget" class="mx-auto max-w-md rounded-xl border border-line bg-surface text-left">
+  <div id="install-widget" class="mx-auto mt-8 max-w-md sm:mt-10 rounded-xl border border-line bg-surface text-left">
     <div class="flex items-center justify-between border-b border-line pr-2 pl-1.5">
       <div class="flex">
         {
@@ -134,4 +73,6 @@ const packageManagers = ["bun", "npm", "yarn", "pnpm"];
       </button>
     </div>
   </div>
+
+  <Benefits />
 </section>
