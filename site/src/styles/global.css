@@ -429,6 +429,207 @@ body {
     tab-size: 2;
   }
 
+  /* Tabbed code block: one frame, a tab bar (or a single label) and a copy button. */
+  .code-tabs {
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    background: var(--surface);
+  }
+  .code-tabs__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-height: 2.5rem;
+    padding-inline: 0.375rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .code-tabs__list {
+    display: flex;
+    min-width: 0;
+    align-self: stretch;
+  }
+  .code-tabs__tab {
+    margin-bottom: -1px;
+    padding-inline: 0.625rem;
+    border-bottom: 1px solid transparent;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--faint);
+    transition:
+      color 0.15s,
+      border-color 0.15s;
+  }
+  .code-tabs__tab:hover,
+  .code-tabs__tab[aria-selected="true"] {
+    color: var(--ink);
+  }
+  .code-tabs__tab[aria-selected="true"] {
+    border-bottom-color: var(--accent);
+  }
+  .code-tabs__label {
+    padding-inline: 0.625rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--faint);
+  }
+  .code-tabs__copy {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.375rem;
+    height: 1.75rem;
+    padding-inline: 0.5rem;
+    border-radius: 0.375rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--faint);
+    transition:
+      color 0.15s,
+      background-color 0.15s;
+  }
+  .code-tabs__copy:hover {
+    background: var(--line);
+    color: var(--ink);
+  }
+  .code-tabs__copy svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  .code-tabs__copy svg[data-icon="done"] {
+    color: var(--accent);
+  }
+  .code-tabs pre {
+    margin: 0;
+    padding: 1rem 1.125rem;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.7;
+    tab-size: 2;
+  }
+
+  /* Collapsed content behind a real <details>, so it works from the keyboard. */
+  .disclosure > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding-block: 0.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s;
+  }
+  .disclosure > summary::-webkit-details-marker {
+    display: none;
+  }
+  .disclosure > summary::before {
+    content: "";
+    width: 0.375rem;
+    height: 0.375rem;
+    margin-inline: 0.125rem;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    rotate: -45deg;
+    transition: rotate 0.15s;
+  }
+  .disclosure[open] > summary::before {
+    rotate: 45deg;
+  }
+  .disclosure > summary:hover,
+  .disclosure[open] > summary {
+    color: var(--ink);
+  }
+  .disclosure__body {
+    margin-top: 0.75rem;
+  }
+
+  /* Reference rows: identifier and chips on one line, the description beneath.
+     Wraps instead of scrolling, so it reads at phone width. */
+  .ref-list {
+    display: grid;
+    gap: 2.5rem;
+  }
+  .ref-list__title {
+    padding-bottom: 0.625rem;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .ref-row {
+    padding-block: 1rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .ref-row:last-child {
+    border-bottom: 0;
+  }
+  .ref-row__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.375rem 0.5rem;
+  }
+  .ref-row__name {
+    margin-right: 0.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+  .ref-chip {
+    padding: 0.0625rem 0.375rem;
+    border: 1px solid var(--line);
+    border-radius: 0.375rem;
+    background: var(--surface);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+  }
+  .ref-chip__key {
+    color: var(--faint);
+  }
+  .ref-row__desc {
+    max-width: 40rem;
+    margin-top: 0.375rem;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--muted);
+    text-wrap: pretty;
+  }
+  .ref-row__link {
+    display: inline-block;
+    margin-top: 0.375rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--accent);
+  }
+  .ref-row__link::after {
+    content: " →";
+  }
+  .ref-row__link:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .ref-row > .disclosure {
+    margin-top: 0.5rem;
+  }
+
   .doc-table {
     width: 100%;
     font-size: 0.9375rem;

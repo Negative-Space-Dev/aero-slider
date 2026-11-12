@@ -2,75 +2,33 @@
 import CodeBlock from "../components/CodeBlock.astro";
 import DocTable from "../components/DocTable.astro";
 import Entry from "../components/Entry.astro";
+import {
+  attributes,
+  cssVariables,
+  eventRefGroups,
+  globals,
+  instanceRefGroups,
+  optionRefGroups,
+  stateClasses,
+} from "../data/api";
 import { REPO } from "../lib/site";
 
-// ── API reference tables. Cells are HTML strings. ─────────────────────
-const globalRows = [
-  ["AeroSlider.createSlider", "Same as the module <code>createSlider</code> — creates a slider instance"],
-  ["AeroSlider.syncThumbnails", "Same as the module <code>syncThumbnails</code> — syncs primary and thumbnail sliders"],
-];
-
-const cssPropertyRows = [
-  ["--slides-per-view", "1", "Number of visible slides (supports fractional, e.g. 1.5)"],
-  ["--slide-gap", "0px", "Gap between slides"],
-  ["--slide-aspect", "5 / 3", "Aspect ratio for slides"],
-  ["--aero-layout-width", "100%", "Content column width for <code>aero-slider--breakout</code> sliders. Slides size to this column while the track spans the full width; edge gutters are derived automatically."],
-  ["data-aero-defer-visibility", "—", "Prevents layout shift before JS init in loop mode by reserving space for prepended clones. Pair it with <code>data-aero-alignment</code> in HTML when mirroring a non-default pre-init alignment; center is assumed otherwise."],
-];
-
-const stateClassRows = [
-  ["aero-slider--ready", "The slider has initialized"],
-  ["aero-slider--draggable", "<code>draggable</code> is on. The track shows the <code>grab</code> cursor only then"],
-  ["aero-slider--dragging", "A mouse or pen drag is in progress (<code>grabbing</code> cursor)"],
-  ["aero-slider--free", '<code>snap</code> is <code>"settle"</code> or <code>"none"</code>. Turns CSS scroll snapping off'],
-  ["aero-slider--vertical", '<code>direction</code> is <code>"ttb"</code>'],
-];
-
-const configRows = [
-  ["loop", "boolean", "false", "Infinite looping"],
-  ["alignment", '"left" | "center" | "right"', '"center"', "Align the active slide to the left, center, or right when possible. At non-loop edges the scroll position clamps, but <code>currentIndex</code> still reflects the focused slide."],
-  ["draggable", "boolean", "true", "Enable mouse and pen dragging. Touch always swipes natively"],
-  ["autoplay", 'boolean | "continuous"', "false", '<code>true</code> advances one move every <code>autoplayInterval</code>. <code>"continuous"</code> drifts the track smoothly like a ticker at <code>autoplaySpeed</code>; it implies <code>loop</code> and <code>snap: "none"</code>'],
-  ["autoplaySpeed", "number", "40", "Continuous autoplay speed in pixels per second. <code>0</code> or less keeps the track still"],
-  ["autoplayInterval", "number", "5000", "Delay between auto-advances (ms). Restarts after any manual change, and holds while the slider is pressed"],
-  ["maxDots", "number", "0", "Max pagination dots (0 = unlimited); shows iOS-style sliding window when exceeded"],
-  ["noDrag", "string", '""', 'CSS selector for elements inside slides that should not trigger drag (e.g. <code>"a, button, input"</code>)'],
-  ["perMove", "number", "1", "Number of slides to advance per <code>next()</code> / <code>prev()</code> call"],
-  ["direction", '"ltr" | "rtl" | "ttb"', '"ltr"', "Carousel direction: left-to-right, right-to-left, or top-to-bottom (vertical)"],
-  ["snap", '"native" | "settle" | "none"', '"native"', 'How the track comes to rest. <code>"native"</code> uses CSS scroll snapping. <code>"settle"</code> scrolls freely, then eases onto the nearest slide once scrolling stops (with <code>scrollDuration</code> / <code>scrollEasing</code>). <code>"none"</code> rests wherever the track stops'],
-  ["scrollDuration", "number", "0", "Length of <code>next()</code> / <code>prev()</code> / <code>goTo()</code> scrolls in ms, eased by <code>scrollEasing</code>, so they move the same way in every browser. <code>0</code> uses the browser's native smooth scrolling. Reduced motion makes every scroll instant either way"],
-  ["scrollEasing", "(t: number) =&gt; number", "ease-out cubic", "Maps linear progress 0–1 to eased progress for <code>scrollDuration</code> scrolls, e.g. <code>(t) =&gt; t</code> for linear"],
-];
-
-const instanceRows = [
-  [".next()", "Go to next slide"],
-  [".prev()", "Go to previous slide"],
-  [".goTo(index, options?)", "Scroll to a specific slide index. Pass <code>{ instant: true }</code> to jump there with no animation"],
-  [".pause()", "Hold autoplay until <code>.resume()</code>. Hover, focus and drag pauses still apply on top"],
-  [".resume()", "Release a <code>.pause()</code> and restart the autoplay countdown"],
-  [".update(config?)", "Update config and re-render"],
-  [".destroy()", "Tear down and clean up"],
-  [".refresh()", "Re-read slides from DOM and rebuild (call after external DOM changes)"],
-  [".add(slides, index?)", "Insert one or more slides into the track; calls refresh() automatically"],
-  [".remove(index)", "Remove slide(s) by index (number or array); calls refresh() automatically"],
-  [".element", "The container element the slider is attached to (read-only)"],
-  [".currentIndex", "Current active slide index (read-only)"],
-  [".slideCount", "Total number of slides (read-only)"],
-];
-
-const eventRows = [
-  ["aero:ready", "{}", "Fired once after initialization (listen before <code>createSlider</code>)"],
-  ["aero:slideChange", "{ index: number }", "Fired when the active slide changes"],
-  ["aero:dragStart", "{ index: number }", "Fired when a mouse or pen drag starts (touch scrolls natively and doesn't fire drag events)"],
-  ["aero:dragEnd", "{ index: number; fromIndex: number }", "Fired when a mouse or pen drag is released, after the target slide is chosen"],
-  ["aero:autoplayStart", "{}", "Fired when autoplay starts or resumes"],
-  ["aero:autoplayStop", "{}", "Fired when autoplay pauses"],
-  ["aero:visible", "{ index: number }", "Fired per slide when it enters the visible range"],
-  ["aero:hidden", "{ index: number }", "Fired per slide when it leaves the visible range"],
-  ["aero:resize", "{}", "Fired when the track or slide size changes, e.g. a window resize or a CSS variable such as <code>--slides-per-view</code> changing (before re-measuring)"],
-  ["aero:resized", "{}", "Fired after the slider finishes updating from a resize"],
-  ["aero:destroy", "{}", "Fired at the start of <code>destroy()</code>, before teardown"],
-];
+const globalRows = globals.map((entry) => [entry.name, entry.description]);
+const cssPropertyRows = [...cssVariables, ...attributes].map((entry) => [
+  entry.name,
+  entry.default ?? "—",
+  entry.description,
+]);
+const stateClassRows = stateClasses.map((entry) => [entry.name, entry.description]);
+const configRows = optionRefGroups
+  .flatMap((group) => group.entries)
+  .map((entry) => [entry.name, entry.type ?? "", entry.default ?? "", entry.description]);
+const instanceRows = instanceRefGroups
+  .flatMap((group) => group.entries)
+  .map((entry) => [entry.name, entry.description]);
+const eventRows = eventRefGroups
+  .flatMap((group) => group.entries)
+  .map((entry) => [entry.name, entry.type ?? "", entry.description]);
 ---
 
 <section id="api" class="container-page py-12 sm:py-16">
