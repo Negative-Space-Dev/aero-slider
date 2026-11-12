@@ -89,15 +89,20 @@ const layers = [
   },
 ];
 
+// The anatomy drawing nests each box 12 units inside its parent. Labels sit on
+// an even pitch; each leader starts with a dot on the edge of what it names.
+const slideWidth = (132 - 2 * 8) / 3;
+const slideXs = [0, 1, 2].map((i) => 36.5 + i * (slideWidth + 8));
+
 const callouts = [
-  { y: 11, from: "M196 8H208", label: ".aero-slider" },
-  { y: 25, from: "M186 22H208", label: "__viewport" },
-  { y: 47, from: "M160 44H208", label: "__track" },
-  { y: 87, from: "M180 84H208", label: "__nav--prev/next" },
-  { y: 115, from: "M154 112H208", label: "slides", accent: true },
-  { y: 177, from: "M186 174H208", label: "__pagination" },
-  { y: 199, from: "M114 184V196H208", label: "__dot" },
-];
+  { label: ".aero-slider", at: [204.5, 8.5], path: "M204.5 8.5H218" },
+  { label: "__viewport", at: [192.5, 34.5], path: "M192.5 34.5H218" },
+  { label: "__track", at: [180.5, 60.5], path: "M180.5 60.5H218" },
+  { label: "__nav--prev/next", at: [189.5, 87.5], path: "M189.5 87.5H218" },
+  { label: "slides", at: [168.5, 114.5], path: "M168.5 114.5H218", accent: true },
+  { label: "__pagination", at: [192.5, 184.5], path: "M192.5 184.5H218" },
+  { label: "__dot", at: [118.5, 199.5], path: "M118.5 199.5V210.5H218" },
+].map((callout) => ({ ...callout, labelY: Number(callout.path.match(/([\d.]+)H218$/)![1]) }));
 ---
 
 <section id="start" class="container-page py-12 sm:py-16">
@@ -128,30 +133,36 @@ const callouts = [
       <h3 class="caption mb-6">Three layers</h3>
       <div class="draft-sheet draft-sheet--anatomy grid lg:grid-cols-12">
         <figure class="draft-cell lg:col-span-7">
-          <svg class="draft-fig draft-fig--anatomy" viewBox="0 0 320 212" role="img" aria-labelledby="anatomy-title">
+          <svg class="draft-fig draft-fig--anatomy" viewBox="0 0 336 231" role="img" aria-labelledby="anatomy-title">
             <title id="anatomy-title">
               A container holds a viewport and a pagination row. The viewport holds the previous and
               next buttons and the track, and the track holds the slides. The pagination row holds
               one dot template and its clones.
             </title>
-            <rect class="dr-muted" x="0.5" y="0.5" width="195" height="205" rx="4" />
-            <rect class="dr-faint" x="10.5" y="14.5" width="175" height="140" rx="3" />
-            <rect class="dr-strong" x="36.5" y="30.5" width="123" height="108" rx="2" />
-            {[42, 82, 122].map((x) => <rect class="dr-accent" x={x + 0.5} y="50.5" width="33" height="68" rx="1.5" />)}
-            <circle class="dr-faint" cx="23.5" cy="84.5" r="7" />
-            <path class="dr-faint" d="M25 81L22 84.5L25 88" />
-            <circle class="dr-faint" cx="172.5" cy="84.5" r="7" />
-            <path class="dr-faint" d="M171 81L174 84.5L171 88" />
-            <rect class="dr-faint" x="10.5" y="166.5" width="175" height="26" rx="3" />
-            <circle class="dr-faint dr-fill" cx="82.5" cy="179.5" r="2.5" />
-            <circle class="dr-faint dr-dashed-fine" cx="98.5" cy="179.5" r="2.5" />
-            <circle class="dr-faint dr-dashed-fine" cx="114.5" cy="179.5" r="2.5" />
+            <rect class="dr-muted" x="0.5" y="0.5" width="204" height="230" rx="6" />
+            <rect class="dr-faint" x="12.5" y="12.5" width="180" height="150" rx="4" />
+            <rect class="dr-strong" x="24.5" y="24.5" width="156" height="126" rx="3" />
+            {slideXs.map((x) => <rect class="dr-accent" x={x} y="36.5" width={slideWidth} height="102" rx="2" />)}
+            <circle class="dr-faint" cx="24.5" cy="87.5" r="9" fill="var(--paper)" />
+            <path class="dr-faint" d="M26.5 83.5L22.5 87.5L26.5 91.5" />
+            <circle class="dr-faint" cx="180.5" cy="87.5" r="9" fill="var(--paper)" />
+            <path class="dr-faint" d="M178.5 83.5L182.5 87.5L178.5 91.5" />
+            <rect class="dr-faint" x="12.5" y="174.5" width="180" height="44" rx="4" />
+            <circle class="dr-faint dr-fill" cx="86.5" cy="196.5" r="3" />
+            <circle class="dr-faint dr-dashed-fine" cx="102.5" cy="196.5" r="3" />
+            <circle class="dr-faint dr-dashed-fine" cx="118.5" cy="196.5" r="3" />
             {
               callouts.map((callout) => (
                 <g>
-                  <path class={callout.accent ? "dr-accent" : "dr-strong"} d={callout.from} />
-                  <circle class={callout.accent ? "dr-accent" : "dr-strong"} cx="208" cy={callout.y - 3} r="1" />
-                  <text x="214" y={callout.y} class:list={[callout.accent && "dr-accent-text"]}>
+                  <path class={callout.accent ? "dr-accent" : "dr-strong"} d={callout.path} />
+                  <circle
+                    cx={callout.at[0]}
+                    cy={callout.at[1]}
+                    r="1.75"
+                    stroke="none"
+                    fill={callout.accent ? "var(--accent)" : "var(--faint)"}
+                  />
+                  <text x="224" y={callout.labelY} class:list={[callout.accent && "dr-accent-text"]}>
                     {callout.label}
                   </text>
                 </g>

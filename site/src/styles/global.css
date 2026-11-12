@@ -1047,11 +1047,22 @@ body {
 }
 .draft-fig.draft-fig--anatomy {
   margin-block: auto;
-  max-width: 28rem;
+  max-width: 26rem;
   padding-block: 1.5rem 1.75rem;
 }
 .draft-fig.draft-fig--anatomy text {
-  font-size: 10.5px;
+  font-size: 11px;
+  dominant-baseline: central;
+}
+/* The wide cell draws it larger, so its labels shrink to stay near 13px. */
+@media (min-width: 1024px) {
+  .draft-fig.draft-fig--anatomy {
+    max-width: 33rem;
+    padding-block: 2rem;
+  }
+  .draft-fig.draft-fig--anatomy text {
+    font-size: 9px;
+  }
 }
 .draft-cell__note {
   font-size: 0.875rem;
