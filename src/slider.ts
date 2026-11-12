@@ -675,13 +675,14 @@ export function createSlider(
 
   // ── Observers ────────────────────────────────────────────────────────
 
-  let skipInitialResize = false;
+  // Sizes the layout was last measured at. The first callback after observe() may already carry a
+  // change (no frame ran in between), so compare rather than skip it.
+  let measuredSize = "";
+  const observedSize = () =>
+    [track, track.firstElementChild].map((el) => `${el?.clientWidth},${el?.clientHeight}`).join();
   const resizeObserver = new ResizeObserver(() => {
-    if (skipInitialResize) {
-      skipInitialResize = false;
-      return;
-    }
-    if (destroyed) return;
+    if (destroyed || observedSize() === measuredSize) return;
+    measuredSize = observedSize();
     emit("resize", {});
     relayout();
     emit("resized", {});
@@ -705,7 +706,7 @@ export function createSlider(
 
   function observe(): void {
     resizeObserver.disconnect();
-    skipInitialResize = true;
+    measuredSize = observedSize();
     resizeObserver.observe(track);
     if (track.firstElementChild) resizeObserver.observe(track.firstElementChild);
 
@@ -723,6 +724,7 @@ export function createSlider(
   /** Cheap path for size changes: re-measure and keep the current slide in place. */
   function relayout(): void {
     const previousStops = stops.join();
+    let index = current;
     // The index doesn't follow a continuous drift, so keep the slide that's actually showing.
     // Its box includes the drift, so the slide resting nearest the scroll offset is the one on screen.
     if (play.drifting()) {
@@ -730,22 +732,28 @@ export function createSlider(
       const position = scrollPosition();
       const distance = (el: Element) => Math.abs(snapPositionOf(el) - position);
       const showing = children.reduce((best, el) => (distance(el) < distance(best) ? el : best));
-      current = indexOfDom(children.indexOf(showing));
+      index = indexOfDom(children.indexOf(showing));
     }
     play.reset(); // continuous autoplay's transforms would skew every measurement
     readSlidesPerView();
-    if (cloneCount() !== clonesBefore) return rebuild();
+    if (cloneCount() !== clonesBefore) return rebuild(index);
     measure();
     if (stops.join() !== previousStops) dots.build();
-    current = loop() ? wrap(current) : clamp(current, 0, maxIndex());
-    programmaticScroll = false; // an instant reposition supersedes any goTo() animation
-    scrollTo(restPositionOf(current));
     nav.refresh();
+    rest(index);
     play.start();
   }
 
-  /** Full path: re-read slides from the DOM, rebuild clones and UI. */
-  function rebuild(): void {
+  /** Rests the track on slide `index`, brought into range, and makes it the current slide. */
+  function rest(index: number): void {
+    index = loop() ? wrap(index) : clamp(index, 0, maxIndex());
+    programmaticScroll = false; // an instant reposition supersedes any goTo() animation
+    scrollTo(restPositionOf(index));
+    setCurrent(index);
+  }
+
+  /** Full path: re-read slides from the DOM, rebuild clones and UI, and rest on slide `index`. */
+  function rebuild(index = current): void {
     play.reset();
     for (const clone of track.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
     slides = Array.from(track.children) as HTMLElement[];
@@ -771,11 +779,9 @@ export function createSlider(
     for (let i = 0; i < clonesBefore; i++) track.append(cloneOf(slides[i % slideCount]!));
 
     measure();
-    current = loop() ? wrap(current) : clamp(current, 0, maxIndex());
-    programmaticScroll = false; // an instant reposition supersedes any goTo() animation
-    scrollTo(restPositionOf(current));
     dots.build();
     nav.refresh();
+    rest(index);
     observe();
     play.stop(); // restarts interval autoplay's countdown; the lap was already reset above
     play.start();
@@ -800,15 +806,18 @@ export function createSlider(
 
   function add(newSlides: HTMLElement | HTMLElement[], index?: number): void {
     if (destroyed) return;
+    const added = ([] as HTMLElement[]).concat(newSlides);
     const before = index === undefined ? null : (slides[index] ?? null);
-    for (const slide of ([] as HTMLElement[]).concat(newSlides)) track.insertBefore(slide, before);
-    rebuild();
+    for (const slide of added) track.insertBefore(slide, before);
+    // Inserting at or ahead of the slide in view pushes it along; follow it.
+    rebuild(before && index! <= current ? current + added.length : current);
   }
 
   function remove(indices: number | number[]): void {
     if (destroyed) return;
-    for (const index of ([] as number[]).concat(indices)) slides[index]?.remove();
-    rebuild();
+    const removed = new Set(([] as number[]).concat(indices).filter((index) => slides[index]));
+    for (const index of removed) slides[index]!.remove();
+    rebuild(current - [...removed].filter((index) => index < current).length);
   }
 
   function destroy(): void {
