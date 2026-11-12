@@ -68,6 +68,12 @@ function glide(samples: [number, number][], from: number, to: number) {
   };
 }
 
+/** The default ease-out covers most of the distance in the first half, at about 7 times the pace. */
+function expectEvenPace({ firstHalf, secondHalf }: ReturnType<typeof glide>): void {
+  expect(firstHalf / secondHalf).toBeGreaterThan(0.6);
+  expect(firstHalf / secondHalf).toBeLessThan(1.6);
+}
+
 async function eased(page: Page, scrollDuration: number): Promise<void> {
   await mount(page, slider("s", 5, { style: "--slide-gap:10px" }));
   await create(page, "s", { scrollDuration });
@@ -108,6 +114,7 @@ test("scrollEasing shapes the curve: linear moves in even steps, both ways", asy
   expect(forward.steps).toBeGreaterThanOrEqual(12);
   expect(forward.oneWay).toBe(true);
   expect(forward.biggest).toBeLessThan(0.15);
+  expectEvenPace(forward);
   await settled(page, "s");
   expect((await state(page, "s")).position).toBe(2 * STRIDE);
 
@@ -115,6 +122,7 @@ test("scrollEasing shapes the curve: linear moves in even steps, both ways", asy
   expect(back.steps).toBeGreaterThanOrEqual(12);
   expect(back.oneWay).toBe(true);
   expect(back.biggest).toBeLessThan(0.15);
+  expectEvenPace(back);
 });
 
 // A longer ease than 300ms leaves room to interrupt it under a loaded test machine.

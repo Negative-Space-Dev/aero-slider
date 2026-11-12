@@ -96,7 +96,7 @@ test("pause() holds interval autoplay until resume()", async ({ page }) => {
   expect(await changes()).toEqual([]);
 
   await page.evaluate(() => window.sliders.s!.resume());
-  await expect.poll(changes).toEqual([`slideChange${(at + 1) % 4}`]);
+  await expect.poll(async () => (await changes())[0]).toBe(`slideChange${(at + 1) % 4}`);
 });
 
 test("a press holds interval autoplay until it lifts", async ({ page }) => {

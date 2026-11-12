@@ -156,14 +156,18 @@ test("content that captures the pointer on press still lets the slider drag", as
   await fiveSlides(page);
   const content = page.locator("#s .aero-slider__track > :first-child > div");
   await content.evaluate((el: HTMLElement) =>
-    el.addEventListener("pointerdown", (e) => el.setPointerCapture(e.pointerId))
+    el.addEventListener("pointerdown", (e) => {
+      el.setPointerCapture(e.pointerId);
+      el.dataset.captured = String(el.hasPointerCapture(e.pointerId));
+    })
   );
   const box = (await content.boundingBox())!;
-  const x = box.x + 300;
+  const x = box.x + box.width / 2;
   const y = box.y + box.height / 2;
 
   await page.mouse.move(x, y);
   await page.mouse.down();
+  await expect(content).toHaveAttribute("data-captured", "true");
   await moveThrough(page, [x - 20, x - 60, x - 100], y);
   expect(await dragging(page)).toBe(true);
   expect((await state(page, "s")).position).toBeGreaterThan(50);

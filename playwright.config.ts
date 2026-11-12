@@ -11,7 +11,7 @@ export default defineConfig({
   retries: ci ? 1 : 0,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
-    baseURL: `http://localhost:${port}`,
+    baseURL: `http://127.0.0.1:${port}`,
     trace: "on-first-retry",
   },
   projects: [
@@ -21,7 +21,7 @@ export default defineConfig({
   ],
   webServer: {
     command: `bun ./test/server.ts ${port}`,
-    url: `http://localhost:${port}/dist/aero-slider.min.js`,
+    url: `http://127.0.0.1:${port}/dist/aero-slider.min.js`,
     // Never reuse: a server left by another worktree would serve that checkout's dist/.
     reuseExistingServer: false,
   },
