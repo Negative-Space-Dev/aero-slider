@@ -1011,14 +1011,24 @@ body {
   }
 }
 @media (min-width: 1024px) {
-  .draft-cell + .draft-cell {
+  /* Benefits: 7/5 over 5/7. */
+  .draft-sheet--benefits > .draft-cell + .draft-cell {
     border-top-width: 0;
   }
-  .draft-cell:nth-child(-n + 2) {
+  .draft-sheet--benefits > .draft-cell:nth-child(-n + 2) {
     border-bottom-width: 1px;
   }
-  .draft-cell:nth-child(odd) {
+  .draft-sheet--benefits > .draft-cell:nth-child(odd) {
     border-right-width: 1px;
+  }
+
+  /* Anatomy: the drawing on the left, three layers stacked beside it. */
+  .draft-sheet--anatomy > .draft-cell:first-child {
+    grid-row: span 3;
+    border-right-width: 1px;
+  }
+  .draft-sheet--anatomy > .draft-cell:nth-child(2) {
+    border-top-width: 0;
   }
 }
 
@@ -1042,6 +1052,39 @@ body {
   font-weight: 500;
   letter-spacing: -0.015em;
   color: var(--ink);
+}
+.draft-cell > h4 {
+  margin-top: 0.875rem;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.draft-cell code {
+  white-space: nowrap;
+}
+.draft-fig.draft-fig--anatomy {
+  margin-block: auto;
+  max-width: 28rem;
+  padding-block: 1.5rem 1.75rem;
+}
+.draft-fig.draft-fig--anatomy text {
+  font-size: 10.5px;
+}
+.draft-cell__note {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--faint);
+}
+.draft-cell a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+}
+.draft-cell a:hover {
+  text-decoration-color: var(--accent);
 }
 .draft-cell > p {
   max-width: 34rem;
@@ -1082,6 +1125,9 @@ body {
 }
 .draft-fig .dr-dashed {
   stroke-dasharray: 3 3;
+}
+.draft-fig .dr-dashed-fine {
+  stroke-dasharray: 2 2;
 }
 .draft-fig .dr-fill {
   fill: var(--faint);
