@@ -114,7 +114,8 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
     }
     parent.insertBefore(holder, anchor);
     measure();
-    if (focused >= 0) dots[Math.min(focused, count - 1)]?.focus({ preventScroll: true });
+    // With no dot focused this looks up dots[-1], which is nothing.
+    dots[Math.min(focused, count - 1)]?.focus({ preventScroll: true });
   }
 
   /** Sizes the dot window. Everything measures 0 while hidden, so it reruns on every relayout. */
