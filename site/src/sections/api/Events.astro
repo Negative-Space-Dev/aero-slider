@@ -2,9 +2,6 @@
 import ApiEventList from "../../components/ApiEventList.astro";
 import CodeTabs from "../../components/CodeTabs.astro";
 import Entry from "../../components/Entry.astro";
-import Pagination from "../../components/Pagination.astro";
-import SliderNav from "../../components/SliderNav.astro";
-import Slides from "../../components/Slides.astro";
 import { eventEntryGroups } from "../../data/api";
 import type { CodeTab } from "../../lib/code";
 
@@ -56,48 +53,14 @@ el.addEventListener("aero:dragEnd", (event) => {
         <code>event.detail</code>, and bubbles.
       </p>
       <p>
-        Every row below listens to the slider beside it. Press its arrows, drag it with a mouse, or
-        hover it with autoplay on, and the matching rows light up with a count and the last
-        <code>detail</code>. In the recipes, <code>el</code> is the container.
+        Each event below says when it fires and what it is useful for, with a recipe to copy. In
+        the recipes, <code>el</code> is the container.
       </p>
     </div>
     <CodeTabs tabs={listen} />
   </div>
 
-  <div class="api-events">
-    <aside class="api-events__demo" id="api-events-demo" aria-label="Live event demo">
-      <div class="api-events__panel">
-        <div class="api-events__meta">
-          <span>Live</span>
-          <span>#api-events-slider</span>
-        </div>
-        <div id="api-events-slider" class="aero-slider api-events__slider" aria-label="Event demo slider">
-          <div class="aero-slider__viewport relative">
-            <SliderNav />
-            <div class="aero-slider__track">
-              <Slides items={6} />
-            </div>
-          </div>
-          <Pagination />
-        </div>
-        <div class="api-events__controls">
-          <label class="toggle">
-            <input type="checkbox" name="autoplay" class="sr-only" />
-            <span>Autoplay</span>
-          </label>
-          <div class="segmented" role="group" aria-label="Slides per view">
-            <button type="button" data-per-view="1" data-active>1 up</button>
-            <button type="button" data-per-view="2">2 up</button>
-          </div>
-          <button type="button" class="api-call" data-lifecycle>slider.destroy()</button>
-        </div>
-        <p class="api-events__hint">
-          Switch to 2 up, or narrow the window, for the layout events. Touch swipes fire no drag
-          events.
-        </p>
-      </div>
-    </aside>
-
+  <div class="api-ref-columns">
     <ApiEventList groups={eventEntryGroups} />
   </div>
 
