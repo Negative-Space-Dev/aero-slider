@@ -7,42 +7,66 @@
     "url": "git+https://github.com/Negative-Space-Dev/aero-slider.git"
   },
   "homepage": "https://aeroslider.com",
+  "bugs": {
+    "url": "https://github.com/Negative-Space-Dev/aero-slider/issues"
+  },
+  "license": "MIT",
+  "author": "Negative Space",
+  "keywords": [
+    "slider",
+    "carousel",
+    "css",
+    "scroll-snap",
+    "thumbnails",
+    "autoplay",
+    "typescript"
+  ],
   "type": "module",
   "workspaces": [
     "site"
   ],
-  "main": "./dist/aero-slider.min.js",
-  "module": "./dist/aero-slider.min.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/aero-slider.min.js",
-      "default": "./dist/aero-slider.min.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
-    "./slider.css": "./dist/aero-slider.min.css"
+    "./slider.css": "./dist/aero-slider.min.css",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist"
+  ],
+  "sideEffects": [
+    "*.css",
+    "./dist/aero-slider.min.js"
   ],
   "scripts": {
     "build": "bun run ./build.ts",
     "dev": "cd site && bun run dev",
     "site:dev": "cd site && bun run dev",
     "site:build": "cd site && bun run build",
-    "prepare": "bun run build",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tools.json",
+    "prepack": "bun run build",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tools.json && bun run typecheck:consumer",
+    "typecheck:consumer": "bun run build && tsc -p test/types",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "size": "bun run ./scripts/size.ts",
+    "check:package": "bun run ./scripts/check-package.ts",
     "test": "bun run build && playwright test",
     "test:ui": "bun run build && playwright test --ui",
     "pack": "bun pm pack"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
     "@playwright/test": "1.65.0",
     "@types/bun": "1.3.10",
+    "dts-bundle-generator": "9.5.1",
     "prettier": "^3.4.2",
+    "publint": "0.3.25",
     "typescript": "^5"
   }
 }

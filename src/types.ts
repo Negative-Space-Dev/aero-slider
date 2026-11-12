@@ -86,8 +86,13 @@ export interface SliderEventMap {
 export type SliderEvent = keyof SliderEventMap;
 export type SliderEventData<E extends SliderEvent = SliderEvent> = SliderEventMap[E];
 
+export type SliderDomEventMap = {
+  [E in SliderEvent as `aero:${E}`]: CustomEvent<SliderEventMap[E]>;
+};
+
 declare global {
   interface HTMLElement {
     aeroSlider?: SliderInstance;
   }
+  interface HTMLElementEventMap extends SliderDomEventMap {}
 }
