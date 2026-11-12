@@ -5,7 +5,7 @@ import { state } from "./helpers/state";
 const box = (page: Page, id = "s") =>
   page.evaluate((id) => {
     const [first, second] = Array.from(
-      document.querySelectorAll(`#${id} .aero-slider__track > *`),
+      document.querySelectorAll(`#${id} > .aero-slider__viewport > .aero-slider__track > *`),
       (slide) => slide.getBoundingClientRect()
     );
     return {
@@ -98,6 +98,43 @@ test("cascade: old names set on an ancestor are not inherited", async ({ page })
   expect(await box(page)).toEqual(DEFAULT_BOX);
   await create(page, "s");
   await expect(page.locator("#s .aero-slider__dot")).toHaveCount(6);
+});
+
+// The outer slider's new names would otherwise be inherited by the inner one and beat the old
+// names set on it, so moving only the outer slider to the new names would resize the inner one.
+for (const prefix of ["--", "--aero-"]) {
+  test(`a nested slider keeps its own settings when the outer one uses ${prefix}names`, async ({
+    page,
+  }) => {
+    const inner = slider("inner", 2, {
+      style: "--slides-per-view:1;--slide-gap:0px;--slide-aspect:2 / 1",
+      nav: false,
+      dots: false,
+    });
+    await mount(
+      page,
+      slider("outer", 4, {
+        style: `${prefix}slides-per-view:3;${prefix}slide-gap:12px;${prefix}slide-aspect:1`,
+        inner: (i) => (i === 0 ? inner : `<div>${i}</div>`),
+      })
+    );
+    await create(page, "outer");
+    await create(page, "inner", { loop: true });
+    expect(await box(page, "outer")).toEqual({ width: 192, height: 192, gap: 12 });
+    expect(await box(page, "inner")).toEqual({ width: 192, height: 96, gap: 0 });
+    await expect(page.locator("#inner [data-aero-slider-clone]")).toHaveCount(6);
+  });
+}
+
+test("a nested slider with no settings of its own starts from the defaults", async ({ page }) => {
+  await mount(
+    page,
+    slider("outer", 4, {
+      style: "--aero-slides-per-view:2;--aero-slide-gap:20px;--aero-slide-aspect:1",
+      inner: (i) => (i === 0 ? slider("inner", 3, { nav: false, dots: false }) : `<div>${i}</div>`),
+    })
+  );
+  expect(await box(page, "inner")).toEqual({ width: 290, height: 174, gap: 0 });
 });
 
 /** The resting position after each of `steps` presses of next(), then of goTo(index). */

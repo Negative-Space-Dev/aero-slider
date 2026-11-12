@@ -99,7 +99,7 @@ type SlideChange = SliderEventMap["slideChange"]; // { index: number }
 
 ## Renamed in 1.0
 
-The old names still work as aliases, so existing markup and styles keep working:
+The old names still work as aliases, so existing options, markup and variables keep working:
 
 | Old                  | New                      |
 | -------------------- | ------------------------ |
@@ -109,7 +109,12 @@ The old names still work as aliases, so existing markup and styles keep working:
 | `--slide-gap`        | `--aero-slide-gap`       |
 | `--slide-aspect`     | `--aero-slide-aspect`    |
 
-Alignment is logical: `"start"` is the right edge in an RTL slider and the top in a vertical one. The library writes `data-aero-alignment="start"` or `"end"`, and the stylesheet accepts `"left"` and `"right"` in server-rendered markup. When both a new and an old variable are set, the new one wins.
+Alignment is logical: `"start"` is the right edge in an RTL slider and the top in a vertical one. When both a new and an old variable are set on the same element, the new one wins.
+
+Two things to check when you upgrade:
+
+- **Your own selectors on `data-aero-alignment`.** The library writes `data-aero-alignment="start"` or `"end"` once it initialises, whichever spelling you used. The stylesheet accepts `"left"` and `"right"` in server-rendered markup, but a rule of yours such as `[data-aero-alignment="left"]` stops matching after init. Select both spellings: `:is([data-aero-alignment="start"], [data-aero-alignment="left"])`.
+- **Nested sliders.** The `--aero-*` variables are inherited, so you can set them on any ancestor of a slider. They stop at the content of a slide: a slider nested inside a slide does not take the outer slider's settings, so set its variables on the nested slider itself.
 
 ## Contributing
 
