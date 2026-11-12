@@ -49,3 +49,21 @@ export const recordEvents = (page: Page, id: string) =>
 /** The events logged for `#id` so far, then clears the log. */
 export const takeEvents = (page: Page, id: string) =>
   page.evaluate((id) => window.events[id]!.splice(0), id);
+
+/**
+ * Drags the track of `#id` with the mouse by `dx` pixels from `fromX` (both relative to the
+ * track's left edge), one move per animation frame as real input arrives. Back-to-back moves
+ * would make the release velocity meaningless.
+ */
+export async function drag(page: Page, id: string, fromX: number, dx: number): Promise<void> {
+  const box = (await page.locator(`#${id} .aero-slider__track`).boundingBox())!;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(box.x + fromX, y);
+  await page.mouse.down();
+  const steps = 10;
+  for (let i = 1; i <= steps; i++) {
+    await page.mouse.move(box.x + fromX + (dx * i) / steps, y);
+    await page.evaluate(() => new Promise(requestAnimationFrame));
+  }
+  await page.mouse.up();
+}

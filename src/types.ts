@@ -25,7 +25,11 @@ export interface SliderConfig {
   noDrag?: string;
   /** Slides advanced per next()/prev() call. */
   perMove?: number;
-  direction?: "ltr" | "rtl" | "ttb";
+  /**
+   * `"auto"` (the default) follows the container's computed direction and leaves its `dir`
+   * attribute alone. `"ltr"` and `"rtl"` set `dir` on the container. `"ttb"` scrolls vertically.
+   */
+  direction?: "auto" | "ltr" | "rtl" | "ttb";
   /** How the track comes to rest after scrolling. Defaults to `"native"`. */
   snap?: SliderSnap;
   /**

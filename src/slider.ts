@@ -22,7 +22,7 @@ const DEFAULTS: Required<SliderConfig> = {
   maxDots: 0,
   noDrag: "",
   perMove: 1,
-  direction: "ltr",
+  direction: "auto",
   snap: "native",
   scrollDuration: 0,
   scrollEasing: easeOutCubic,
@@ -30,7 +30,7 @@ const DEFAULTS: Required<SliderConfig> = {
 
 const CHOICES = {
   alignment: ["left", "center", "right"],
-  direction: ["ltr", "rtl", "ttb"],
+  direction: ["auto", "ltr", "rtl", "ttb"],
   snap: ["native", "settle", "none"],
 } as const;
 
@@ -122,6 +122,8 @@ export function createSlider(
   let slideCount = 0;
   let current = 0;
   let destroyed = false;
+  let rtl = false; // resolved from the computed direction on every rebuild
+  const authorDir = container.getAttribute("dir");
 
   // Layout metrics, refreshed by measure()
   let slidesPerView = 1;
@@ -150,7 +152,7 @@ export function createSlider(
   let settleDeferred = false; // a settle arrived while a pointer or finger was still down
 
   const isVertical = () => config.direction === "ttb";
-  const isRtl = () => config.direction === "rtl";
+  const isRtl = () => rtl;
   const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(value, max));
   const wrap = (index: number) => ((index % slideCount) + slideCount) % slideCount;
 
@@ -728,8 +730,10 @@ export function createSlider(
     });
 
     container.classList.toggle("aero-slider--vertical", isVertical());
-    if (isRtl()) container.setAttribute("dir", "rtl");
-    else container.removeAttribute("dir");
+    const { direction } = config;
+    if (direction === "ltr" || direction === "rtl") container.setAttribute("dir", direction);
+    else restoreDir();
+    rtl = !isVertical() && getComputedStyle(container).direction === "rtl";
     container.setAttribute("data-aero-alignment", config.alignment);
     container.classList.toggle("aero-slider--draggable", config.draggable);
     container.classList.toggle("aero-slider--free", snapMode() !== "native");
@@ -748,6 +752,11 @@ export function createSlider(
     observe();
     play.stop(); // restarts interval autoplay's countdown; the lap was already reset above
     play.start();
+  }
+
+  function restoreDir(): void {
+    if (authorDir === null) container.removeAttribute("dir");
+    else container.setAttribute("dir", authorDir);
   }
 
   // ── Public API ───────────────────────────────────────────────────────
@@ -794,9 +803,10 @@ export function createSlider(
       "aero-slider--vertical",
       "aero-slider--ready"
     );
-    for (const attr of ["aria-roledescription", "dir", "data-aero-alignment"]) {
+    for (const attr of ["aria-roledescription", "data-aero-alignment"]) {
       container.removeAttribute(attr);
     }
+    restoreDir();
     if (container.aeroSlider === api) delete container.aeroSlider;
   }
 

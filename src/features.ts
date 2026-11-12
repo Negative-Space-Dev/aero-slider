@@ -142,13 +142,11 @@ export function keyboard(core: SliderCore): void {
     "keydown",
     (event) => {
       if ((event.target as Element).closest("input, textarea, select, [contenteditable]")) return;
-      const { direction } = core.config;
-      const [back, forward] =
-        direction === "ttb"
-          ? ["ArrowUp", "ArrowDown"]
-          : direction === "rtl"
-            ? ["ArrowRight", "ArrowLeft"]
-            : ["ArrowLeft", "ArrowRight"];
+      const [back, forward] = core.isVertical()
+        ? ["ArrowUp", "ArrowDown"]
+        : core.isRtl()
+          ? ["ArrowRight", "ArrowLeft"]
+          : ["ArrowLeft", "ArrowRight"];
       if (event.key === back) core.prev();
       else if (event.key === forward) core.next();
       else return;
