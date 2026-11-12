@@ -1,59 +1,49 @@
 import { create, dots, expect, mount, settled, slider, test } from "./fixtures";
 import { state } from "./helpers/state";
 
-const buttonDots = `<div class="aero-slider__pagination"><button class="aero-slider__dot" style="width:10px;height:10px"></button></div>`;
+const buttonDots = `<div class="aero-slider__pagination"><button type="button" class="aero-slider__dot" aria-label="Go to slide {index}" style="width:10px;height:10px"></button></div>`;
+/** A slider whose dots are named buttons, as the docs tell authors to write them. */
+const withDots = (id: string, n: number, options: Parameters<typeof slider>[2] = {}) =>
+  slider(id, n, { ...options, dots: false }).replace(/<\/div>$/, `${buttonDots}</div>`);
 const index = async (page: Parameters<typeof state>[0]) => (await state(page, "s")).index;
 
-test("span dots are a labelled group of buttons with the current one marked", async ({ page }) => {
-  await mount(page, slider("s", 3));
+// The dot template carries the semantics: a <button> named with an {index} placeholder.
+test("dots copy the template's name with the slide number, and the current one is marked", async ({
+  page,
+}) => {
+  await mount(page, withDots("s", 3));
   await create(page, "s");
   const pagination = page.locator("#s .aero-slider__pagination");
   await expect(pagination).toMatchAriaSnapshot(`
-    - group "Slides":
-      - button "Go to slide 1"
-      - button "Go to slide 2"
-      - button "Go to slide 3"
+    - button "Go to slide 1"
+    - button "Go to slide 2"
+    - button "Go to slide 3"
   `);
   const current = pagination.locator("[aria-current]");
   await expect(current).toHaveCount(1);
   await expect(current).toHaveAttribute("aria-current", "true");
   await expect(current).toHaveAccessibleName("Go to slide 1");
-  await expect(pagination.locator("[aria-selected]")).toHaveCount(0);
-});
 
-for (const key of ["Enter", " "]) {
-  test(`a span dot is a tab stop that ${key === " " ? "Space" : key} activates`, async ({
-    page,
-  }) => {
-    await mount(page, slider("s", 3, { nav: false }));
-    await create(page, "s");
-    await page.getByRole("button", { name: "Go to slide 1", exact: true }).focus();
-    await page.keyboard.press("Tab");
-    const second = page.getByRole("button", { name: "Go to slide 2" });
-    await expect(second).toBeFocused();
-    await page.keyboard.press(key);
-    await settled(page, "s");
-    expect(await index(page)).toBe(1);
-    await expect(second).toHaveAttribute("aria-current", "true");
-  });
-}
-
-test("a button dot keeps its native semantics", async ({ page }) => {
-  await mount(page, slider("s", 3, { dots: false }).replace(/<\/div>$/, `${buttonDots}</div>`));
-  await create(page, "s");
   const dot = page.getByRole("button", { name: "Go to slide 3" });
-  await expect(dot).not.toHaveAttribute("role");
-  await expect(dot).not.toHaveAttribute("tabindex");
   await dot.focus();
   await page.keyboard.press("Enter");
   await settled(page, "s");
   expect(await index(page)).toBe(2);
+  await expect(dot).toHaveAttribute("aria-current", "true");
+});
+
+test("a template with no name or role gets none from the slider", async ({ page }) => {
+  await mount(page, slider("s", 3));
+  await create(page, "s");
+  const dot = page.locator("#s .aero-slider__dot");
+  await expect(dot).toHaveCount(3);
+  await expect(dot.and(page.locator("[role], [tabindex], [aria-label]"))).toHaveCount(0);
 });
 
 // Playwright's role queries don't honour inert, though browsers drop inert elements from the
 // accessibility tree. So this checks the attribute, and real Tab presses for the tab order.
 test("windowed dots outside the window are inert and skipped by Tab", async ({ page }) => {
-  await mount(page, slider("s", 12, { nav: false }) + "<button id=after>after</button>");
+  await mount(page, withDots("s", 12, { nav: false }) + "<button id=after>after</button>");
   await create(page, "s", { maxDots: 5 });
   const pagination = page.locator("#s .aero-slider__pagination");
   await expect(pagination.locator(".aero-slider__dot:not([inert])")).toHaveCount(5);
@@ -91,7 +81,7 @@ test("destroy() restores the pagination markup", async ({ page }) => {
 });
 
 test("End from the first windowed dot moves focus to the last dot", async ({ page }) => {
-  await mount(page, slider("s", 12));
+  await mount(page, withDots("s", 12));
   await create(page, "s", { maxDots: 5 });
   await page.getByRole("button", { name: "Go to slide 1", exact: true }).focus();
   await page.keyboard.press("End");
@@ -100,7 +90,7 @@ test("End from the first windowed dot moves focus to the last dot", async ({ pag
 });
 
 test("a focused dot keeps focus when the dots are rebuilt", async ({ page }) => {
-  await mount(page, slider("s", 3));
+  await mount(page, withDots("s", 3));
   await create(page, "s", { alignment: "left" });
   const buttons = page.locator("#s .aero-slider__dot");
   await buttons.nth(1).focus();

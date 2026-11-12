@@ -48,25 +48,6 @@ export function pagination(core: SliderCore) {
   return createPagination(core, box, template);
 }
 
-/** Enter and Space click a target that `is` accepts, the way they press a native button. */
-export function pressable(
-  root: HTMLElement,
-  is: (target: Element) => boolean,
-  signal: AbortSignal
-): void {
-  root.addEventListener(
-    "keydown",
-    (event) => {
-      const target = event.target as HTMLElement;
-      if ((event.key === "Enter" || event.key === " ") && is(target)) {
-        event.preventDefault();
-        target.click();
-      }
-    },
-    { signal }
-  );
-}
-
 function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElement) {
   const { config, signal } = core;
   const parent = template.parentNode!;
@@ -75,6 +56,7 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
   let windowed = false;
   let dotTrack: HTMLElement | null = null;
   let dotPitch = 0; // distance between neighbouring dots; negative in RTL
+  const name = template.getAttribute("aria-label");
 
   function clear(): void {
     for (const dot of dots) dot.remove();
@@ -89,20 +71,15 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
     // Rebuilding removes the dot that has focus, which would drop a keyboard user on the page.
     const focused = dots.indexOf(document.activeElement as HTMLElement);
     clear();
-    core.attr(box, "role", "group");
-    core.attr(box, "aria-label", core.label("pagination"));
     const count = core.stopCount();
     const { maxDots } = config;
     windowed = maxDots > 0 && count > maxDots;
     const holder = windowed ? document.createElement("div") : new DocumentFragment();
     for (let i = 0; i < count; i++) {
       const dot = template.cloneNode(true) as HTMLElement;
-      if (dot.localName !== "button") {
-        if (!dot.hasAttribute("role")) dot.setAttribute("role", "button");
-        if (!dot.hasAttribute("tabindex")) dot.tabIndex = 0;
-      }
       const slide = core.slideOfStop(i);
-      dot.setAttribute("aria-label", core.label("dot", slide));
+      // The template names its dots: aria-label="Go to slide {index}".
+      if (name) dot.setAttribute("aria-label", name.replace("{index}", String(slide + 1)));
       dot.dataset.slideIndex = String(slide);
       holder.append(dot);
       dots.push(dot);
@@ -182,7 +159,6 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
     },
     { signal }
   );
-  pressable(box, (target) => dots.includes(target as HTMLElement), signal);
   signal.addEventListener("abort", () => {
     clear();
     if (!box.getAttribute("style")) box.removeAttribute("style");
@@ -196,8 +172,15 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
 
 export function keyboard(core: SliderCore): void {
   const { container, track, signal } = core;
-  core.attr(container, "tabindex", "0");
-  core.attr(track, "tabindex", "-1"); // a scroller is otherwise a second, unnamed tab stop
+  // The container is the one tab stop. A scroller would otherwise be a second, unnamed one.
+  for (const [el, index] of [
+    [container, 0],
+    [track, -1],
+  ] as const) {
+    if (el.hasAttribute("tabindex")) continue;
+    el.tabIndex = index;
+    signal.addEventListener("abort", () => el.removeAttribute("tabindex"));
+  }
   container.addEventListener(
     "keydown",
     (event) => {
@@ -340,24 +323,7 @@ export function autoplay(core: SliderCore) {
     }
   }
 
-  /** The optional pause button and the paused class follow the hold pause() puts on. */
-  function paint(): void {
-    const paused = holds.has("api");
-    container.classList.toggle("aero-slider--paused", paused);
-    if (!button) return;
-    // Nothing autoplays under reduced motion, so there is nothing to pause.
-    core.attr(button, "hidden", config.autoplay && !reducedMotion.matches ? null : "");
-    // A name we supply says what a press will do. A button with its own name keeps it and
-    // carries the state in aria-pressed.
-    const named =
-      !button.textContent!.trim() &&
-      !button.hasAttribute("aria-labelledby") &&
-      core.attr(button, "aria-label", core.label(paused ? "play" : "pause"));
-    if (!named) button.setAttribute("aria-pressed", String(paused));
-  }
-
   function start(): void {
-    paint();
     if (blocked()) {
       // A lap reset quietly for a resize that can't restart now still owes its autoplayStop.
       if (running && !lap) {
@@ -394,7 +360,6 @@ export function autoplay(core: SliderCore) {
 
   function hold(reason: string): void {
     holds.add(reason);
-    paint();
     stop();
   }
 
@@ -409,22 +374,6 @@ export function autoplay(core: SliderCore) {
     clearTimeout(settleFallback);
     settleFallback = window.setTimeout(() => release("settle"), SETTLE_FALLBACK_MS);
   }
-
-  // A nested slider's button belongs to that slider.
-  const button = [...container.querySelectorAll(".aero-slider__autoplay")].find(
-    (el) => el.closest(".aero-slider") === container
-  );
-  const pressedBefore = button?.getAttribute("aria-pressed");
-  button?.addEventListener(
-    "click",
-    () => {
-      if (!holds.has("api")) return hold("api");
-      // Starting autoplay from the keyboard: the focus that reached the button mustn't hold it.
-      holds.delete("focus");
-      release("api");
-    },
-    { signal }
-  );
 
   const listen = (target: EventTarget, type: string, handler: (event: Event) => void) =>
     target.addEventListener(type, handler, { passive: true, signal });
@@ -462,18 +411,21 @@ export function autoplay(core: SliderCore) {
     if (event.target !== container) return; // a nested slider's change
     if (timer) countdown();
     const { index } = (event as CustomEvent<{ index: number }>).detail;
-    status.textContent = timer || lap ? "" : core.label("slidePosition", index);
+    // data-aero-status on the container words it for other languages.
+    status.textContent =
+      timer || lap
+        ? ""
+        : (container.dataset.aeroStatus ?? "{index} of {count}")
+            .replace("{index}", String(index + 1))
+            .replace("{count}", String(track.querySelectorAll("[data-aero-slider-index]").length));
   });
   listen(document, "visibilitychange", () => (document.hidden ? stop() : start()));
   listen(reducedMotion, "change", () => {
     if (reducedMotion.matches) stop();
     else start();
-    paint();
   });
   signal.addEventListener("abort", () => {
     status.remove();
-    if (button && pressedBefore == null) button.removeAttribute("aria-pressed");
-    else button?.setAttribute("aria-pressed", pressedBefore!);
     clearTimeout(settleFallback);
     stopInterval();
     stopLap(false);
@@ -494,8 +446,8 @@ export function autoplay(core: SliderCore) {
     drifting: () => lap !== null,
     /**
      * Ends a lap without handing it back, for when the layout is about to change under it. A
-     * rebuild can change the slide count or the labels, so it also drops the status text, which
-     * would otherwise go on naming the old ones until the next slide change.
+     * rebuild can change the slide count, so it also drops the status text, which
+     * would otherwise go on naming the old one until the next slide change.
      */
     reset(rebuilding?: boolean): void {
       stopLap(false, false);

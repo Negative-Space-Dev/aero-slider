@@ -55,29 +55,6 @@ export interface SliderConfig {
   scrollDuration?: number;
   /** Maps linear progress 0–1 to eased progress, for `scrollDuration` scrolls. */
   scrollEasing?: (progress: number) => number;
-  /** Strings the slider writes for assistive technology. Missing keys use the English defaults. */
-  labels?: SliderLabels;
-}
-
-/**
- * Text the slider gives screen readers. `{index}` (counting from 1) and `{count}` (the number of
- * slides) are replaced where a key allows them.
- */
-export interface SliderLabels {
-  /** Role description of the container. Defaults to `"carousel"`. */
-  carousel?: string;
-  /** Role description of each slide. Defaults to `"slide"`. */
-  slide?: string;
-  /** Name of each slide, with `{index}` and `{count}`. Defaults to `"{index} of {count}"`. */
-  slidePosition?: string;
-  /** Name of each pagination dot and thumbnail, with `{index}` and `{count}`. Defaults to `"Go to slide {index}"`. */
-  dot?: string;
-  /** Name of the pagination group. Defaults to `"Slides"`. */
-  pagination?: string;
-  /** Name of the autoplay button while autoplay can be paused. Defaults to `"Pause autoplay"`. */
-  pause?: string;
-  /** Name of the autoplay button while it is paused. Defaults to `"Start autoplay"`. */
-  play?: string;
 }
 
 export interface GoToOptions {

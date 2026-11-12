@@ -1,4 +1,4 @@
-const JS_BUDGET = 9_500;
+const JS_BUDGET = 9_000;
 const CSS_BUDGET = 1_500;
 
 const report = (path: string, bytes: Uint8Array<ArrayBuffer>, note: string) =>

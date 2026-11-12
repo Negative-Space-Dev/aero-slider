@@ -1,6 +1,5 @@
 import type { SliderInstance } from "./types.ts";
-import { SLIDE_INDEX_ATTR, cores } from "./slider.ts";
-import { pressable } from "./features.ts";
+import { SLIDE_INDEX_ATTR } from "./slider.ts";
 
 const ACTIVE_CLASS = "aero-slider__thumb--active";
 
@@ -19,13 +18,11 @@ export function syncThumbnails(
   options: SyncThumbnailsOptions = {}
 ): () => void {
   const track = thumbnails.element.querySelector<HTMLElement>(".aero-slider__track");
-  const core = cores.get(thumbnails);
-  if (!track || !core) return () => {};
+  if (!track) return () => {};
   const controller = new AbortController();
   const { signal } = controller;
 
-  // Thumbnails become buttons. Drag would swallow clicks, and clicks alone drive the strip.
-  core.picker = true;
+  // Drag would swallow clicks, and clicks alone drive the strip.
   thumbnails.update({ draggable: false, loop: options.loop ?? true });
   track.style.cursor = "pointer";
 
@@ -39,13 +36,18 @@ export function syncThumbnails(
     return (((children.indexOf(child) - firstReal) % count) + count) % count;
   };
 
-  const activate = (index: number): void => {
+  /** Marks thumbnail `index` as the current one, or none of them. Clones stay unmarked. */
+  const mark = (index: number): void => {
     for (const child of track.children) {
       const active = indexOf(child) === index;
       child.classList.toggle(ACTIVE_CLASS, active);
-      if (child.hasAttribute(SLIDE_INDEX_ATTR))
-        core.attr(child, "aria-current", active ? "true" : null);
+      if (active && child.hasAttribute(SLIDE_INDEX_ATTR))
+        child.setAttribute("aria-current", "true");
+      else child.removeAttribute("aria-current");
     }
+  };
+  const activate = (index: number): void => {
+    mark(index);
     thumbnails.goTo(index);
   };
 
@@ -66,23 +68,16 @@ export function syncThumbnails(
     },
     { signal }
   );
-  // Thumbnails the author marked up as buttons count too, not only the ones made into buttons here.
-  pressable(
-    track,
-    (target) => target.hasAttribute(SLIDE_INDEX_ATTR) && target.getAttribute("role") === "button",
-    signal
-  );
 
-  activate(primary.currentIndex);
-  return () => {
+  const teardown = (): void => {
     controller.abort();
     track.style.cursor = "";
     if (!track.getAttribute("style")) track.removeAttribute("style");
-    for (const child of track.children) {
-      child.classList.remove(ACTIVE_CLASS);
-      core.attr(child, "aria-current", null);
-    }
-    core.picker = false;
-    thumbnails.refresh();
+    mark(-1);
   };
+  // Destroying the strip without calling the teardown still takes the marks back.
+  thumbnails.element.addEventListener("aero:destroy", teardown, { signal });
+
+  activate(primary.currentIndex);
+  return teardown;
 }

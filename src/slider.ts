@@ -4,7 +4,6 @@ import type {
   SliderEvent,
   SliderEventData,
   SliderInstance,
-  SliderLabels,
 } from "./types.ts";
 import { autoplay, keyboard, navigation, pagination } from "./features.ts";
 
@@ -14,19 +13,13 @@ const SLIDE_CLASS = "aero-slider__slide";
 const FOCUSABLE =
   "a, area, button, input, select, textarea, iframe, summary, audio[controls], video[controls], embed, object, [contenteditable], [tabindex]";
 
-/** Each slider's core, for syncThumbnails. */
-export const cores = new WeakMap<SliderInstance, SliderCore>();
-
 const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
 
 /**
- * The config as the slider holds it: every option set, every label filled in, and `alignment`
- * resolved to its canonical spelling.
+ * The config as the slider holds it: every option set, and `alignment` resolved to its canonical
+ * spelling.
  */
-export type Config = Required<SliderConfig> & {
-  alignment: "start" | "center" | "end";
-  labels: Required<SliderLabels>;
-};
+export type Config = Required<SliderConfig> & { alignment: "start" | "center" | "end" };
 
 const DEFAULTS: Config = {
   loop: false,
@@ -42,15 +35,6 @@ const DEFAULTS: Config = {
   snap: "native",
   scrollDuration: 0,
   scrollEasing: easeOutCubic,
-  labels: {
-    carousel: "carousel",
-    slide: "slide",
-    slidePosition: "{index} of {count}",
-    dot: "Go to slide {index}",
-    pagination: "Slides",
-    pause: "Pause autoplay",
-    play: "Start autoplay",
-  },
 };
 
 const CHOICES = {
@@ -95,11 +79,6 @@ function configure(config: Config, changes: SliderConfig = {}): void {
     }
   }
   if (typeof config.scrollEasing !== "function") config.scrollEasing = DEFAULTS.scrollEasing;
-  const labels = { ...DEFAULTS.labels };
-  for (const [key, value] of Object.entries(Object(config.labels))) {
-    if (key in labels && typeof value === "string") labels[key as keyof SliderLabels] = value;
-  }
-  config.labels = labels;
 }
 
 const DRAG_THRESHOLD_PX = 5;
@@ -129,15 +108,6 @@ export interface SliderCore {
   prev(): void;
   goTo(index: number, options?: GoToOptions): void;
   emit<E extends SliderEvent>(event: E, data: SliderEventData<E>): void;
-  /**
-   * Sets an attribute, or removes it when `value` is null, unless the author set it. Returns
-   * whether the attribute is the library's. destroy() removes every one still holding our value.
-   */
-  attr(el: Element, name: string, value?: string | null): boolean;
-  /** Slides are buttons that pick a slide (a synced thumbnail strip), not slides in a carousel. */
-  picker: boolean;
-  /** `labels[key]` with its placeholders filled in for slide `index`. */
-  label(key: keyof SliderLabels, index?: number): string;
   // What continuous autoplay needs to drive the track by hand.
   isVertical(): boolean;
   isRtl(): boolean;
@@ -240,32 +210,6 @@ export function createSlider(
       : continuous()
         ? slideCount + Math.ceil(slidesPerView) + 2
         : Math.max(slideCount, Math.ceil(slidesPerView) + 2);
-
-  const written = new Map<Element, Record<string, string>>();
-  function attr(el: Element, name: string, value: string | null = ""): boolean {
-    const mine = written.get(el) ?? {};
-    written.set(el, mine);
-    const now = el.getAttribute(name);
-    if (now !== null && now !== mine[name]) return false;
-    if (value === null) {
-      el.removeAttribute(name);
-      delete mine[name];
-    } else el.setAttribute(name, (mine[name] = value));
-    return true;
-  }
-
-  /** Takes back every attribute written on `el`, and stops holding on to it. */
-  function forget(el: Element): void {
-    for (const [name, value] of Object.entries(written.get(el) ?? {})) {
-      if (el.getAttribute(name) === value) el.removeAttribute(name);
-    }
-    written.delete(el);
-  }
-
-  const label = (key: keyof SliderLabels, index = 0) =>
-    config.labels[key]
-      .replaceAll("{index}", String(index + 1))
-      .replaceAll("{count}", String(slideCount));
 
   function emit<E extends SliderEvent>(event: E, detail: SliderEventData<E>): void {
     container.dispatchEvent(new CustomEvent(`aero:${event}`, { detail, bubbles: true }));
@@ -877,31 +821,12 @@ export function createSlider(
   function rebuild(index = current): void {
     play.reset(true);
     for (const clone of track.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
-    // A slide removed since the last build would otherwise be kept alive, with our attributes.
-    for (const el of written.keys()) if (!container.contains(el)) forget(el);
     slides = Array.from(track.children) as HTMLElement[];
     slideCount = slides.length;
     slides.forEach((slide, i) => {
       if (!slide.classList.contains(SLIDE_CLASS)) classed.add(slide);
       slide.classList.add(SLIDE_CLASS);
       slide.setAttribute(SLIDE_INDEX_ATTR, String(i));
-      // A slide that is a link or a button keeps its own role and name. So does an image or a list
-      // item outside a thumbnail picker, once the button role a picker gave it is taken back: a
-      // group there would cost the list its item count. In a picker an image becomes a button
-      // too, named by its alt text, or a keyboard could not reach it.
-      const { picker } = core;
-      const item = !picker && slide.matches("li");
-      if (item) attr(slide, "role", null);
-      if (!picker && slide.matches("img")) forget(slide);
-      else if (
-        !slide.matches("a[href], button") &&
-        (item || attr(slide, "role", picker ? "button" : "group"))
-      ) {
-        attr(slide, "aria-roledescription", picker ? null : label("slide"));
-        attr(slide, "tabindex", picker ? "0" : null);
-        if (!slide.hasAttribute("aria-labelledby") && !(picker && slide.getAttribute("alt")))
-          attr(slide, "aria-label", label(picker ? "dot" : "slidePosition", i));
-      }
     });
 
     container.classList.toggle("aero-slider--vertical", isVertical());
@@ -912,8 +837,6 @@ export function createSlider(
     } else restoreDir();
     rtl = computedRtl();
     container.setAttribute("data-aero-alignment", config.alignment);
-    attr(container, "role", "region");
-    attr(container, "aria-roledescription", label("carousel"));
     container.classList.toggle("aero-slider--draggable", config.draggable);
     container.classList.toggle("aero-slider--free", snapMode() !== "native");
 
@@ -995,11 +918,9 @@ export function createSlider(
       "aero-slider--draggable",
       "aero-slider--free",
       "aero-slider--vertical",
-      "aero-slider--ready",
-      "aero-slider--paused"
+      "aero-slider--ready"
     );
     container.removeAttribute("data-aero-alignment");
-    for (const el of written.keys()) forget(el);
     restoreDir();
     if (container.aeroSlider === api) delete container.aeroSlider;
   }
@@ -1044,9 +965,6 @@ export function createSlider(
     prev,
     goTo,
     emit,
-    attr,
-    picker: false,
-    label,
     isVertical,
     isRtl,
     position: scrollPosition,
@@ -1181,7 +1099,6 @@ export function createSlider(
   track.addEventListener("dragstart", (e) => config.draggable && e.preventDefault(), { signal });
 
   rebuild();
-  cores.set(api, core);
   container.aeroSlider = api;
   container.classList.add("aero-slider--ready");
   emit("ready", {});

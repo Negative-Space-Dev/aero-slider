@@ -7,7 +7,6 @@ export type {
   SliderSnap,
   SliderConfig,
   SliderInstance,
-  SliderLabels,
   SliderEvent,
   SliderEventData,
   SliderEventMap,
