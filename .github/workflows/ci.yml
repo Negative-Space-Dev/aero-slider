@@ -43,6 +43,9 @@ jobs:
       - name: Check size budget
         run: bun run size
 
+      - name: Check package
+        run: bun run check:package
+
       - uses: actions/cache@v4
         id: playwright-cache
         with:
