@@ -1,13 +1,11 @@
 ---
-import CodeBlock from "../components/CodeBlock.astro";
 import Create from "./api/Create.astro";
 import Css from "./api/Css.astro";
 import Events from "./api/Events.astro";
 import Methods from "./api/Methods.astro";
 import Options from "./api/Options.astro";
+import Sync from "./api/Sync.astro";
 import "../styles/api.css";
-import DocTable from "../components/DocTable.astro";
-import Entry from "../components/Entry.astro";
 ---
 
 <section id="api" class="container-page py-12 sm:py-16">
@@ -15,49 +13,11 @@ import Entry from "../components/Entry.astro";
 
   <div class="space-y-14 sm:space-y-16">
     <Create />
-
     <Options />
-
     <Css />
-
     <Methods />
-
-    <!-- syncThumbnails -->
-    <Entry tag="Function" title="syncThumbnails(primary, thumbnail, options?)" mono id="api-sync">
-      <div class="copy">
-        <p>
-          Syncs a primary slider with a thumbnail slider. Clicking a thumbnail navigates the
-          primary to that slide; when the primary changes (drag, arrows, etc.), the thumbnail
-          slider scrolls to keep the active thumbnail in view and adds
-          <code>aero-slider__thumb--active</code>
-          to it. The function does not force thumbnail alignment; set
-          <code>alignment: "center"</code>
-          on the thumbnail slider if you want the active thumb centered when possible. Both
-          sliders must have the same number of slides. Pass an optional third argument
-          <code>{"{ loop }"}</code>
-          to control whether the thumbnail strip loops (defaults to
-          <code>true</code>). Returns a teardown function — call it before destroying the
-          sliders.
-        </p>
-      </div>
-      <CodeBlock
-        lang="typescript"
-        code={`import { createSlider, syncThumbnails } from "aero-slider";
-
-const main = createSlider(mainEl);
-const thumbs = createSlider(thumbsEl, {
-  alignment: "center",
-});
-const teardown = syncThumbnails(main, thumbs);
-
-// On unmount:
-// teardown();
-// main.destroy();
-// thumbs.destroy();`}
-      />
-    </Entry>
-
     <Events />
+    <Sync />
   </div>
 </section>
 

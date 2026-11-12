@@ -394,3 +394,34 @@
 .api-gotchas .draft-cell > h4 {
   margin-top: 1.25rem;
 }
+
+/* A short list of behaviours, one hairline row each. */
+.api-behaviours__title {
+  max-width: 48rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid var(--line-strong);
+}
+.api-behaviours {
+  max-width: 48rem;
+}
+.api-behaviours > li {
+  position: relative;
+  padding: 0.75rem 0 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+.api-behaviours > li:last-child {
+  border-bottom: 0;
+}
+.api-behaviours > li::before {
+  content: "";
+  position: absolute;
+  top: 1.45rem;
+  left: 0.25rem;
+  width: 0.375rem;
+  height: 1px;
+  background: var(--accent);
+}
