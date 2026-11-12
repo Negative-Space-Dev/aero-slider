@@ -704,7 +704,7 @@ body {
 }
 
 /* ── Motion ─────────────────────────────────────────────────────────── */
-/* The ticker holds three identical sets; shifting by one set loops seamlessly. */
+/* Each marquee row holds three identical sets; shifting by one set loops seamlessly. */
 @keyframes marquee {
   0% {
     transform: translateX(0);
@@ -715,14 +715,19 @@ body {
 }
 
 .animate-marquee {
-  animation: marquee 60s linear infinite;
+  animation: marquee 50s linear infinite;
+}
+
+.animate-marquee-reverse {
+  animation: marquee 50s linear infinite reverse;
 }
 
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
-  .animate-marquee {
+  .animate-marquee,
+  .animate-marquee-reverse {
     animation: none;
   }
 }
