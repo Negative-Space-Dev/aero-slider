@@ -37,7 +37,6 @@
     "size": "bun run ./scripts/size.ts",
     "test": "bun run build && playwright test",
     "test:ui": "bun run build && playwright test --ui",
-    "test:smoke": "bun run build && bun run ./test/smoke.ts",
     "pack": "bun pm pack"
   },
   "devDependencies": {
