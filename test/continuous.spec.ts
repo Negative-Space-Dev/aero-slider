@@ -112,15 +112,19 @@ const shift = (a: number, b: number, cycle: number) =>
   ((((b - a + cycle / 2) % cycle) + cycle) % cycle) - cycle / 2;
 
 /**
- * Checks a recorded drift: every frame should move the content forward by speed × frame time, so
- * a lap seam or a hand-back shows up as a bad frame.
+ * Checks a recorded drift: every two frames should move the content forward by speed × their
+ * time, so a lap seam or a hand-back shows up as a bad pair. Pairs, because WebKit can sample a
+ * frame a little late and catch up on the next.
  */
 function steady(samples: { time: number; content: number }[], cycle: number, speed = SPEED) {
   const frames = samples.slice(1).map(({ time, content }, k) => ({
     dt: time - samples[k]!.time,
     d: (((content - samples[k]!.content) % cycle) + cycle) % cycle,
   }));
-  const bad = frames.filter(
+  const pairs = frames
+    .slice(1)
+    .map((f, k) => ({ dt: f.dt + frames[k]!.dt, d: f.d + frames[k]!.d }));
+  const bad = pairs.filter(
     ({ dt, d }) => Math.abs(d - (speed * dt) / 1000) > Math.max(3, (0.3 * speed * dt) / 1000)
   );
   const total = frames.reduce((a, f) => a + f.d, 0);
@@ -210,7 +214,7 @@ test("a mouse press holds the drift without a jump, and release resumes it", asy
     d: shift(samples[k]!.content, s.content, cycle),
     drift: (SPEED * (s.time - samples[k]!.time)) / 1000,
   }));
-  expect(steps.filter(({ d, drift }) => d < -1.5 || d > drift * 1.3 + 3)).toEqual([]);
+  expect(steps.filter(({ d, drift }) => d < -3 || d > drift * 1.3 + 3)).toEqual([]);
   expect(steps.slice(-10).map(({ d }) => Math.abs(d) < 0.5)).toEqual(Array(10).fill(true));
 
   await page.mouse.up();
@@ -260,11 +264,16 @@ test("goTo() takes the lap back without a jump, then the drift resumes", async (
     return {
       before,
       after: window.ticker.content("s"),
+      sinceFrame: performance.now() - Number(document.timeline.currentTime),
       animations: window.ticker.animations("s").length,
     };
   });
   expect(handOff.animations).toBe(0);
-  expectNear(shift(handOff.before, handOff.after, cycle), 0);
+  // WebKit lays the slides out at the last frame's time but hands back the lap at the current
+  // time, so the content may land ahead by the drift since that frame, where it would draw next.
+  const moved = shift(handOff.before, handOff.after, cycle);
+  expect(moved).toBeGreaterThanOrEqual(-1.5);
+  expect(moved).toBeLessThanOrEqual((SPEED * handOff.sinceFrame) / 1000 + 1.5);
   await expect.poll(() => animationCount(page), { timeout: 5000 }).toBeGreaterThan(0);
 });
 

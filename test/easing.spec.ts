@@ -40,7 +40,9 @@ const glideTo = (page: Page, index: number, ms: number) =>
 
 /**
  * How a recorded scroll from `from` to `to` moved. `biggest` is the largest step as a share of the
- * distance, scaled to one 60Hz frame, so a frame the browser dropped doesn't read as a jump.
+ * distance, scaled to one 60Hz frame, so a frame the browser dropped doesn't read as a jump. A
+ * sample can show the previous frame's step, so each step is scaled by the longer of its own and
+ * the previous frame interval.
  */
 function glide(samples: [number, number][], from: number, to: number) {
   const steps = samples
@@ -54,8 +56,13 @@ function glide(samples: [number, number][], from: number, to: number) {
     steps: steps.length,
     oneWay: steps.every(({ d }) => Math.sign(d) === Math.sign(to - from)),
     biggest:
-      Math.max(0, ...steps.map(({ d, dt }) => Math.abs(d) / Math.max(1, dt / FRAME_MS))) /
-      Math.abs(to - from),
+      Math.max(
+        0,
+        ...steps.map(
+          ({ d, dt }, k) =>
+            Math.abs(d) / Math.max(1, dt / FRAME_MS, (steps[k - 1]?.dt ?? 0) / FRAME_MS)
+        )
+      ) / Math.abs(to - from),
     firstHalf: speed(steps.slice(0, half)),
     secondHalf: speed(steps.slice(half)),
   };

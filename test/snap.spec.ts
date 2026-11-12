@@ -107,9 +107,13 @@ test.describe("snap: settle", () => {
     expectNear(samples[0]!.offset, 820);
     expect(steps.length).toBeGreaterThanOrEqual(6);
     expect(steps.every(({ d }) => d < 0)).toBe(true);
-    // The largest step scaled to one 60Hz frame, so a frame the browser dropped isn't a jump.
+    // The largest step scaled to one 60Hz frame, so a frame the browser dropped isn't a jump. A
+    // sample can show the previous frame's step, so scale by the longer of the two intervals.
     const biggest = Math.max(
-      ...steps.map(({ d, dt }) => Math.abs(d) / Math.max(1, dt / (1000 / 60)))
+      ...steps.map(
+        ({ d, dt }, k) =>
+          Math.abs(d) / Math.max(1, dt / (1000 / 60), (steps[k - 1]?.dt ?? 0) / (1000 / 60))
+      )
     );
     expect(biggest).toBeLessThan(210 * 0.4);
     await settled(page, "s");
