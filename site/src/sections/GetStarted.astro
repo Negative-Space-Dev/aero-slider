@@ -1,0 +1,190 @@
+---
+import CodeTabs from "../components/CodeTabs.astro";
+import type { CodeTab } from "../lib/code";
+
+const CDN = "https://unpkg.com/aero-slider/dist";
+
+const markup = `<div class="aero-slider">
+  <div class="aero-slider__viewport">
+    <!-- Optional: arrows, placed before the track -->
+    <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">‹</button>
+    <button type="button" class="aero-slider__nav--next" aria-label="Next slide">›</button>
+
+    <div class="aero-slider__track">
+      <div>Slide 1</div>
+      <div>Slide 2</div>
+      <div>Slide 3</div>
+    </div>
+  </div>
+
+  <!-- Optional: pagination, with one dot as a template -->
+  <div class="aero-slider__pagination">
+    <span class="aero-slider__dot"></span>
+  </div>
+</div>`;
+
+const load: CodeTab[] = [
+  {
+    label: "Package",
+    lang: "javascript",
+    code: `import { createSlider } from "aero-slider";
+import "aero-slider/slider.css";`,
+  },
+  {
+    label: "CDN",
+    lang: "html",
+    code: `<link rel="stylesheet" href="${CDN}/aero-slider.min.css" />
+<script type="module" src="${CDN}/aero-slider.min.js"></script>`,
+  },
+];
+
+const create: CodeTab[] = [
+  {
+    label: "Package",
+    lang: "javascript",
+    code: `const slider = createSlider(document.querySelector(".aero-slider"), { loop: true });`,
+  },
+  {
+    label: "CDN",
+    lang: "html",
+    code: `<script type="module">
+  const slider = AeroSlider.createSlider(document.querySelector(".aero-slider"), { loop: true });
+</script>`,
+  },
+];
+
+const steps = [
+  {
+    title: "Markup",
+    text: "A container, a viewport and a track. Every direct child of the track is a slide. Arrows and pagination are optional elements you add when you want them.",
+    tabs: [{ label: "HTML", lang: "html", code: markup }] satisfies CodeTab[],
+  },
+  {
+    title: "Load it",
+    text: "From the package, or from a CDN without a bundler. The CDN module puts an <code>AeroSlider</code> object on <code>window</code>.",
+    tabs: load,
+  },
+  {
+    title: "Create it",
+    text: "Pass the container and any options. It returns the slider instance, which is also stored on the element as <code>element.aeroSlider</code>.",
+    tabs: create,
+  },
+];
+
+const layers = [
+  {
+    tag: "HTML",
+    title: "HTML decides what exists",
+    body: "Arrows and dots are not JavaScript options. If the elements are inside the container, the slider finds them and wires them up. The dot is one template that the slider clones for each position it can scroll to.",
+  },
+  {
+    tag: "CSS",
+    title: "CSS variables decide how it looks",
+    body: "<code>--slides-per-view</code>, <code>--slide-gap</code> and <code>--slide-aspect</code>, set on the container and changed in media queries.",
+  },
+  {
+    tag: "JS",
+    title: "JS config decides how it behaves",
+    body: '<code>loop</code>, <code>autoplay</code>, <code>snap</code>, <code>direction</code> and the rest of the <a href="#api-options">options</a>.',
+  },
+];
+
+const callouts = [
+  { y: 11, from: "M196 8H208", label: ".aero-slider" },
+  { y: 25, from: "M186 22H208", label: "__viewport" },
+  { y: 47, from: "M160 44H208", label: "__track" },
+  { y: 87, from: "M180 84H208", label: "__nav--prev/next" },
+  { y: 115, from: "M154 112H208", label: "slides", accent: true },
+  { y: 177, from: "M186 174H208", label: "__pagination" },
+  { y: 199, from: "M114 184V196H208", label: "__dot" },
+];
+---
+
+<section id="start" class="container-page py-12 sm:py-16">
+  <h2 class="mb-10 text-3xl font-medium tracking-[-0.025em] sm:mb-14 sm:text-4xl">Get started</h2>
+
+  <div class="space-y-16 sm:space-y-20">
+    <div>
+      <h3 class="caption mb-6">Quick start</h3>
+      <ol class="space-y-10 sm:space-y-12">
+        {
+          steps.map((step, i) => (
+            <li class="grid gap-4 border-t border-line pt-6 lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-10">
+              <div>
+                <p class="flex items-baseline gap-3">
+                  <span class="caption text-accent tabular-nums">{String(i + 1).padStart(2, "0")}</span>
+                  <span class="text-lg font-medium tracking-[-0.015em] text-ink">{step.title}</span>
+                </p>
+                <p class="copy mt-2 text-[0.9375rem]" set:html={step.text} />
+              </div>
+              <CodeTabs tabs={step.tabs} group={step.tabs.length > 1 ? "setup" : undefined} class="self-start" />
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+
+    <div>
+      <h3 class="caption mb-6">Three layers</h3>
+      <div class="draft-sheet draft-sheet--anatomy grid lg:grid-cols-12">
+        <figure class="draft-cell lg:col-span-7">
+          <div class="draft-cell__meta">
+            <span>Fig. 05</span>
+            <span>Anatomy</span>
+          </div>
+          <svg class="draft-fig draft-fig--anatomy" viewBox="0 0 320 212" role="img" aria-labelledby="anatomy-title">
+            <title id="anatomy-title">
+              A container holds a viewport and a pagination row. The viewport holds the previous and
+              next buttons and the track, and the track holds the slides. The pagination row holds
+              one dot template and its clones.
+            </title>
+            <rect class="dr-muted" x="0.5" y="0.5" width="195" height="205" rx="4" />
+            <rect class="dr-faint" x="10.5" y="14.5" width="175" height="140" rx="3" />
+            <rect class="dr-strong" x="36.5" y="30.5" width="123" height="108" rx="2" />
+            {[42, 82, 122].map((x) => <rect class="dr-accent" x={x + 0.5} y="50.5" width="33" height="68" rx="1.5" />)}
+            <circle class="dr-faint" cx="23.5" cy="84.5" r="7" />
+            <path class="dr-faint" d="M25 81L22 84.5L25 88" />
+            <circle class="dr-faint" cx="172.5" cy="84.5" r="7" />
+            <path class="dr-faint" d="M171 81L174 84.5L171 88" />
+            <rect class="dr-faint" x="10.5" y="166.5" width="175" height="26" rx="3" />
+            <circle class="dr-faint dr-fill" cx="82.5" cy="179.5" r="2.5" />
+            <circle class="dr-faint dr-dashed-fine" cx="98.5" cy="179.5" r="2.5" />
+            <circle class="dr-faint dr-dashed-fine" cx="114.5" cy="179.5" r="2.5" />
+            {
+              callouts.map((callout) => (
+                <g>
+                  <path class={callout.accent ? "dr-accent" : "dr-strong"} d={callout.from} />
+                  <circle class={callout.accent ? "dr-accent" : "dr-strong"} cx="208" cy={callout.y - 3} r="1" />
+                  <text x="214" y={callout.y} class:list={[callout.accent && "dr-accent-text"]}>
+                    {callout.label}
+                  </text>
+                </g>
+              ))
+            }
+          </svg>
+          <figcaption class="draft-cell__note">
+            Class names are the contract: the slider looks them up inside the container.
+          </figcaption>
+        </figure>
+
+        {
+          layers.map((layer, i) => (
+            <div class="draft-cell lg:col-span-5">
+              <div class="draft-cell__meta">
+                <span>Layer {String(i + 1).padStart(2, "0")}</span>
+                <span>{layer.tag}</span>
+              </div>
+              <h4>{layer.title}</h4>
+              <p set:html={layer.body} />
+            </div>
+          ))
+        }
+      </div>
+
+      <p class="note mt-6">
+        <strong>The library ships layout only.</strong> It has no styles for the arrow buttons and
+        no size or colour for the dots, so you style those yourself.
+      </p>
+    </div>
+  </div>
+</section>

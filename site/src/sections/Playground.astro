@@ -1,0 +1,223 @@
+---
+import Pagination from "../components/Pagination.astro";
+import SliderNav from "../components/SliderNav.astro";
+import Slides from "../components/Slides.astro";
+import CodeTabs from "../components/CodeTabs.astro";
+import type { CodeTab } from "../lib/code";
+import { playgroundCode } from "../lib/playground-code";
+import { heroToneFor, type SlideContent } from "../lib/slide";
+
+// Playground controls. Ids and names are read by the inline script below and
+// by scripts/playground.ts.
+const ranges = [
+  { id: "slideCount", name: "slideCount", out: "slideCount", label: "Number of slides", min: 3, max: 20, step: 1, value: 5, display: "5" },
+  { id: "spv", name: "slidesPerView", out: "spv", label: "Slides per view", min: 0, max: 16, step: 1, value: 0, display: "1" },
+  { id: "gap", name: "gap", out: "gap", label: "Gap", min: 0, max: 32, step: 2, value: 10, display: "10px" },
+  { id: "perMove", name: "perMove", out: "perMove", label: "Per move", min: 1, max: 4, step: 1, value: 1, display: "1" },
+  { id: "maxDots", name: "maxDots", out: "maxDots", label: "Max dots", min: 3, max: 21, step: 1, value: 9, display: "9" },
+  { id: "interval", name: "autoplayInterval", out: "interval", label: "Autoplay interval", min: 1000, max: 8000, step: 500, value: 4000, display: "4000ms", wrapperId: "interval-control" },
+];
+
+const choices = [
+  { name: "alignment", label: "Alignment", selected: "center", options: [["left", "Left"], ["center", "Center"], ["right", "Right"]] },
+  { name: "direction", label: "Direction", selected: "ltr", options: [["ltr", "LTR"], ["rtl", "RTL"], ["ttb", "Vertical"]] },
+];
+
+const toggles = [
+  { name: "loop", label: "Loop", checked: false },
+  { name: "pagination", label: "Pagination", checked: true },
+  { name: "navigation", label: "Navigation", checked: true },
+  { name: "draggable", label: "Draggable", checked: true },
+  { name: "autoplay", label: "Autoplay", checked: false },
+  { name: "thumbnails", label: "Thumbnails", checked: false },
+];
+
+const ORDINALS = ["One", "Two", "Three", "Four", "Five"];
+const heroSlides: SlideContent[] = ORDINALS.map((ordinal, i) => ({
+  num: i + 1,
+  label: `Slide ${ordinal}`,
+  tone: heroToneFor(i + 1),
+}));
+// Matches the form defaults above, so the code panel is right before the script runs.
+const initialCode = playgroundCode({
+  slideCount: 5,
+  slidesPerView: 1,
+  gap: 10,
+  perMove: 1,
+  maxDots: 9,
+  autoplayInterval: 4000,
+  alignment: "center",
+  direction: "ltr",
+  loop: false,
+  pagination: true,
+  navigation: true,
+  draggable: true,
+  autoplay: false,
+  thumbnails: false,
+});
+const initialTabs = [
+  { label: "HTML", key: "html", lang: "html", code: initialCode.html },
+  { label: "CSS", key: "css", lang: "css", code: initialCode.css },
+  { label: "JS", key: "js", lang: "javascript", code: initialCode.js },
+] satisfies CodeTab[];
+
+const heroThumbs: SlideContent[] = heroSlides.map(({ num, tone }) => ({ num, tone }));
+---
+
+<section id="playground" class="container-page pt-10 pb-12 sm:pt-14 sm:pb-16" aria-labelledby="playground-title">
+  <div class="mb-4 flex items-baseline justify-between gap-4">
+    <h2 id="playground-title" class="caption">Playground</h2>
+    <p class="caption tracking-normal normal-case">Settings are saved in the URL</p>
+  </div>
+
+  <div class="grid overflow-hidden rounded-2xl border border-line bg-surface lg:grid-cols-[minmax(0,1fr)_20rem]">
+    <div class="flex min-w-0 flex-col">
+      <div class="p-3 sm:p-5">
+        <!-- Main Hero Slider -->
+        <div id="hero-slider" class="aero-slider w-full">
+          <div class="aero-slider__viewport relative">
+            <SliderNav />
+            <div class="aero-slider__track">
+              <Slides items={heroSlides} />
+            </div>
+          </div>
+          <Pagination />
+        </div>
+
+        <!-- Thumbnail Strip -->
+        <div id="hero-thumbs-wrapper" hidden class="mt-1">
+          <div
+            id="hero-thumbs"
+            class="aero-slider aero-slider--thumbnails"
+            style="--slide-aspect: 16/9; --slides-per-view: 5; --slide-gap: 8px;"
+          >
+            <div class="aero-slider__viewport relative">
+              <SliderNav noun="thumbnail" />
+              <div class="aero-slider__track">
+                <Slides items={heroThumbs} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-1 flex-col border-t border-line">
+        <button
+          type="button"
+          id="code-toggle"
+          aria-expanded="true"
+          aria-controls="code-content"
+          class="flex w-full items-center justify-between px-5 py-3 text-left sm:hidden"
+        >
+          <span class="caption">Code</span>
+          <span id="code-toggle-icon" class="font-mono text-faint" aria-hidden="true">−</span>
+        </button>
+        <div id="code-content" class="flex-1 max-sm:border-t max-sm:border-line">
+          <CodeTabs id="playground-code" class="code-tabs--flush" tabs={initialTabs} />
+        </div>
+      </div>
+    </div>
+
+    <!-- Config Panel -->
+    <aside class="border-t border-line p-5 lg:border-t-0 lg:border-l">
+      <h2 class="caption mb-5">Configuration</h2>
+      <form id="config-form" class="space-y-5">
+        {
+          ranges.map((range) => (
+            <div id={range.wrapperId} class="transition-opacity">
+              <div class="mb-1.5 flex items-center justify-between text-sm">
+                <label for={range.id} class="text-muted">
+                  {range.label}
+                </label>
+                <output id={`out-${range.out}`} class="font-mono text-xs text-ink tabular-nums">
+                  {range.display}
+                </output>
+              </div>
+              <input
+                id={range.id}
+                type="range"
+                name={range.name}
+                min={range.min}
+                max={range.max}
+                step={range.step}
+                value={range.value}
+              />
+            </div>
+          ))
+        }
+
+        {
+          choices.map((choice) => (
+            <fieldset>
+              <legend class="mb-1.5 text-sm text-muted">{choice.label}</legend>
+              <div class="segmented flex w-full">
+                {choice.options.map(([value, label]) => (
+                  <label>
+                    <input
+                      type="radio"
+                      name={choice.name}
+                      value={value}
+                      checked={value === choice.selected}
+                      class="sr-only"
+                    />
+                    <span>{label}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ))
+        }
+
+        <fieldset class="border-t border-line pt-5">
+          <legend class="sr-only">Feature toggles</legend>
+          <div class="grid grid-cols-2 gap-2">
+            {
+              toggles.map((toggle) => (
+                <label class="toggle">
+                  <input type="checkbox" name={toggle.name} checked={toggle.checked} class="sr-only" />
+                  <span>{toggle.label}</span>
+                </label>
+              ))
+            }
+          </div>
+        </fieldset>
+      </form>
+      <!-- Apply URL params to form immediately, before module script loads -->
+      <script is:inline>
+        (function(){
+          var q=location.search;if(!q||q.length<2)return;
+          var p=new URLSearchParams(q),f=document.getElementById('config-form');
+          if(!f)return;
+          var SPV=[1,1.05,1.1,1.15,1.2,1.25,1.3,1.35,1.4,1.45,1.5,1.75,2,2.5,3,4,5];
+          function sR(n,k,lo,hi){var v=p.get(k);if(v==null)return;var x=parseInt(v,10);if(isNaN(x))return;x=Math.max(lo,Math.min(hi,x));f.elements[n].value=x;return x}
+          function sC(n,k){var v=p.get(k);if(v==null)return;f.elements[n].checked=v==='1'||v==='on'||v==='true'}
+          function sS(n,k,ok){var v=p.get(k);if(v==null||ok.indexOf(v)<0)return;f.elements[n].value=v}
+          function out(id,t){var e=document.getElementById(id);if(e)e.textContent=t}
+          sR('slideCount','sc',3,20);
+          var si=sR('slidesPerView','spv',0,16);
+          sR('gap','gap',0,32);
+          sR('autoplayInterval','interval',1000,8000);
+          sR('maxDots','dots',3,21);
+          sR('perMove','pm',1,4);
+          sS('alignment','align',['left','center','right']);
+          sS('direction','dir',['ltr','rtl','ttb']);
+          sC('loop','loop');sC('pagination','pag');sC('navigation','nav');
+          sC('draggable','drag');sC('autoplay','auto');sC('thumbnails','thumbs');
+          if(si!=null){var spv=SPV[Math.max(0,Math.min(SPV.length-1,si))];out('out-spv',spv.toFixed(2).replace(/\.?0+$/,''))}
+          var g=f.elements['gap'];if(g)out('out-gap',g.value+'px');
+          var iv=f.elements['autoplayInterval'];if(iv)out('out-interval',iv.value+'ms');
+          var sc=f.elements['slideCount'];if(sc)out('out-slideCount',sc.value);
+          var d=f.elements['maxDots'];if(d)out('out-maxDots',parseInt(d.value)>=21?'∞':d.value);
+          var pm=f.elements['perMove'];if(pm)out('out-perMove',pm.value);
+          var ac=f.elements['autoplay'];
+          var ic=document.getElementById('interval-control');
+          if(ac&&ic){ic.classList.toggle('opacity-40',!ac.checked);ic.classList.toggle('pointer-events-none',!ac.checked)}
+        })();
+      </script>
+    </aside>
+  </div>
+</section>
+
+<script>
+  import "../scripts/playground.ts";
+</script>

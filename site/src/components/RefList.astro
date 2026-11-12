@@ -1,0 +1,52 @@
+---
+import CodeTabs from "./CodeTabs.astro";
+import Disclosure from "./Disclosure.astro";
+import type { RefGroup } from "../data/api";
+
+interface Props {
+  groups: RefGroup[];
+}
+
+const { groups } = Astro.props;
+---
+
+<div class="ref-list">
+  {
+    groups.map((group) => (
+      <section class="ref-list__group">
+        {group.title && <h4 class="caption ref-list__title">{group.title}</h4>}
+        <ul>
+          {group.entries.map((entry) => (
+            <li class="ref-row">
+              <div class="ref-row__head">
+                <span class="ref-row__name">{entry.name}</span>
+                {entry.type && (
+                  <span class="ref-chip">
+                    <span class="sr-only">Type: </span>
+                    {entry.type}
+                  </span>
+                )}
+                {entry.default && (
+                  <span class="ref-chip">
+                    <span class="ref-chip__key">default</span> {entry.default}
+                  </span>
+                )}
+              </div>
+              <div class="ref-row__desc" set:html={entry.description} />
+              {entry.example && (
+                <a class="ref-row__link" href={`#${entry.example}`}>
+                  See example
+                </a>
+              )}
+              {entry.snippet && (
+                <Disclosure>
+                  <CodeTabs tabs={entry.snippet} />
+                </Disclosure>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))
+  }
+</div>

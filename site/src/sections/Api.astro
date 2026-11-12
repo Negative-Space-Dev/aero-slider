@@ -1,0 +1,26 @@
+---
+import Create from "./api/Create.astro";
+import Css from "./api/Css.astro";
+import Events from "./api/Events.astro";
+import Methods from "./api/Methods.astro";
+import Options from "./api/Options.astro";
+import Sync from "./api/Sync.astro";
+import "../styles/api.css";
+---
+
+<section id="api" class="container-page py-12 sm:py-16">
+  <h2 class="mb-10 text-3xl font-medium tracking-[-0.025em] sm:mb-14 sm:text-4xl">API Reference</h2>
+
+  <div class="space-y-14 sm:space-y-16">
+    <Create />
+    <Options />
+    <Css />
+    <Methods />
+    <Events />
+    <Sync />
+  </div>
+</section>
+
+<script>
+  import "../scripts/api.ts";
+</script>

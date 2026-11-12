@@ -1,0 +1,26 @@
+---
+import Entry from "../../components/Entry.astro";
+import RefList from "../../components/RefList.astro";
+import { attributes, cssVariables } from "../../data/api";
+
+const groups = [
+  { title: "Custom properties", entries: cssVariables },
+  { title: "HTML attributes", entries: attributes },
+];
+---
+
+<Entry tag="CSS" title="Variables and attributes" id="api-css">
+  <div class="copy">
+    <p>
+      Size and spacing live in CSS, set on the container. Change them in media queries and the slider
+      re-measures on its own.
+    </p>
+  </div>
+  <div class="api-ref-columns">
+    <RefList groups={groups} />
+  </div>
+  <p class="note">
+    The slider also adds state classes such as <code>aero-slider--dragging</code> to the container.
+    They are listed with the <a href="#ex-styling">styling example</a>.
+  </p>
+</Entry>

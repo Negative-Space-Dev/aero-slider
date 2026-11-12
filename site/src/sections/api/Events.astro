@@ -1,0 +1,129 @@
+---
+import ApiEventList from "../../components/ApiEventList.astro";
+import CodeTabs from "../../components/CodeTabs.astro";
+import Entry from "../../components/Entry.astro";
+import Pagination from "../../components/Pagination.astro";
+import SliderNav from "../../components/SliderNav.astro";
+import Slides from "../../components/Slides.astro";
+import { eventEntryGroups } from "../../data/api";
+import type { CodeTab } from "../../lib/code";
+
+const listen: CodeTab[] = [
+  {
+    label: "Listen",
+    lang: "javascript",
+    code: `el.addEventListener("aero:slideChange", (event) => {
+  console.log(event.detail.index);
+});`,
+  },
+];
+
+const gotchas = [
+  {
+    title: "Listen before you create",
+    body: "<code>aero:ready</code> fires inside <code>createSlider</code>, before it returns, and so does the first <code>aero:autoplayStart</code>. A listener added afterwards never hears them.",
+  },
+  {
+    title: "Touch fires no drag events",
+    body: "A finger swipe scrolls the track natively, so <code>aero:dragStart</code> and <code>aero:dragEnd</code> come from a mouse or pen only. To follow every way of moving, use <code>aero:slideChange</code>.",
+  },
+  {
+    title: "One listener for every slider",
+    body: "Events bubble, so a listener on <code>document</code> hears every slider on the page. <code>event.target</code> is the container and <code>event.target.aeroSlider</code> its instance. If sliders nest, check <code>event.target === el</code>.",
+  },
+];
+
+const typed: CodeTab[] = [
+  {
+    label: "TypeScript",
+    lang: "typescript",
+    code: `import type { SliderEventData } from "aero-slider";
+
+el.addEventListener("aero:dragEnd", (event) => {
+  const { detail } = event as CustomEvent<SliderEventData<"dragEnd">>;
+  console.log(detail.fromIndex, detail.index);
+});`,
+  },
+];
+---
+
+<Entry tag="DOM events" title="Events" id="api-events">
+  <div class="api-split">
+    <div class="copy">
+      <p>
+        The slider reports what it does as events on its container. Each is a native
+        <code>CustomEvent</code> named with the <code>aero:</code> prefix, carries its data on
+        <code>event.detail</code>, and bubbles.
+      </p>
+      <p>
+        Every row below listens to the slider beside it. Press its arrows, drag it with a mouse, or
+        hover it with autoplay on, and the matching rows light up with a count and the last
+        <code>detail</code>. In the recipes, <code>el</code> is the container.
+      </p>
+    </div>
+    <CodeTabs tabs={listen} />
+  </div>
+
+  <div class="api-events">
+    <aside class="api-events__demo" id="api-events-demo" aria-label="Live event demo">
+      <div class="api-events__panel">
+        <div class="api-events__meta">
+          <span>Live</span>
+          <span>#api-events-slider</span>
+        </div>
+        <div id="api-events-slider" class="aero-slider api-events__slider" aria-label="Event demo slider">
+          <div class="aero-slider__viewport relative">
+            <SliderNav />
+            <div class="aero-slider__track">
+              <Slides items={6} />
+            </div>
+          </div>
+          <Pagination />
+        </div>
+        <div class="api-events__controls">
+          <label class="toggle">
+            <input type="checkbox" name="autoplay" class="sr-only" />
+            <span>Autoplay</span>
+          </label>
+          <div class="segmented" role="group" aria-label="Slides per view">
+            <button type="button" data-per-view="1" data-active>1 up</button>
+            <button type="button" data-per-view="2">2 up</button>
+          </div>
+          <button type="button" class="api-call" data-lifecycle>slider.destroy()</button>
+        </div>
+        <p class="api-events__hint">
+          Switch to 2 up, or narrow the window, for the layout events. Touch swipes fire no drag
+          events.
+        </p>
+      </div>
+    </aside>
+
+    <ApiEventList groups={eventEntryGroups} />
+  </div>
+
+  <div class="draft-sheet api-gotchas">
+    {
+      gotchas.map((gotcha, i) => (
+        <div class="draft-cell">
+          <div class="draft-cell__meta">
+            <span>Note {String(i + 1).padStart(2, "0")}</span>
+            <span>Gotcha</span>
+          </div>
+          <h4>{gotcha.title}</h4>
+          <p set:html={gotcha.body} />
+        </div>
+      ))
+    }
+  </div>
+
+  <div class="api-split">
+    <div class="copy">
+      <p>
+        <strong>TypeScript.</strong> <code>addEventListener</code> types these events as a plain
+        <code>Event</code>. Cast to <code>CustomEvent</code> with the exported
+        <code>SliderEventData</code> to type <code>detail</code>.
+      </p>
+    </div>
+    <CodeTabs tabs={typed} />
+  </div>
+</Entry>

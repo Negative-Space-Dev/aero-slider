@@ -1,0 +1,98 @@
+---
+import Example from "../components/Example.astro";
+import RefList from "../components/RefList.astro";
+import { exampleIds } from "../data/anchors";
+import { stateClasses } from "../data/api";
+import { controlStates, exampleGroups, examples } from "../data/examples";
+import "../styles/examples.css";
+
+const indexOf = (id: (typeof exampleIds)[number]) => exampleIds.indexOf(id) + 1;
+const groups = exampleGroups.map((group) => ({
+  ...group,
+  ids: exampleIds.filter((id) => examples[id].group === group.key),
+}));
+---
+
+<section id="examples" class="container-page py-12 sm:py-16">
+  <h2 class="mb-10 text-3xl font-medium tracking-[-0.025em] sm:mb-14 sm:text-4xl">Examples</h2>
+
+  <nav class="ex-jump" aria-label="Examples">
+    {
+      groups.map((group) => (
+        <div class="ex-jump__group">
+          <p class="caption ex-jump__title">{group.title}</p>
+          <ul class="ex-jump__list">
+            {group.ids.map((id) => (
+              <li>
+                <a class="ex-chip" href={`#${id}`}>
+                  <span class="ex-chip__index">{String(indexOf(id)).padStart(2, "0")}</span>
+                  {examples[id].title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))
+    }
+  </nav>
+
+  {
+    groups.map((group) => (
+      <section id={group.id} class="ex-group" aria-labelledby={`${group.id}-title`}>
+        <h3 id={`${group.id}-title`} class="caption ex-group__title">
+          {group.title}
+        </h3>
+        {group.ids.map((id) =>
+          id === "ex-edge-to-edge" ? (
+            <Example id={id} index={indexOf(id)}>
+              <div slot="controls" class="ex-controls">
+                <span class="caption">Alignment</span>
+                <div id="edge-align" class="segmented" role="group" aria-label="Edge-to-edge alignment">
+                  <button type="button" data-align="left" data-active>
+                    Left
+                  </button>
+                  <button type="button" data-align="center">
+                    Center
+                  </button>
+                  <button type="button" data-align="right">
+                    Right
+                  </button>
+                </div>
+              </div>
+              <div slot="controls" class="ex-guide" aria-hidden="true">
+                <div class="ex-guide__column">
+                  <span class="caption">Content column</span>
+                </div>
+              </div>
+            </Example>
+          ) : id === "ex-no-shift" ? (
+            <Example id={id} index={indexOf(id)}>
+              <div slot="controls" class="ex-controls">
+                <button id="no-shift-replay" type="button" class="btn">
+                  Replay start-up
+                </button>
+              </div>
+            </Example>
+          ) : id === "ex-styling" ? (
+            <Example id={id} index={indexOf(id)}>
+              <div slot="after" class="ex-states">
+                <RefList
+                  groups={[
+                    { title: "Container states", entries: stateClasses },
+                    { title: "Control states", entries: controlStates },
+                  ]}
+                />
+              </div>
+            </Example>
+          ) : (
+            <Example id={id} index={indexOf(id)} />
+          )
+        )}
+      </section>
+    ))
+  }
+</section>
+
+<script>
+  import "../scripts/examples.ts";
+</script>
