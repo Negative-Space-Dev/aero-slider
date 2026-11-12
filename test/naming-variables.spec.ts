@@ -137,6 +137,15 @@ test("a nested slider with no settings of its own starts from the defaults", asy
   expect(await box(page, "inner")).toEqual({ width: 290, height: 174, gap: 0 });
 });
 
+test("a slide that is itself a slider keeps the settings made on it", async ({ page }) => {
+  const inner = slider("inner", 3, { style: "--aero-slides-per-view:2", nav: false, dots: false });
+  await mount(
+    page,
+    `<div id="outer" class="aero-slider" style="width:600px"><div class="aero-slider__viewport"><div class="aero-slider__track">${inner}<div>1</div></div></div></div>`
+  );
+  expect((await box(page, "inner")).width).toBe(150);
+});
+
 /** The resting position after each of `steps` presses of next(), then of goTo(index). */
 async function walk(page: Page, steps: number, index: number) {
   const positions = [];
