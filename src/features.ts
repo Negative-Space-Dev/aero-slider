@@ -86,6 +86,8 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
   }
 
   function build(): void {
+    // Rebuilding removes the dot that has focus, which would drop a keyboard user on the page.
+    const focused = dots.indexOf(document.activeElement as HTMLElement);
     clear();
     core.attr(box, "role", "group");
     core.attr(box, "aria-label", core.label("pagination"));
@@ -112,6 +114,7 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
     }
     parent.insertBefore(holder, anchor);
     measure();
+    if (focused >= 0) dots[Math.min(focused, count - 1)]?.focus({ preventScroll: true });
   }
 
   /** Sizes the dot window. Everything measures 0 while hidden, so it reruns on every relayout. */
@@ -488,9 +491,14 @@ export function autoplay(core: SliderCore) {
     release,
     /** A continuous lap is moving the slides right now. */
     drifting: () => lap !== null,
-    /** Ends a lap without handing it back, for when the layout is about to change under it. */
-    reset(): void {
+    /**
+     * Ends a lap without handing it back, for when the layout is about to change under it. A
+     * rebuild can change the slide count or the labels, so it also drops the status text, which
+     * would otherwise go on naming the old ones until the next slide change.
+     */
+    reset(rebuilding?: boolean): void {
       stopLap(false, false);
+      if (rebuilding) status.textContent = "";
     },
     /** goTo() is about to measure from the scroll offset. True if a lap was handed back. */
     interrupt(): boolean {

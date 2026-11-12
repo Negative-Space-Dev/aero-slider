@@ -23,6 +23,27 @@ test("the status line uses the slidePosition label", async ({ page }) => {
   await expect(status(page)).toHaveText("Bild 2 von 3");
 });
 
+test("a rebuild drops status text that names the old labels or count", async ({ page }) => {
+  await mount(page, slider("s", 3));
+  await create(page, "s");
+  await page.evaluate(() => window.sliders.s!.next());
+  await expect(status(page)).toHaveText("2 of 3");
+
+  await page.evaluate(() =>
+    window.sliders.s!.update({ labels: { slidePosition: "Bild {index} von {count}" } })
+  );
+  await expect(status(page)).toHaveText("");
+  await page.evaluate(() => window.sliders.s!.next());
+  await expect(status(page)).toHaveText("Bild 3 von 3");
+
+  await page.evaluate(() => {
+    const track = document.querySelector("#s .aero-slider__track")!;
+    track.append(track.firstElementChild!.cloneNode(true));
+    window.sliders.s!.refresh();
+  });
+  await expect(status(page)).toHaveText("");
+});
+
 test("the status line stays quiet while autoplay moves the slides", async ({ page }) => {
   await mount(page, slider("s", 4));
   await recordEvents(page, "s");

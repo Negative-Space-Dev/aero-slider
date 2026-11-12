@@ -85,24 +85,29 @@ test("clones load their images once scrolled into view", async ({ page }) => {
     .toBe(true);
 });
 
-test("looped clones of a video with source children load", async ({ page }) => {
-  await mount(
-    page,
-    slider("s", 4, {
-      style: "--slides-per-view:2",
-      dots: false,
-      inner: () =>
-        `<video muted loop playsinline preload="auto" width="150" height="84"><source src="/test/assets/clip.webm" type="video/webm"></video>`,
-    })
-  );
-  await create(page, "s", { loop: true });
-  const cloneStates = () =>
-    page.evaluate(() =>
-      Array.from(
-        document.querySelectorAll<HTMLVideoElement>("#s [data-aero-slider-clone] video"),
-        (video) => video.readyState > 0
-      )
-    );
-  expect((await cloneStates()).length).toBeGreaterThan(0);
-  await expect.poll(async () => (await cloneStates()).every(Boolean)).toBe(true);
-});
+const VIDEO = `<video muted loop playsinline preload="auto" width="150" height="84"><source src="/test/assets/clip.webm" type="video/webm"></video>`;
+
+// WebKit never starts loading media that arrived from another document with <source> children.
+for (const [where, markup] of [
+  [
+    "inside a slide",
+    slider("s", 4, { style: "--slides-per-view:2", dots: false, inner: () => VIDEO }),
+  ],
+  [
+    "that is the slide itself",
+    `<div id="s" class="aero-slider" style="width:600px;--slides-per-view:2"><div class="aero-slider__viewport"><div class="aero-slider__track">${VIDEO.repeat(4)}</div></div></div>`,
+  ],
+] as const) {
+  test(`looped clones of a video ${where} load`, async ({ page }) => {
+    await mount(page, markup);
+    await create(page, "s", { loop: true });
+    const cloneStates = () =>
+      page.evaluate(() =>
+        Array.from(document.querySelectorAll<HTMLVideoElement>("#s video"))
+          .filter((video) => video.closest("[data-aero-slider-clone]"))
+          .map((video) => video.readyState > 0)
+      );
+    expect((await cloneStates()).length).toBeGreaterThan(0);
+    await expect.poll(async () => (await cloneStates()).every(Boolean)).toBe(true);
+  });
+}
