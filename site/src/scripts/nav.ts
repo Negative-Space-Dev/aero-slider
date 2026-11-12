@@ -44,3 +44,76 @@ window.addEventListener(
 );
 window.addEventListener("resize", update);
 update();
+
+// ── Examples menu ──────────────────────────────────────────────────────
+// Opens on mouse hover and on keyboard focus. The trigger stays a link to the
+// section, so a touch needs one tap to open the menu and a second to follow it.
+const menu = document.querySelector<HTMLElement>("[data-menu]");
+const trigger = menu?.querySelector<HTMLAnchorElement>("[aria-controls]");
+if (menu && trigger) {
+  let closeTimer = 0;
+  let openAtPress = false;
+  let keepClosed = false;
+  const isOpen = () => menu.hasAttribute("data-open");
+  const setOpen = (open: boolean): void => {
+    clearTimeout(closeTimer);
+    menu.toggleAttribute("data-open", open);
+    trigger.setAttribute("aria-expanded", String(open));
+  };
+
+  menu.addEventListener("pointerenter", (event) => {
+    if (event.pointerType === "mouse") setOpen(true);
+  });
+  menu.addEventListener("pointerleave", (event) => {
+    if (event.pointerType === "mouse") closeTimer = window.setTimeout(() => setOpen(false), 150);
+  });
+  menu.addEventListener("focusin", () => {
+    if (keepClosed) keepClosed = false;
+    else setOpen(true);
+  });
+  menu.addEventListener("focusout", (event) => {
+    if (!menu.contains(event.relatedTarget as Node | null)) setOpen(false);
+  });
+  menu.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !isOpen()) return;
+    setOpen(false);
+    if (document.activeElement !== trigger) {
+      keepClosed = true;
+      trigger.focus();
+    }
+  });
+
+  // Focus lands before the click, so the press records whether it was open.
+  trigger.addEventListener("pointerdown", () => {
+    openAtPress = isOpen();
+  });
+  menu.addEventListener("click", (event) => {
+    const link = (event.target as Element).closest("a");
+    if (!link) return;
+    const touch = (event as PointerEvent).pointerType === "touch";
+    if (link === trigger && touch && !openAtPress) {
+      event.preventDefault();
+      setOpen(true);
+      return;
+    }
+    setOpen(false);
+    link.blur();
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (!menu.contains(event.target as Node)) setOpen(false);
+  });
+}
+
+// ── Drawer ─────────────────────────────────────────────────────────────
+const drawer = document.querySelector<HTMLDialogElement>("#site-drawer");
+if (drawer) {
+  document.querySelector("[data-drawer-open]")?.addEventListener("click", () => drawer.showModal());
+  // The dialog itself is the target only for a press on the backdrop.
+  drawer.addEventListener("click", (event) => {
+    const target = event.target as Element;
+    if (target === drawer || target.closest("a, [data-drawer-close]")) drawer.close();
+  });
+  window.matchMedia("(min-width: 640px)").addEventListener("change", (event) => {
+    if (event.matches) drawer.close();
+  });
+}

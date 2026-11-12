@@ -6,7 +6,7 @@
 import type { SliderConfig } from "aero-slider";
 import type { CodeTab } from "../lib/code";
 import type { SlideContent } from "../lib/slide";
-import type { ExampleId } from "./anchors";
+import { exampleIds, type ExampleId } from "./anchors";
 import type { RefEntry } from "./api";
 
 export const exampleGroups = [
@@ -739,3 +739,11 @@ export function exampleTabs(example: Example): CodeTab[] {
   tabs.push({ label: "JS", lang: "javascript", code: js(example) });
   return tabs;
 }
+
+/** The examples in page order under their group, for menus. */
+export const exampleNav = exampleGroups.map((group) => ({
+  ...group,
+  items: exampleIds
+    .filter((id) => examples[id].group === group.key)
+    .map((id) => ({ id, index: exampleIds.indexOf(id) + 1, title: examples[id].title })),
+}));

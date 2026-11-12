@@ -1,7 +1,9 @@
 ---
 import pkg from "../../../package.json";
+import ExampleLinks from "../components/ExampleLinks.astro";
 import Logo from "../components/Logo.astro";
 import { REPO } from "../lib/site";
+import "../styles/nav.css";
 
 interface NavLink {
   id: string;
@@ -9,8 +11,10 @@ interface NavLink {
   children?: { id: string; label: string }[];
 }
 
-// Sub-sections show only at lg and up, where the row has room for them.
+// The row shows from sm up, and sub-sections from lg up, where it has room for
+// them. Below sm the same links live in the drawer.
 const links: NavLink[] = [
+  { id: "playground", label: "Playground" },
   { id: "start", label: "Get started" },
   {
     id: "examples",
@@ -34,21 +38,47 @@ const links: NavLink[] = [
 ---
 
 <header class="sticky top-0 z-50 border-b border-line bg-paper/80 backdrop-blur-md">
-  <div class="container-page flex h-14 items-center justify-between gap-3">
+  <div class="container-page relative flex h-14 items-center justify-between gap-3">
     <a href="/" class="flex min-w-0 items-center gap-2 text-[0.9375rem] font-medium tracking-tight text-ink">
       <Logo class="size-5 shrink-0" />
-      <span class="whitespace-nowrap max-[359px]:sr-only">Aero Slider</span>
-      <span class="hidden rounded-full border border-line px-2 py-0.5 font-mono text-[0.6875rem] font-normal tracking-normal text-faint sm:inline">
+      <span class="whitespace-nowrap">Aero Slider</span>
+      <span class="shrink-0 rounded-full border border-line px-2 py-0.5 font-mono text-[0.6875rem] font-normal tracking-normal whitespace-nowrap text-faint max-[359px]:hidden sm:max-md:hidden lg:max-xl:hidden">
         v{pkg.version}
       </span>
     </a>
-    <nav class="flex items-center gap-3 text-sm text-muted min-[360px]:gap-4 sm:gap-7" aria-label="Primary">
+
+    <nav class="hidden items-center gap-5 text-sm text-muted sm:flex md:gap-7" aria-label="Primary">
       {
         links.map((link) => (
           <div class="flex items-center gap-3.5">
-            <a href={`#${link.id}`} class="nav-link whitespace-nowrap" data-spy={link.id}>
-              {link.label}
-            </a>
+            {link.id === "examples" ? (
+              <div class="nav-menu" data-menu>
+                <a
+                  href="#examples"
+                  class="nav-link nav-menu__trigger"
+                  data-spy="examples"
+                  aria-expanded="false"
+                  aria-controls="examples-menu"
+                >
+                  Examples
+                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                    <path d="M2.5 4.5 6 8l3.5-3.5" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </a>
+                <div id="examples-menu" class="nav-menu__panel">
+                  <div class="nav-menu__intro">
+                    <p class="caption">Examples</p>
+                    <p>Fifteen live sliders, each with the code that runs it.</p>
+                    <a href="#examples">Browse them all</a>
+                  </div>
+                  <ExampleLinks />
+                </div>
+              </div>
+            ) : (
+              <a href={`#${link.id}`} class="nav-link whitespace-nowrap" data-spy={link.id}>
+                {link.label}
+              </a>
+            )}
             {link.children && (
               <span class="hidden items-center gap-3.5 border-l border-line pl-3.5 lg:flex">
                 {link.children.map((child) => (
@@ -70,8 +100,53 @@ const links: NavLink[] = [
         </svg>
       </a>
     </nav>
+
+    <button type="button" class="drawer-button" data-drawer-open aria-haspopup="dialog" aria-controls="site-drawer">
+      Menu
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="M2.5 5.5h11M2.5 10.5h11" stroke-linecap="round" />
+      </svg>
+    </button>
   </div>
 </header>
+
+<dialog id="site-drawer" class="drawer" aria-label="Menu">
+  <div class="drawer__head">
+    <p class="caption">Menu</p>
+    <button type="button" class="drawer__close" data-drawer-close aria-label="Close menu">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="m4 4 8 8M12 4l-8 8" stroke-linecap="round" />
+      </svg>
+    </button>
+  </div>
+  <nav class="drawer__body" aria-label="Sections">
+    {
+      links.map((link) => (
+        <section>
+          <a class="drawer__top" href={`#${link.id}`}>
+            {link.label}
+          </a>
+          {link.id === "examples" ? (
+            <ExampleLinks />
+          ) : (
+            link.children && (
+              <ul class="drawer__sub">
+                {link.children.map((child) => (
+                  <li>
+                    <a href={`#${child.id}`}>{child.label}</a>
+                  </li>
+                ))}
+              </ul>
+            )
+          )}
+        </section>
+      ))
+    }
+    <section>
+      <a class="drawer__top" href={REPO} target="_blank" rel="noopener">GitHub</a>
+    </section>
+  </nav>
+</dialog>
 
 <script>
   import "../scripts/nav.ts";

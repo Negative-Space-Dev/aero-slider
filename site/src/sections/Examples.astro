@@ -16,26 +16,6 @@ const groups = exampleGroups.map((group) => ({
 <section id="examples" class="container-page py-12 sm:py-16">
   <h2 class="mb-10 text-3xl font-medium tracking-[-0.025em] sm:mb-14 sm:text-4xl">Examples</h2>
 
-  <nav class="ex-jump" aria-label="Examples">
-    {
-      groups.map((group) => (
-        <div class="ex-jump__group">
-          <p class="caption ex-jump__title">{group.title}</p>
-          <ul class="ex-jump__list">
-            {group.ids.map((id) => (
-              <li>
-                <a class="ex-chip" href={`#${id}`}>
-                  <span class="ex-chip__index">{String(indexOf(id)).padStart(2, "0")}</span>
-                  {examples[id].title}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))
-    }
-  </nav>
-
   {
     groups.map((group) => (
       <section id={group.id} class="ex-group" aria-labelledby={`${group.id}-title`}>
