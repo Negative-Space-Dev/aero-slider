@@ -41,6 +41,7 @@ const inFrame = (x: number) => x >= 86 && x + 56 <= 218;
         <span>Fig. 01</span>
         <span>Breakpoints</span>
       </div>
+      <div class="draft-fig-row">
       <svg class="draft-fig" viewBox="0 0 320 146" aria-hidden="true">
         <text x="4" y="12" class="dr-accent-text">--slides-per-view</text>
         <path class="dr-strong" d="M4 20.5H316" />
@@ -63,6 +64,12 @@ const inFrame = (x: number) => x >= 86 && x + 56 <= 218;
           ))
         }
       </svg>
+      <pre class="draft-note">{`@media (min-width: 768px) {
+  .aero-slider {
+    `}<b>--slides-per-view: 2;</b>{`
+  }
+}`}</pre>
+      </div>
       <h3>CSS-first</h3>
       <p>Responsive in CSS with media queries instead of JavaScript breakpoint objects.</p>
     </article>

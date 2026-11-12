@@ -59,8 +59,6 @@
   --slide-edge: rgb(255 255 255 / 0.06);
 
   --docs-page-gutter: 1rem;
-  /* The readable content column the breakout slider aligns its active card to. */
-  --breakout-column: calc(min(72rem, 100vw) - var(--docs-page-gutter) * 2);
 }
 
 @media (min-width: 640px) {
@@ -211,7 +209,12 @@ body {
     font-family: var(--font-mono);
     font-size: 0.8125em;
     color: var(--ink);
-    overflow-wrap: break-word;
+    /* Inline-block moves a whole identifier to the next line instead of
+       splitting it at a hyphen; it only wraps inside when wider than the line. */
+    display: inline-block;
+    max-width: 100%;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
   }
 
   .note {
@@ -910,82 +913,6 @@ body {
   outline-offset: 2px;
 }
 
-/* ── Example layouts ────────────────────────────────────────────────── */
-/* Responsive example: layout adapts via media queries */
-.aero-slider--responsive {
-  --slides-per-view: 1;
-  --slide-gap: 8px;
-}
-
-/* Full-bleed wrapper lets slides reach the screen edges. */
-.docs-breakout-clip {
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
-}
-
-.aero-slider--viewport-breakout-demo {
-  --slides-per-view: 1.12;
-  --slide-gap: 12px;
-  --slide-radius: 1rem;
-  --aero-layout-width: var(--breakout-column);
-}
-
-.aero-slider--viewport-breakout-demo .aero-slider__pagination {
-  position: relative;
-  z-index: 1;
-}
-
-/* Guide bleeds full width and centers a column marker on the same reference the
-   slider uses, so the dashed lines land exactly where the active card aligns. */
-.docs-breakout-guide {
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
-  display: flex;
-  justify-content: center;
-}
-
-.docs-breakout-guide-column {
-  position: relative;
-  width: var(--breakout-column);
-}
-
-.docs-breakout-guide-column::before,
-.docs-breakout-guide-column::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  border-left: 1px dashed var(--accent);
-  pointer-events: none;
-}
-
-.docs-breakout-guide-column::before {
-  left: 0;
-}
-
-.docs-breakout-guide-column::after {
-  right: 0;
-}
-
-@media (min-width: 640px) {
-  .aero-slider--viewport-breakout-demo {
-    --slides-per-view: 1.35;
-    --slide-gap: 18px;
-  }
-
-  .aero-slider--responsive {
-    --slides-per-view: 2;
-    --slide-gap: 12px;
-  }
-}
-@media (min-width: 1024px) {
-  .aero-slider--responsive {
-    --slides-per-view: 3;
-    --slide-gap: 16px;
-  }
-}
-
 /* ── Drafting sheet ─────────────────────────────────────────────────────
    Benefits and anatomy are drawn like a technical drawing: one framed sheet
    on a faint grid, cells split by hairlines, registration marks where the
@@ -1133,6 +1060,32 @@ body {
   line-height: 1.6;
   color: var(--muted);
   text-wrap: pretty;
+}
+
+.draft-note {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .draft-fig-row {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+  }
+  .draft-fig-row > .draft-fig {
+    max-width: 24rem;
+  }
+  .draft-note {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    line-height: 1.7;
+    color: var(--faint);
+    white-space: pre;
+  }
+  .draft-note b {
+    font-weight: 500;
+    color: var(--accent);
+  }
 }
 
 /* Line drawings. Strokes stay one device pixel at any scale. */
