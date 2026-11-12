@@ -4,6 +4,7 @@ import {
   expect,
   failOnPageErrors,
   mount,
+  onSteadyFrames,
   recordEvents,
   recordScroll,
   settled,
@@ -121,19 +122,21 @@ test("goTo() with instant jumps there in the same task", async ({ page }) => {
 });
 
 test("after an instant jump, next() still scrolls smoothly", async ({ page }) => {
-  await fiveSlides(page);
-  await page.evaluate(() => window.sliders.s!.goTo(3, { instant: true }));
-  await settled(page, "s");
+  await onSteadyFrames(page, async () => {
+    await fiveSlides(page);
+    await page.evaluate(() => window.sliders.s!.goTo(3, { instant: true }));
+    await settled(page, "s");
 
-  const path = await recordScroll(page, "s", 500);
-  await page.evaluate(() => window.sliders.s!.next());
-  const samples = await path();
-  const between = samples.filter((p) => p > 3 * STRIDE + 1 && p < END - 1);
-  expect(new Set(between).size).toBeGreaterThanOrEqual(3);
-  expect(samples.every((p, k) => k === 0 || p >= samples[k - 1]!)).toBe(true);
+    const path = await recordScroll(page, "s", 500);
+    await page.evaluate(() => window.sliders.s!.next());
+    const samples = await path();
+    const between = samples.filter((p) => p > 3 * STRIDE + 1 && p < END - 1);
+    expect(new Set(between).size).toBeGreaterThanOrEqual(3);
+    expect(samples.every((p, k) => k === 0 || p >= samples[k - 1]!)).toBe(true);
 
-  await settled(page, "s");
-  expect(await state(page, "s")).toEqual({ index: 4, position: END });
+    await settled(page, "s");
+    expect(await state(page, "s")).toEqual({ index: 4, position: END });
+  });
 });
 
 test("an instant goTo() back to the start cancels a smooth move before it leaves", async ({
