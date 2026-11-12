@@ -25,7 +25,7 @@ test("destroy() restores the markup and leaves the API inert", async ({ page }) 
     window.sliders.s!.destroy();
     window.sliders.s!.next();
   });
-  expect(await el.evaluate((el) => el.aeroSlider)).toBeUndefined();
+  expect(await el.evaluate((el: HTMLElement) => el.aeroSlider)).toBeUndefined();
   await expect(el).not.toHaveAttribute("tabindex");
   await expect(el).not.toHaveAttribute("dir");
   await expect(page.locator("#s .aero-slider__dot")).toHaveCount(1);

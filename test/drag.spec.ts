@@ -154,7 +154,7 @@ test("a press released off the track before the threshold doesn't drag on hover"
 test("content that captures the pointer on press still lets the slider drag", async ({ page }) => {
   await fiveSlides(page);
   const content = page.locator("#s .aero-slider__track > :first-child > div");
-  await content.evaluate((el) =>
+  await content.evaluate((el: HTMLElement) =>
     el.addEventListener("pointerdown", (e) => el.setPointerCapture(e.pointerId))
   );
   const box = (await content.boundingBox())!;
