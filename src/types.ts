@@ -1,4 +1,11 @@
-export type SliderAlignment = "left" | "center" | "right";
+export type SliderAlignment =
+  | "start"
+  | "center"
+  | "end"
+  /** @deprecated Use `"start"`. */
+  | "left"
+  /** @deprecated Use `"end"`. */
+  | "right";
 
 /**
  * How the track comes to rest. `native` uses CSS scroll snapping; `settle` scrolls freely, then
@@ -18,7 +25,12 @@ export interface SliderConfig {
   /** Continuous autoplay speed, in pixels per second. 0 or less keeps the track still. */
   autoplaySpeed?: number;
   draggable?: boolean;
-  /** Where the active slide rests in the viewport. */
+  /**
+   * Where the active slide rests in the viewport. The values are logical: `"start"` is the left
+   * edge in a left-to-right slider, the right edge in a right-to-left one and the top edge in a
+   * vertical one, and `"end"` is the opposite edge. Defaults to `"center"`. `"left"` and `"right"`
+   * are deprecated aliases for `"start"` and `"end"`.
+   */
   alignment?: SliderAlignment;
   /** Show at most this many pagination dots, scrolling them iOS-style. 0 = unlimited. */
   maxDots?: number;

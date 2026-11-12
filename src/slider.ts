@@ -19,8 +19,14 @@ export const cores = new WeakMap<SliderInstance, SliderCore>();
 
 const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
 
-/** The config as the slider holds it: every option set, every label filled in. */
-export type Config = Required<SliderConfig> & { labels: Required<SliderLabels> };
+/**
+ * The config as the slider holds it: every option set, every label filled in, and `alignment`
+ * resolved to its canonical spelling.
+ */
+export type Config = Required<SliderConfig> & {
+  alignment: "start" | "center" | "end";
+  labels: Required<SliderLabels>;
+};
 
 const DEFAULTS: Config = {
   loop: false,
@@ -48,10 +54,12 @@ const DEFAULTS: Config = {
 };
 
 const CHOICES = {
-  alignment: ["left", "center", "right"],
+  alignment: ["start", "center", "end"],
   direction: ["auto", "ltr", "rtl", "ttb"],
   snap: ["native", "settle", "none"],
 } as const;
+
+const ALIGNMENT_ALIASES: Record<string, Config["alignment"]> = { left: "start", right: "end" };
 
 /** Lowest accepted value for each numeric option, and whether it must be a whole number. */
 const NUMBERS = {
@@ -72,6 +80,7 @@ function configure(config: Config, changes: SliderConfig = {}): void {
   for (const [key, value] of Object.entries(changes ?? {})) {
     if (value !== undefined) target[key] = value;
   }
+  target.alignment = ALIGNMENT_ALIASES[target.alignment as string] ?? target.alignment;
   for (const [key, [min, whole]] of Object.entries(NUMBERS)) {
     // Theme scripts often pass numbers straight from data attributes, as strings.
     const raw = target[key];
@@ -206,7 +215,7 @@ export function createSlider(
   const wrap = (index: number) => ((index % slideCount) + slideCount) % slideCount;
 
   function maxIndex(): number {
-    const pagesByStart = config.alignment === "left" && Number.isInteger(slidesPerView);
+    const pagesByStart = config.alignment === "start" && Number.isInteger(slidesPerView);
     return Math.max(0, pagesByStart ? slideCount - slidesPerView : slideCount - 1);
   }
   const continuous = () => config.autoplay === "continuous";
@@ -314,16 +323,19 @@ export function createSlider(
     const snapportStart = axisStart + paddingStart;
     const snapportEnd = axisStart + axisSize - paddingEnd;
     const delta =
-      config.alignment === "left"
+      config.alignment === "start"
         ? elStart - snapportStart
-        : config.alignment === "right"
+        : config.alignment === "end"
           ? elEnd - snapportEnd
           : (elStart + elEnd - snapportStart - snapportEnd) / 2;
     return scrollPosition() + delta;
   }
 
   function readSlidesPerView(): void {
-    const value = getComputedStyle(container).getPropertyValue("--slides-per-view");
+    const style = getComputedStyle(container);
+    const value =
+      style.getPropertyValue("--aero-slides-per-view") ||
+      style.getPropertyValue("--slides-per-view");
     slidesPerView = parseFloat(value) || 1;
   }
 

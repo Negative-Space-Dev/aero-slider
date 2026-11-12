@@ -6,6 +6,9 @@
   width: 100%;
   min-width: 0;
   min-height: 0;
+  /* Defaults for the pre-1.0 names, set here so a host page's own --slide-gap and the like on
+     an ancestor never reach the slider. The --aero-* names are never set by the library, so
+     they inherit and win over these. */
   --slide-aspect: 5 / 3;
   --slides-per-view: 1;
   --slide-gap: 0px;
@@ -15,30 +18,44 @@
 /* Loop pre-init spacer. Loop mode prepends clones at init, which would shift
    the first slide. Add data-aero-defer-visibility in HTML to reserve that space
    up front (JS removes it once clones are in place). Also set
-   data-aero-alignment in HTML if not using the default center. */
+   data-aero-alignment in HTML if not using the default center. "left" and
+   "right" are the pre-1.0 spellings of "start" and "end". */
 .aero-slider[data-aero-defer-visibility] {
   --aero-defer-offset: calc(
     var(--aero-layout-width, 100%) / 2 -
-      (var(--aero-layout-width, 100%) - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) /
-      (2 * var(--slides-per-view, 1))
+      (
+        var(--aero-layout-width, 100%) - var(--aero-slide-gap, var(--slide-gap, 0px)) *
+          (var(--aero-slides-per-view, var(--slides-per-view, 1)) - 1)
+      ) /
+      (2 * var(--aero-slides-per-view, var(--slides-per-view, 1)))
   );
 }
 
-.aero-slider[data-aero-defer-visibility][data-aero-alignment="left"] {
+.aero-slider[data-aero-defer-visibility]:is(
+    [data-aero-alignment="start"],
+    [data-aero-alignment="left"]
+  ) {
   --aero-defer-offset: 0px;
 }
 
-.aero-slider[data-aero-defer-visibility][data-aero-alignment="right"] {
+.aero-slider[data-aero-defer-visibility]:is(
+    [data-aero-alignment="end"],
+    [data-aero-alignment="right"]
+  ) {
   --aero-defer-offset: calc(
     var(--aero-layout-width, 100%) -
-      (var(--aero-layout-width, 100%) - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) /
-      var(--slides-per-view, 1)
+      (
+        var(--aero-layout-width, 100%) - var(--aero-slide-gap, var(--slide-gap, 0px)) *
+          (var(--aero-slides-per-view, var(--slides-per-view, 1)) - 1)
+      ) /
+      var(--aero-slides-per-view, var(--slides-per-view, 1))
   );
 }
 
 .aero-slider[data-aero-defer-visibility] .aero-slider__track::before {
   content: "";
-  flex: 0 0 max(0px, calc(var(--aero-defer-offset, 0px) - var(--slide-gap, 0px)));
+  flex: 0 0
+    max(0px, calc(var(--aero-defer-offset, 0px) - var(--aero-slide-gap, var(--slide-gap, 0px))));
   scroll-snap-align: none;
 }
 
@@ -64,7 +81,7 @@
   min-width: 100%;
   min-height: 0;
   box-sizing: border-box;
-  gap: var(--slide-gap, 0px);
+  gap: var(--aero-slide-gap, var(--slide-gap, 0px));
   overflow: auto hidden;
   scroll-snap-type: x mandatory;
   overscroll-behavior-x: contain; /* x only, so vertical wheel scrolling still reaches the page */
@@ -103,10 +120,13 @@
 .aero-slider__track > * {
   flex: 0 0
     calc(
-      (var(--aero-layout-width, 100%) - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) /
-        var(--slides-per-view, 1)
+      (
+          var(--aero-layout-width, 100%) - var(--aero-slide-gap, var(--slide-gap, 0px)) *
+            (var(--aero-slides-per-view, var(--slides-per-view, 1)) - 1)
+        ) /
+        var(--aero-slides-per-view, var(--slides-per-view, 1))
     );
-  aspect-ratio: var(--slide-aspect, 5 / 3);
+  aspect-ratio: var(--aero-slide-aspect, var(--slide-aspect, 5 / 3));
   scroll-snap-align: center;
   display: flex;
   align-items: center;
@@ -117,11 +137,15 @@
   contain: layout style paint;
 }
 
-.aero-slider[data-aero-alignment="left"] .aero-slider__track > * {
+.aero-slider:is([data-aero-alignment="start"], [data-aero-alignment="left"])
+  .aero-slider__track
+  > * {
   scroll-snap-align: start;
 }
 
-.aero-slider[data-aero-alignment="right"] .aero-slider__track > * {
+.aero-slider:is([data-aero-alignment="end"], [data-aero-alignment="right"])
+  .aero-slider__track
+  > * {
   scroll-snap-align: end;
 }
 
@@ -214,9 +238,9 @@
 }
 
 /* === Vertical (ttb) === */
-/* Viewport height derives from width via --slide-aspect, as for horizontal. */
+/* Viewport height derives from width via --aero-slide-aspect, as for horizontal. */
 .aero-slider--vertical .aero-slider__viewport {
-  aspect-ratio: var(--slide-aspect, 5 / 3);
+  aspect-ratio: var(--aero-slide-aspect, var(--slide-aspect, 5 / 3));
 }
 
 .aero-slider--vertical .aero-slider__track {
@@ -231,7 +255,11 @@
 
 .aero-slider--vertical .aero-slider__track > * {
   flex-basis: calc(
-    (100% - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) / var(--slides-per-view, 1)
+    (
+        100% - var(--aero-slide-gap, var(--slide-gap, 0px)) *
+          (var(--aero-slides-per-view, var(--slides-per-view, 1)) - 1)
+      ) /
+      var(--aero-slides-per-view, var(--slides-per-view, 1))
   );
   aspect-ratio: auto;
   width: 100%;
