@@ -1,0 +1,48 @@
+/* API reference section. Tokens and base classes come from global.css. */
+
+/* Prose beside its code sample; stacked below lg. */
+.api-split {
+  display: grid;
+  gap: 1.25rem;
+}
+@media (min-width: 1024px) {
+  .api-split {
+    grid-template-columns: minmax(0, 36rem) minmax(0, 1fr);
+    gap: 2.5rem;
+    align-items: start;
+  }
+}
+
+/* Errors a function throws: message and cause on one hairline row each. */
+.api-throws {
+  display: grid;
+  max-width: 48rem;
+}
+.api-throws > dt {
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid var(--line-strong);
+}
+.api-throws > dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  padding-block: 0.75rem;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.api-throws > dd:last-child {
+  border-bottom: 0;
+}
+
+/* Phones: code wraps instead of scrolling sideways, so nothing in the section
+   needs a horizontal swipe. */
+@media (max-width: 639px) {
+  #api .code-tabs pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 0.75rem;
+  }
+}

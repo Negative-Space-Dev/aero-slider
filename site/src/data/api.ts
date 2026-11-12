@@ -307,18 +307,6 @@ export const stateClasses: RefEntry[] = [
   { name: "aero-slider--vertical", description: '<code>direction</code> is <code>"ttb"</code>' },
 ];
 
-export const globals: RefEntry[] = [
-  {
-    name: "AeroSlider.createSlider",
-    description: "Same as the module <code>createSlider</code> — creates a slider instance",
-  },
-  {
-    name: "AeroSlider.syncThumbnails",
-    description:
-      "Same as the module <code>syncThumbnails</code> — syncs primary and thumbnail sliders",
-  },
-];
-
 /** Groups a registry in the given group order; `display` maps a key to its shown name. */
 export function toRefGroups<G extends string, K extends string>(
   registry: Record<K, Doc<G>>,

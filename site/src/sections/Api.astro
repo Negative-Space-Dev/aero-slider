@@ -1,19 +1,18 @@
 ---
 import CodeBlock from "../components/CodeBlock.astro";
+import Create from "./api/Create.astro";
+import "../styles/api.css";
 import DocTable from "../components/DocTable.astro";
 import Entry from "../components/Entry.astro";
 import {
   attributes,
   cssVariables,
   eventRefGroups,
-  globals,
   instanceRefGroups,
   optionRefGroups,
   stateClasses,
 } from "../data/api";
-import { REPO } from "../lib/site";
 
-const globalRows = globals.map((entry) => [entry.name, entry.description]);
 const cssPropertyRows = [...cssVariables, ...attributes].map((entry) => [
   entry.name,
   entry.default ?? "—",
@@ -35,79 +34,7 @@ const eventRows = eventRefGroups
   <h2 class="mb-10 text-3xl font-medium tracking-[-0.025em] sm:mb-14 sm:text-4xl">API Reference</h2>
 
   <div class="space-y-14 sm:space-y-16">
-    <!-- createSlider -->
-    <Entry tag="Function" title="createSlider(element, config?)" mono id="api-create">
-      <div class="copy">
-        <p>
-          Creates a new slider instance on the given container element. Pagination and
-          navigation are configured via DOM structure, not JavaScript—see the
-          <a href="#examples-controls">Pagination &amp; Navigation example</a>
-          for required HTML.
-        </p>
-      </div>
-      <CodeBlock
-        lang="typescript"
-        code={`import { createSlider } from "aero-slider";
-import "aero-slider/slider.css";
-
-const slider = createSlider(document.getElementById("my-slider"), {
-  loop: true,
-  draggable: true,
-});`}
-      />
-      <div class="copy">
-        <p>
-          <strong>Without a bundler:</strong> Use the global script — see
-          <a href="#aeroslider-global">window.AeroSlider</a>.
-        </p>
-      </div>
-    </Entry>
-
-    <!-- Global script (window.AeroSlider) -->
-    <Entry tag="Global" title="window.AeroSlider (global script)" mono id="aeroslider-global">
-      <div class="copy">
-        <p>
-          When using the standalone script (no bundler), the library attaches an
-          <code>AeroSlider</code>
-          object to <code>window</code>
-          with two methods: <code>createSlider</code> and
-          <code>syncThumbnails</code>. Include the CSS and JS files, then call
-          <code>AeroSlider.createSlider()</code> and optionally
-          <code>AeroSlider.syncThumbnails()</code>.
-        </p>
-        <p>
-          Use <code>aero-slider.min.js</code> with
-          <code>type="module"</code>
-          from
-          <a href="https://unpkg.com/aero-slider/dist/" target="_blank" rel="noopener noreferrer">unpkg</a>
-          or the
-          <a href={`${REPO}/releases`} target="_blank" rel="noopener noreferrer">releases</a> page.
-        </p>
-      </div>
-      <CodeBlock
-        lang="html"
-        code={`<link rel="stylesheet" href="https://unpkg.com/aero-slider/dist/aero-slider.min.css" />
-<script type="module" src="https://unpkg.com/aero-slider/dist/aero-slider.min.js"></script>
-<script type="module">
-  // AeroSlider is on window after the module loads
-  const slider = AeroSlider.createSlider(document.getElementById("my-slider"), { loop: true });
-</script>`}
-      />
-      <CodeBlock
-        label="With thumbnails"
-        lang="javascript"
-        code={`const main = AeroSlider.createSlider(mainEl);
-const thumbs = AeroSlider.createSlider(thumbsEl);
-const teardown = AeroSlider.syncThumbnails(main, thumbs);
-
-// On unmount: teardown(); main.destroy(); thumbs.destroy();`}
-      />
-      <DocTable
-        minWidth={400}
-        columns={[{ label: "Property", mono: true, nowrap: true }, { label: "Description" }]}
-        rows={globalRows}
-      />
-    </Entry>
+    <Create />
 
     <!-- CSS Custom Properties -->
     <Entry tag="CSS" title="CSS Custom Properties" id="api-css">
