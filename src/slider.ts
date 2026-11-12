@@ -83,8 +83,12 @@ export interface SliderCore {
   /** A scrollDuration animation is in flight. */
   easing(): boolean;
   current(): number;
-  maxIndex(): number;
-  pageCount(): number;
+  /** How many distinct places the track rests at: every slide on a loop, fewer where ends clamp. */
+  stopCount(): number;
+  /** The stop the current slide rests on. */
+  stop(): number;
+  /** The first slide that rests on stop `n`. */
+  slideOfStop(n: number): number;
   loop(): boolean;
   next(): void;
   prev(): void;
@@ -133,6 +137,9 @@ export function createSlider(
   let maxScroll = 0;
   let paddingStart = 0; // track padding doubles as scroll-padding (see slider.css)
   let paddingEnd = 0;
+  // The first slide at each distinct rest position, and those positions. On a loop, every slide.
+  let stops: number[] = [];
+  let stopPositions: number[] = [];
 
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -164,7 +171,6 @@ export function createSlider(
   // Continuous autoplay loops by nature and moves the track by hand, so snapping stays off.
   const loop = () => (continuous() ? slideCount > 1 : config.loop && maxIndex() > 0);
   const snapMode = () => (continuous() ? "none" : config.snap);
-  const pageCount = () => (loop() ? slideCount : maxIndex() + 1);
   // A continuous lap travels one full set of slides past wherever it starts, so it needs a whole
   // set of clones beyond the real slides plus a viewport's worth.
   const cloneCount = () =>
@@ -265,6 +271,14 @@ export function createSlider(
     maxScroll = isVertical()
       ? track.scrollHeight - track.clientHeight
       : track.scrollWidth - track.clientWidth;
+    stops = [];
+    stopPositions = [];
+    for (let i = 0; i <= (loop() ? slideCount - 1 : maxIndex()); i++) {
+      const position = loop() ? 0 : restPositionOf(i);
+      if (i && slideStride && !loop() && position - stopPositions.at(-1)! < 0.5) continue;
+      stops.push(i);
+      stopPositions.push(position);
+    }
   }
 
   // ── Indexing ─────────────────────────────────────────────────────────
@@ -277,13 +291,16 @@ export function createSlider(
   const indexOfDom = (domIndex: number) =>
     loop() ? wrap(domIndex - clonesBefore) : clamp(domIndex, 0, maxIndex());
 
+  /** The slide resting nearest `position`: on a loop any slide, otherwise the slide of a stop. */
   function indexAt(position: number): number {
-    if (!loop()) {
-      if (position <= 1) return 0;
-      if (position >= maxScroll - 1) return maxIndex();
-    }
-    return indexOfDom(domIndexAt(position));
+    if (loop()) return indexOfDom(domIndexAt(position));
+    const distance = (stop: number) => Math.abs(stopPositions[stop]! - position);
+    return stops[
+      stops.reduce((best, _, stop) => (distance(stop) < distance(best) ? stop : best), 0)
+    ]!;
   }
+
+  const stopOf = (index: number) => stops.findLastIndex((slide) => slide <= index);
 
   /** Where the real copy of slide `index` rests. */
   function restPositionOf(index: number): number {
@@ -418,7 +435,8 @@ export function createSlider(
   /** Steps from the slide that's showing: a continuous lap hands back first, so sync to it. */
   function stepBy(delta: number): void {
     if (play.interrupt()) setCurrent(indexAt(scrollPosition()));
-    goTo(current + delta, {}, delta);
+    if (loop()) goTo(current + delta, {}, delta);
+    else goTo(stops[clamp(stopOf(current) + delta, 0, stops.length - 1)]!);
   }
   const next = () => stepBy(config.perMove);
   const prev = () => stepBy(-config.perMove);
@@ -617,11 +635,17 @@ export function createSlider(
       }
 
       // Like native paging: a flick always moves at least one slide its way.
-      let domTarget = domIndexAt(scrollPosition() + velocity * FLICK_PROJECTION_MS);
-      if (Math.abs(velocity) > FLICK_VELOCITY && domTarget === domIndexAt(scrollPosition())) {
-        domTarget += Math.sign(velocity);
+      const position = scrollPosition();
+      const projected = position + velocity * FLICK_PROJECTION_MS;
+      const flick = Math.abs(velocity) > FLICK_VELOCITY ? Math.sign(velocity) : 0;
+      if (loop()) {
+        const domTarget = domIndexAt(projected);
+        goTo(indexOfDom(domTarget + (domTarget === domIndexAt(position) ? flick : 0)));
+      } else {
+        const stop = stopOf(indexAt(projected));
+        const nudge = stop === stopOf(indexAt(position)) ? flick : 0;
+        goTo(stops[clamp(stop + nudge, 0, stops.length - 1)]!);
       }
-      goTo(indexOfDom(domTarget));
       emit("dragEnd", { index: current, fromIndex });
       play.release("drag");
     }
@@ -695,7 +719,7 @@ export function createSlider(
 
   /** Cheap path for size changes: re-measure and keep the current slide in place. */
   function relayout(): void {
-    const previousPages = pageCount();
+    const previousStops = stops.join();
     // The index doesn't follow a continuous drift, so keep the slide that's actually showing.
     // Its box includes the drift, so the slide resting nearest the scroll offset is the one on screen.
     if (play.drifting()) {
@@ -709,7 +733,7 @@ export function createSlider(
     readSlidesPerView();
     if (cloneCount() !== clonesBefore) return rebuild();
     measure();
-    if (pageCount() !== previousPages) dots.build();
+    if (stops.join() !== previousStops) dots.build();
     current = loop() ? wrap(current) : clamp(current, 0, maxIndex());
     programmaticScroll = false; // an instant reposition supersedes any goTo() animation
     scrollTo(restPositionOf(current));
@@ -842,8 +866,9 @@ export function createSlider(
     reducedMotion,
     easing: () => easeFrame !== 0,
     current: () => current,
-    maxIndex,
-    pageCount,
+    stopCount: () => stops.length,
+    stop: () => stopOf(current),
+    slideOfStop: (n) => stops[n]!,
     loop,
     next,
     prev,

@@ -11,19 +11,18 @@ export function navigation(core: SliderCore) {
 
   return {
     refresh(): void {
-      const singlePage = core.maxIndex() === 0;
+      const last = core.stopCount() - 1;
+      const stop = core.stop();
       const hasEdges = !core.loop();
-      if (prevButton) prevButton.disabled = singlePage || (hasEdges && core.current() === 0);
-      if (nextButton) {
-        nextButton.disabled = singlePage || (hasEdges && core.current() >= core.maxIndex());
-      }
+      if (prevButton) prevButton.disabled = last < 1 || (hasEdges && stop <= 0);
+      if (nextButton) nextButton.disabled = last < 1 || (hasEdges && stop >= last);
     },
   };
 }
 
 // ── Pagination dots ────────────────────────────────────────────────────
 // The markup supplies one .aero-slider__dot as a template; we clone it per
-// page. With maxDots set, the dots sit in a sliding track and only a window
+// stop. With maxDots set, the dots sit in a sliding track and only a window
 // of them shows, iOS style.
 
 export function pagination(core: SliderCore) {
@@ -52,7 +51,7 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
 
   function build(): void {
     clear();
-    const count = core.pageCount();
+    const count = core.stopCount();
     const { maxDots } = config;
     windowed = maxDots > 0 && count > maxDots;
     if (windowed) {
@@ -64,8 +63,9 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
     for (let i = 0; i < count; i++) {
       const dot = !windowed && i === 0 ? template : (template.cloneNode(true) as HTMLElement);
       dot.setAttribute("role", "tab");
-      dot.setAttribute("aria-label", `Go to slide ${i + 1}`);
-      dot.dataset.slideIndex = String(i);
+      const slide = core.slideOfStop(i);
+      dot.setAttribute("aria-label", `Go to slide ${slide + 1}`);
+      dot.dataset.slideIndex = String(slide);
       if (dot !== template) parent.append(dot);
       dots.push(dot);
     }
@@ -82,7 +82,7 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
   }
 
   function refresh(): void {
-    const current = core.current();
+    const current = core.stop();
     const count = dots.length;
     const { maxDots } = config;
     const firstShown = windowed
@@ -197,7 +197,7 @@ export function autoplay(core: SliderCore) {
 
   function advance(): void {
     if (core.easing()) return; // scrollDuration outlasts the interval: let the move land first
-    const atEnd = !core.loop() && core.current() >= core.maxIndex();
+    const atEnd = !core.loop() && core.stop() >= core.stopCount() - 1;
     if (atEnd) core.goTo(0);
     else core.next();
   }
@@ -375,7 +375,7 @@ export function autoplay(core: SliderCore) {
       // sooner cuts the browser's smooth wheel animation short for nothing.
       if (lap) {
         const position = core.position();
-        const margin = lap.width / core.pageCount();
+        const margin = lap.width / core.stopCount();
         if (position + travelled(lap) > core.maxScroll() - margin)
           core.jumpTo(position - lap.width);
       }
