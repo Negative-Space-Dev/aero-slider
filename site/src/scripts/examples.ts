@@ -1,5 +1,6 @@
 import { createSlider, syncThumbnails } from "aero-slider";
 import type { SliderConfig, SliderInstance } from "aero-slider";
+import { createSlideElement, heroToneFor } from "../lib/slide";
 
 // Discrete steps for slidesPerView with exponential curve
 const SPV_STEPS = [1, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.5, 1.75, 2, 2.5, 3, 4, 5];
@@ -106,7 +107,7 @@ function applyParamsFromUrl(): void {
   const setSelect = (name: string, valid: string[]) => {
     const val = params.get(PARAM_KEYS[name as keyof typeof PARAM_KEYS]);
     if (val == null || !valid.includes(val)) return;
-    const el = form.elements.namedItem(name) as HTMLSelectElement | null;
+    const el = form.elements.namedItem(name) as RadioNodeList | null;
     if (el) el.value = val;
   };
 
@@ -177,46 +178,15 @@ function syncUrlFromForm(): void {
   window.history.replaceState(null, "", url);
 }
 
-const SLIDE_GRADIENTS = [
-  ["from-indigo-500", "to-purple-600"],
-  ["from-cyan-500", "to-blue-600"],
-  ["from-emerald-500", "to-teal-600"],
-  ["from-amber-500", "to-orange-600"],
-  ["from-rose-500", "to-pink-600"],
-  ["from-violet-400", "to-fuchsia-500"],
-  ["from-sky-400", "to-indigo-500"],
-  ["from-lime-400", "to-green-500"],
-  ["from-yellow-400", "to-amber-500"],
-  ["from-red-400", "to-rose-500"],
-  ["from-teal-400", "to-cyan-500"],
-  ["from-indigo-400", "to-purple-500"],
-  ["from-blue-400", "to-indigo-600"],
-  ["from-green-400", "to-teal-600"],
-  ["from-orange-400", "to-red-500"],
-  ["from-pink-400", "to-rose-600"],
-  ["from-cyan-400", "to-blue-600"],
-  ["from-emerald-400", "to-teal-600"],
-  ["from-amber-400", "to-orange-600"],
-  ["from-violet-500", "to-purple-600"],
-] as const;
-
 const ORDINALS = ["One", "Two", "Three", "Four", "Five"] as const;
 
 function createHeroSlide(n: number): HTMLElement {
-  const [from, to] = SLIDE_GRADIENTS[(n - 1) % SLIDE_GRADIENTS.length];
   const label = n <= 5 ? ORDINALS[n - 1] : String(n);
-  const div = document.createElement("div");
-  div.className = `bg-linear-to-br ${from} ${to} text-white rounded-2xl`;
-  div.innerHTML = `<div class="flex flex-col items-center justify-center gap-2 p-8 text-center"><span class="text-5xl font-bold">${n}</span><span class="text-sm font-medium opacity-75">Slide ${label}</span></div>`;
-  return div;
+  return createSlideElement({ num: n, label: `Slide ${label}`, tone: heroToneFor(n) }, n);
 }
 
 function createThumbSlide(n: number): HTMLElement {
-  const [from, to] = SLIDE_GRADIENTS[(n - 1) % SLIDE_GRADIENTS.length];
-  const div = document.createElement("div");
-  div.className = `rounded-md bg-linear-to-br ${from} ${to} text-white`;
-  div.innerHTML = `<div class="flex items-center justify-center text-xs font-bold">${n}</div>`;
-  return div;
+  return createSlideElement({ num: n, tone: heroToneFor(n) }, n);
 }
 
 function reconcileSlideCount(targetCount: number): void {
@@ -295,7 +265,7 @@ function ensureHeroNavAndPagination(): void {
       prevBtn.type = "button";
       prevBtn.className = "aero-slider__nav--prev";
       prevBtn.setAttribute("aria-label", "Previous slide");
-      prevBtn.innerHTML = `<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
+      prevBtn.innerHTML = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>`;
       viewport.insertBefore(prevBtn, track);
     }
     if (!nextBtn) {
@@ -303,7 +273,7 @@ function ensureHeroNavAndPagination(): void {
       nextBtn.type = "button";
       nextBtn.className = "aero-slider__nav--next";
       nextBtn.setAttribute("aria-label", "Next slide");
-      nextBtn.innerHTML = `<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>`;
+      nextBtn.innerHTML = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>`;
       viewport.insertBefore(nextBtn, track);
     }
   } else {
@@ -319,7 +289,7 @@ function ensureHeroNavAndPagination(): void {
       pagination = document.createElement("div");
       pagination.className = "aero-slider__pagination";
       const dot = document.createElement("span");
-      dot.className = "aero-slider__dot h-2.5 w-2.5 rounded-full bg-slate-300 transition-all";
+      dot.className = "aero-slider__dot";
       pagination.appendChild(dot);
       heroSliderEl.appendChild(pagination);
     }
@@ -335,17 +305,7 @@ function applyLayoutFromFormToContainer(container: HTMLElement): void {
   const spvValue = spvIndexToValue(spvIndex);
   container.style.setProperty("--slides-per-view", String(spvValue));
   container.style.setProperty("--slide-gap", `${gap}px`);
-
-  if (container.id === "hero-slider") {
-    const slides = container.querySelectorAll(".aero-slider__track > div");
-    for (const slide of slides) {
-      if (gap > 0) {
-        slide.classList.add("rounded-2xl");
-      } else {
-        slide.classList.remove("rounded-2xl");
-      }
-    }
-  }
+  container.toggleAttribute("data-flush", gap === 0);
 }
 
 const eventLogEmpty = document.getElementById("event-log-empty");
@@ -359,7 +319,7 @@ function logEvent(name: string, data: { index?: number; fromIndex?: number } | u
   }
 
   const row = document.createElement("tr");
-  row.className = "group hover:bg-slate-50 transition-colors";
+  row.className = "border-t border-line";
   const time = new Date().toLocaleTimeString();
   const dataStr =
     data?.fromIndex !== undefined && data.index !== undefined
@@ -367,7 +327,7 @@ function logEvent(name: string, data: { index?: number; fromIndex?: number } | u
       : data?.index !== undefined
         ? `index=${data.index}`
         : "{}";
-  row.innerHTML = `<td class="truncate px-4 py-2 font-medium text-slate-900">${name}</td><td class="truncate px-4 py-2 text-slate-600">${dataStr}</td><td class="px-4 py-2 text-left tabular-nums text-slate-400">${time}</td>`;
+  row.innerHTML = `<td class="truncate px-5 py-1.5 text-ink">${name}</td><td class="truncate px-5 py-1.5 text-muted">${dataStr}</td><td class="px-5 py-1.5 text-faint tabular-nums">${time}</td>`;
   logList.prepend(row);
   while (logList.children.length > 30) logList.lastElementChild?.remove();
 }
@@ -557,23 +517,19 @@ const eventLogContent = document.getElementById("event-log-content");
 const eventLogIcon = document.getElementById("event-log-icon");
 
 if (eventLogToggle && eventLogContent && eventLogIcon) {
-  let isExpanded = true; // Start expanded on all devices
+  const icon = (path: string) =>
+    `<svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="${path}" /></svg>`;
+  const MINUS = icon("M20 12H4");
+  const PLUS = icon("M12 4v16m8-8H4");
 
-  // Set initial icon to minus (expanded state)
-  eventLogIcon.innerHTML =
-    '<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" /></svg>';
-
-  // Remove initial hidden classes
-  eventLogContent.classList.remove("max-sm:hidden", "max-sm:h-0");
+  let isExpanded = true;
+  eventLogIcon.innerHTML = MINUS;
 
   eventLogToggle.addEventListener("click", () => {
-    if (window.innerWidth >= 640) return; // Only toggle on mobile
+    if (window.innerWidth >= 640) return; // Only collapsible on mobile
     isExpanded = !isExpanded;
     eventLogContent.classList.toggle("max-sm:hidden", !isExpanded);
-    eventLogContent.classList.toggle("max-sm:h-0", !isExpanded);
-    eventLogIcon.innerHTML = isExpanded
-      ? '<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" /></svg>'
-      : '<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>';
+    eventLogIcon.innerHTML = isExpanded ? MINUS : PLUS;
   });
 }
 
@@ -581,7 +537,7 @@ if (isTouchDevice && draggableLabel) {
   // Create tooltip element
   const tooltip = document.createElement("div");
   tooltip.className =
-    "fixed z-50 max-w-xs px-3 py-2 text-xs text-white bg-slate-800 rounded-lg shadow-lg opacity-0 pointer-events-none transition-opacity";
+    "fixed z-50 max-w-xs rounded-lg border border-line-strong bg-surface px-3 py-2 text-xs text-ink opacity-0 pointer-events-none transition-opacity";
   tooltip.textContent =
     "Touch devices have native swipe support — this setting is for enabling drag on desktop.";
   document.body.appendChild(tooltip);
@@ -662,22 +618,9 @@ requestAnimationFrame(() => {
 
   const dynamicSlider = createSlider(getRequiredElementById<HTMLElement>("dynamic-slides"));
   let dynamicCount = 3;
-  const DYNAMIC_COLORS = [
-    "bg-slate-700",
-    "bg-slate-600",
-    "bg-slate-500",
-    "bg-indigo-600",
-    "bg-emerald-600",
-    "bg-amber-600",
-    "bg-rose-600",
-    "bg-violet-600",
-  ];
   getRequiredElementById("dynamic-add").addEventListener("click", () => {
     dynamicCount++;
-    const slide = document.createElement("div");
-    slide.className = `rounded-lg ${DYNAMIC_COLORS[(dynamicCount - 1) % DYNAMIC_COLORS.length]} text-white`;
-    slide.innerHTML = `<div class="flex items-center justify-center text-2xl font-bold">${dynamicCount}</div>`;
-    dynamicSlider.add(slide);
+    dynamicSlider.add(createSlideElement({ num: dynamicCount }, dynamicCount));
   });
   getRequiredElementById("dynamic-remove").addEventListener("click", () => {
     if (dynamicSlider.slideCount > 1) {

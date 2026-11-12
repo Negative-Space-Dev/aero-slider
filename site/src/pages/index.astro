@@ -1,306 +1,334 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
-import { Code } from 'astro:components';
+import pkg from "../../../package.json";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import CodeBlock from "../components/CodeBlock.astro";
+import DocTable from "../components/DocTable.astro";
+import Entry from "../components/Entry.astro";
+import Logo from "../components/Logo.astro";
+import Pagination from "../components/Pagination.astro";
+import SliderNav from "../components/SliderNav.astro";
+import Slides from "../components/Slides.astro";
+import { heroToneFor, type SlideContent } from "../lib/slide";
 
-import SparklesIcon from '../components/icons/SparklesIcon.astro';
-import ZapIcon from '../components/icons/ZapIcon.astro';
-import BoxIcon from '../components/icons/BoxIcon.astro';
-import WrenchIcon from '../components/icons/WrenchIcon.astro';
-import TargetIcon from '../components/icons/TargetIcon.astro';
-import HandIcon from '../components/icons/HandIcon.astro';
-import AccessibilityIcon from '../components/icons/AccessibilityIcon.astro';
-import InfinityIcon from '../components/icons/InfinityIcon.astro';
-import PlayIcon from '../components/icons/PlayIcon.astro';
-import ColumnsIcon from '../components/icons/ColumnsIcon.astro';
-import RulerIcon from '../components/icons/RulerIcon.astro';
-import MoreHorizontalIcon from '../components/icons/MoreHorizontalIcon.astro';
-import ImageIcon from '../components/icons/ImageIcon.astro';
-import ActivityIcon from '../components/icons/ActivityIcon.astro';
-import AnchorIcon from '../components/icons/AnchorIcon.astro';
-import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
+const REPO = "https://github.com/Negative-Space-Dev/aero-slider";
+
+const features = [
+  "CSS-First Architecture",
+  "~8 KB gzipped",
+  "Zero Dependencies",
+  "Highly Extensible",
+  "Native Scroll Snapping",
+  "Touch & Swipe Friendly",
+  "Accessible",
+  "Infinite Looping",
+  "Smooth Autoplay",
+  "Multi-Slide Views",
+  "Responsive API",
+  "Custom Pagination",
+  "Thumbnail Syncing",
+  "Event Callbacks",
+  "Zero CLS",
+  "Keyboard Nav",
+];
+
+const packageManagers = ["bun", "npm", "yarn", "pnpm"];
+
+// Playground controls. Ids and names are read by the inline script below and
+// by scripts/examples.ts.
+const ranges = [
+  { id: "slideCount", name: "slideCount", out: "slideCount", label: "Number of slides", min: 3, max: 20, step: 1, value: 5, display: "5" },
+  { id: "spv", name: "slidesPerView", out: "spv", label: "Slides per view", min: 0, max: 16, step: 1, value: 0, display: "1" },
+  { id: "gap", name: "gap", out: "gap", label: "Gap", min: 0, max: 32, step: 2, value: 10, display: "10px" },
+  { id: "perMove", name: "perMove", out: "perMove", label: "Per move", min: 1, max: 4, step: 1, value: 1, display: "1" },
+  { id: "maxDots", name: "maxDots", out: "maxDots", label: "Max dots", min: 3, max: 21, step: 1, value: 9, display: "9" },
+  { id: "interval", name: "autoplayInterval", out: "interval", label: "Autoplay interval", min: 1000, max: 8000, step: 500, value: 4000, display: "4000ms", wrapperId: "interval-control" },
+];
+
+const choices = [
+  { name: "alignment", label: "Alignment", selected: "center", options: [["left", "Left"], ["center", "Center"], ["right", "Right"]] },
+  { name: "direction", label: "Direction", selected: "ltr", options: [["ltr", "LTR"], ["rtl", "RTL"], ["ttb", "Vertical"]] },
+];
+
+const toggles = [
+  { name: "loop", label: "Loop", checked: false },
+  { name: "pagination", label: "Pagination", checked: true },
+  { name: "navigation", label: "Navigation", checked: true },
+  { name: "draggable", label: "Draggable", checked: true },
+  { name: "autoplay", label: "Autoplay", checked: false },
+  { name: "thumbnails", label: "Thumbnails", checked: false },
+];
+
+const ORDINALS = ["One", "Two", "Three", "Four", "Five"];
+const heroSlides: SlideContent[] = ORDINALS.map((ordinal, i) => ({
+  num: i + 1,
+  label: `Slide ${ordinal}`,
+  tone: heroToneFor(i + 1),
+}));
+const heroThumbs: SlideContent[] = heroSlides.map(({ num, tone }) => ({ num, tone }));
+
+const letters = (list: string): SlideContent[] => [...list].map((num) => ({ num }));
+
+const breakoutSlides: SlideContent[] = [
+  { num: 1, label: "Aligned", text: "The active card is still positioned from the main content column." },
+  { num: 2, label: "Bleed", text: "The scroll area reaches the page edge, but slide sizing still keys off the content width." },
+  { num: 3, label: "Viewport", text: "That makes the next and previous slides feel like they continue off-screen." },
+  { num: 4, label: "Host Layout", text: "The site still owns the breakout wrapper and gutter math around the slider." },
+  { num: 5, label: "Edges", text: "The edge gutter is derived from the track width, so it stays scrollbar-correct on its own." },
+];
+
+const responsiveSlides: SlideContent[] = ["Mobile", "Tablet", "Desktop", "Wide", "Extra"].map(
+  (label, i) => ({ num: i + 1, label })
+);
+
+const autoplaySlides: SlideContent[] = [
+  { num: "Night", label: "01", tone: 1 },
+  { num: "Sunset", label: "02", tone: 3 },
+  { num: "Day", label: "03", tone: 2 },
+  { num: "Dawn", label: "04", tone: 5 },
+];
+
+const thumbnailMainSlides: SlideContent[] = [1, 2, 3, 4].map((num) => ({ num, label: "Main slide" }));
+
+const alignments = ["left", "center", "right"];
+
+// ── API reference tables. Cells are HTML strings. ─────────────────────
+const globalRows = [
+  ["AeroSlider.createSlider", "Same as the module <code>createSlider</code> — creates a slider instance"],
+  ["AeroSlider.syncThumbnails", "Same as the module <code>syncThumbnails</code> — syncs primary and thumbnail sliders"],
+];
+
+const cssPropertyRows = [
+  ["--slides-per-view", "1", "Number of visible slides (supports fractional, e.g. 1.5)"],
+  ["--slide-gap", "0px", "Gap between slides"],
+  ["--slide-aspect", "16 / 9", "Aspect ratio for slides"],
+  ["--aero-layout-width", "100%", "Content column width for <code>aero-slider--breakout</code> sliders. Slides size to this column while the track spans the full width; edge gutters are derived automatically."],
+  ["data-aero-defer-visibility", "—", "Prevents layout shift before JS init in loop mode by reserving space for prepended clones. Pair it with <code>data-aero-alignment</code> in HTML when mirroring a non-default pre-init alignment; center is assumed otherwise."],
+];
+
+const stateClassRows = [
+  ["aero-slider--ready", "The slider has initialized"],
+  ["aero-slider--draggable", "<code>draggable</code> is on. The track shows the <code>grab</code> cursor only then"],
+  ["aero-slider--dragging", "A mouse or pen drag is in progress (<code>grabbing</code> cursor)"],
+  ["aero-slider--free", '<code>snap</code> is <code>"settle"</code> or <code>"none"</code>. Turns CSS scroll snapping off'],
+  ["aero-slider--vertical", '<code>direction</code> is <code>"ttb"</code>'],
+];
+
+const configRows = [
+  ["loop", "boolean", "false", "Infinite looping"],
+  ["alignment", '"left" | "center" | "right"', '"center"', "Align the active slide to the left, center, or right when possible. At non-loop edges the scroll position clamps, but <code>currentIndex</code> still reflects the focused slide."],
+  ["draggable", "boolean", "true", "Enable mouse and pen dragging. Touch always swipes natively"],
+  ["autoplay", 'boolean | "continuous"', "false", '<code>true</code> advances one move every <code>autoplayInterval</code>. <code>"continuous"</code> drifts the track smoothly like a ticker at <code>autoplaySpeed</code>; it implies <code>loop</code> and <code>snap: "none"</code>'],
+  ["autoplaySpeed", "number", "40", "Continuous autoplay speed in pixels per second. <code>0</code> or less keeps the track still"],
+  ["autoplayInterval", "number", "5000", "Delay between auto-advances (ms). Restarts after any manual change, and holds while the slider is pressed"],
+  ["maxDots", "number", "0", "Max pagination dots (0 = unlimited); shows iOS-style sliding window when exceeded"],
+  ["noDrag", "string", '""', 'CSS selector for elements inside slides that should not trigger drag (e.g. <code>"a, button, input"</code>)'],
+  ["perMove", "number", "1", "Number of slides to advance per <code>next()</code> / <code>prev()</code> call"],
+  ["direction", '"ltr" | "rtl" | "ttb"', '"ltr"', "Carousel direction: left-to-right, right-to-left, or top-to-bottom (vertical)"],
+  ["snap", '"native" | "settle" | "none"', '"native"', 'How the track comes to rest. <code>"native"</code> uses CSS scroll snapping. <code>"settle"</code> scrolls freely, then eases onto the nearest slide once scrolling stops (with <code>scrollDuration</code> / <code>scrollEasing</code>). <code>"none"</code> rests wherever the track stops'],
+  ["scrollDuration", "number", "0", "Length of <code>next()</code> / <code>prev()</code> / <code>goTo()</code> scrolls in ms, eased by <code>scrollEasing</code>, so they move the same way in every browser. <code>0</code> uses the browser's native smooth scrolling. Reduced motion makes every scroll instant either way"],
+  ["scrollEasing", "(t: number) =&gt; number", "ease-out cubic", "Maps linear progress 0–1 to eased progress for <code>scrollDuration</code> scrolls, e.g. <code>(t) =&gt; t</code> for linear"],
+];
+
+const instanceRows = [
+  [".next()", "Go to next slide"],
+  [".prev()", "Go to previous slide"],
+  [".goTo(index, options?)", "Scroll to a specific slide index. Pass <code>{ instant: true }</code> to jump there with no animation"],
+  [".pause()", "Hold autoplay until <code>.resume()</code>. Hover, focus and drag pauses still apply on top"],
+  [".resume()", "Release a <code>.pause()</code> and restart the autoplay countdown"],
+  [".update(config?)", "Update config and re-render"],
+  [".destroy()", "Tear down and clean up"],
+  [".refresh()", "Re-read slides from DOM and rebuild (call after external DOM changes)"],
+  [".add(slides, index?)", "Insert one or more slides into the track; calls refresh() automatically"],
+  [".remove(index)", "Remove slide(s) by index (number or array); calls refresh() automatically"],
+  [".element", "The container element the slider is attached to (read-only)"],
+  [".currentIndex", "Current active slide index (read-only)"],
+  [".slideCount", "Total number of slides (read-only)"],
+];
+
+const eventRows = [
+  ["aero:ready", "{}", "Fired once after initialization (listen before <code>createSlider</code>)"],
+  ["aero:slideChange", "{ index: number }", "Fired when the active slide changes"],
+  ["aero:dragStart", "{ index: number }", "Fired when a mouse or pen drag starts (touch scrolls natively and doesn't fire drag events)"],
+  ["aero:dragEnd", "{ index: number; fromIndex: number }", "Fired when a mouse or pen drag is released, after the target slide is chosen"],
+  ["aero:autoplayStart", "{}", "Fired when autoplay starts or resumes"],
+  ["aero:autoplayStop", "{}", "Fired when autoplay pauses"],
+  ["aero:visible", "{ index: number }", "Fired per slide when it enters the visible range"],
+  ["aero:hidden", "{ index: number }", "Fired per slide when it leaves the visible range"],
+  ["aero:resize", "{}", "Fired when the track or slide size changes, e.g. a window resize or a CSS variable such as <code>--slides-per-view</code> changing (before re-measuring)"],
+  ["aero:resized", "{}", "Fired after the slider finishes updating from a resize"],
+  ["aero:destroy", "{}", "Fired at the start of <code>destroy()</code>, before teardown"],
+];
+
+const browserRows = [
+  ["CSS Variables", "49+", "9.1+", "31+", "Configuring layout and gap size."],
+  ["Scroll Snapping", "69+", "11+", "68+", "Locking slides into place after scrolling."],
+  ["aspect-ratio", "88+", "15+", "89+", "Maintaining proper height for the slider track."],
+  ["contain: paint", "52+", "15.4+", "69+", "Performance optimization for painting slides."],
+  ["overscroll-behavior-x", "63+", "16+", "59+", "Preventing rubber-banding when hitting the edge."],
+];
 ---
 
 <BaseLayout title="Aero Slider — Lightweight CSS-first Slider">
   <Fragment slot="head">
     <script>
-      import '../scripts/examples.ts';
+      import "../scripts/examples.ts";
     </script>
   </Fragment>
+
   <!-- ─── Navbar ──────────────────────────────────────────────── -->
-  <nav class="relative z-50 bg-transparent">
-    <div
-      class="mx-auto flex max-w-6xl flex-row items-center justify-between gap-4 px-4 py-4 sm:px-6 sm:py-6"
-    >
-      <a href="/" class="text-xl font-bold tracking-tight text-slate-900">Aero Slider</a>
-      <div
-        class="flex items-center gap-4 text-sm font-medium text-slate-600 sm:gap-6"
-      >
-        <a href="#examples" class="transition hover:text-slate-900">Examples</a>
-        <a href="#api" class="transition hover:text-slate-900">API</a>
-        <a
-          href="https://github.com/Negative-Space-Dev/aero-slider"
-          target="_blank"
-          rel="noopener"
-          class="transition hover:text-slate-900"
-          aria-label="GitHub"
-        >
-          <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"
-            ><path
+  <header class="sticky top-0 z-50 border-b border-line bg-paper/80 backdrop-blur-md">
+    <div class="container-page flex h-14 items-center justify-between gap-4">
+      <a href="/" class="flex items-center gap-2.5 text-[0.9375rem] font-medium tracking-tight text-ink">
+        <Logo class="size-5" />
+        Aero Slider
+        <span class="hidden rounded-full border border-line px-2 py-0.5 font-mono text-[0.6875rem] font-normal tracking-normal text-faint sm:inline">
+          v{pkg.version}
+        </span>
+      </a>
+      <nav class="flex items-center gap-5 text-sm text-muted sm:gap-7" aria-label="Primary">
+        <a href="#examples" class="transition-colors hover:text-ink">Examples</a>
+        <a href="#api" class="transition-colors hover:text-ink">API</a>
+        <a href={REPO} target="_blank" rel="noopener" class="transition-colors hover:text-ink" aria-label="GitHub">
+          <svg class="size-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path
               fill-rule="evenodd"
               d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.654-1.093 2.75-1.026 2.75-1.026.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-              clip-rule="evenodd"></path></svg
-          >
+              clip-rule="evenodd"></path>
+          </svg>
         </a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- ════════════════════════════════════════════════════════════
+         HERO
+         ════════════════════════════════════════════════════════════ -->
+    <section class="container-page pt-14 pb-12 sm:pt-24 sm:pb-16">
+      <div class="grid items-end gap-10 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:gap-16">
+        <div>
+          <p class="caption mb-6 flex items-center gap-2.5">
+            <span class="size-1.5 rounded-full bg-accent shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_18%,transparent)]"></span>
+            V1 coming soon
+            <span class="text-line-strong">/</span>
+            ~8 KB gzipped
+          </p>
+          <h1 class="text-[clamp(2.75rem,7.2vw,5.5rem)] leading-[0.95] font-medium tracking-[-0.045em] text-balance">
+            CSS-first slider for the modern web
+          </h1>
+        </div>
+
+        <div class="lg:pb-1.5">
+          <p class="mb-6 max-w-md leading-relaxed text-muted">
+            Native scroll snapping does the scrolling. JavaScript only handles events, loop
+            cloning, pagination and autoplay, with zero dependencies.
+          </p>
+
+          <!-- Install Widget -->
+          <div id="install-widget" class="max-w-md rounded-xl border border-line bg-surface">
+            <div class="flex items-center justify-between border-b border-line pr-2 pl-1.5">
+              <div class="flex">
+                {
+                  packageManagers.map((pm) => (
+                    <button
+                      type="button"
+                      data-pm={pm}
+                      class="install-tab -mb-px border-b border-transparent px-2.5 py-2.5 font-mono text-xs text-faint transition-colors hover:text-ink data-[active]:border-accent data-[active]:text-ink"
+                    >
+                      {pm}
+                    </button>
+                  ))
+                }
+              </div>
+              <a
+                href={`${REPO}/releases/latest`}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex items-center gap-1.5 rounded-md px-2 py-1 font-mono text-xs text-faint transition-colors hover:text-ink"
+                title="Download .zip"
+              >
+                <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                .zip
+              </a>
+            </div>
+            <div class="flex items-center justify-between gap-3 py-2.5 pr-2.5 pl-4">
+              <p class="min-w-0 truncate font-mono text-sm text-ink">
+                <span class="text-faint select-none" aria-hidden="true">$ </span><span id="install-command">bun add aero-slider</span>
+              </p>
+              <button
+                id="copy-install"
+                type="button"
+                class="rounded-md p-2 text-faint transition-colors hover:bg-line hover:text-ink"
+                aria-label="Copy to clipboard"
+              >
+                <svg id="copy-icon" class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <svg id="check-icon" class="hidden size-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Feature ticker: three identical sets, shifted by one set per loop -->
+    <div class="overflow-hidden border-y border-line [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+      <div class="animate-marquee flex w-max py-4">
+        {
+          [0, 1, 2].map((set) => (
+            <ul class="flex shrink-0" aria-hidden={set > 0 ? "true" : undefined}>
+              {features.map((feature) => (
+                <li class="caption flex items-center gap-7 pr-7 whitespace-nowrap">
+                  {feature}
+                  <span class="size-1 rotate-45 bg-line-strong" />
+                </li>
+              ))}
+            </ul>
+          ))
+        }
       </div>
     </div>
-  </nav>
 
-  <main class="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
     <!-- ════════════════════════════════════════════════════════════
-         HERO — Interactive Playground
+         PLAYGROUND
          ════════════════════════════════════════════════════════════ -->
-    <section class="mb-12 sm:mb-20">
-      <div class="mb-8 sm:mb-12 text-center">
-        <div class="mb-6 flex flex-wrap items-center justify-center gap-3">
-          <span
-            class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600"
-          >
-            <span class="h-2 w-2 rounded-full bg-yellow-500"></span>
-            V1 coming soon
-          </span>
-          <span
-            class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600"
-          >
-            <svg
-              class="h-4 w-4 text-indigo-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
-            </svg>
-            ~8 KB gzipped
-          </span>
-        </div>
-        <h1
-          class="text-4xl font-extrabold tracking-tight text-[#0f172a] sm:text-5xl md:text-6xl/tight text-pretty max-w-2xl mx-auto"
-        >
-          CSS-first slider for the modern web
-        </h1>
-        <div class="mt-8 mb-10 overflow-hidden relative flex flex-col gap-3 md:gap-4 py-3 [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)] -mx-4 sm:mx-0 [--marquee-gap:0.75rem] md:[--marquee-gap:1rem]">
-          <!-- Row 1: Left to right -->
-          <div class="flex w-max animate-marquee hover:pause gap-3 md:gap-4">
-            <!-- First set -->
-            <div class="flex shrink-0 gap-3 md:gap-4">
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><SparklesIcon class="size-4 shrink-0 text-slate-600" /> CSS-First Architecture</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><ZapIcon class="size-4 shrink-0 text-slate-600" /> ~8 KB gzipped</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><BoxIcon class="size-4 shrink-0 text-slate-600" /> Zero Dependencies</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><WrenchIcon class="size-4 shrink-0 text-slate-600" /> Highly Extensible</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><TargetIcon class="size-4 shrink-0 text-slate-600" /> Native Scroll Snapping</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><HandIcon class="size-4 shrink-0 text-slate-600" /> Touch &amp; Swipe Friendly</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><AccessibilityIcon class="size-4 shrink-0 text-slate-600" /> Accessible</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><InfinityIcon class="size-4 shrink-0 text-slate-600" /> Infinite Looping</span>
-            </div>
-            <!-- Duplicated set -->
-            <div class="flex shrink-0 gap-3 md:gap-4" aria-hidden="true">
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><SparklesIcon class="size-4 shrink-0 text-slate-600" /> CSS-First Architecture</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><ZapIcon class="size-4 shrink-0 text-slate-600" /> ~8 KB gzipped</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><BoxIcon class="size-4 shrink-0 text-slate-600" /> Zero Dependencies</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><WrenchIcon class="size-4 shrink-0 text-slate-600" /> Highly Extensible</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><TargetIcon class="size-4 shrink-0 text-slate-600" /> Native Scroll Snapping</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><HandIcon class="size-4 shrink-0 text-slate-600" /> Touch &amp; Swipe Friendly</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><AccessibilityIcon class="size-4 shrink-0 text-slate-600" /> Accessible</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><InfinityIcon class="size-4 shrink-0 text-slate-600" /> Infinite Looping</span>
-            </div>
-            <!-- Third set for seamless fill and loop -->
-            <div class="flex shrink-0 gap-3 md:gap-4" aria-hidden="true">
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><SparklesIcon class="size-4 shrink-0 text-slate-600" /> CSS-First Architecture</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><ZapIcon class="size-4 shrink-0 text-slate-600" /> ~8 KB gzipped</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><BoxIcon class="size-4 shrink-0 text-slate-600" /> Zero Dependencies</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><WrenchIcon class="size-4 shrink-0 text-slate-600" /> Highly Extensible</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><TargetIcon class="size-4 shrink-0 text-slate-600" /> Native Scroll Snapping</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><HandIcon class="size-4 shrink-0 text-slate-600" /> Touch &amp; Swipe Friendly</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><AccessibilityIcon class="size-4 shrink-0 text-slate-600" /> Accessible</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-slate-50"><InfinityIcon class="size-4 shrink-0 text-slate-600" /> Infinite Looping</span>
-            </div>
-          </div>
-
-          <!-- Row 2: Right to left -->
-          <div class="flex w-max animate-marquee-reverse hover:pause gap-3 md:gap-4">
-            <!-- First set -->
-            <div class="flex shrink-0 gap-3 md:gap-4">
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><PlayIcon class="size-4 shrink-0 text-slate-600" /> Smooth Autoplay</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ColumnsIcon class="size-4 shrink-0 text-slate-600" /> Multi-Slide Views</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><RulerIcon class="size-4 shrink-0 text-slate-600" /> Responsive API</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><MoreHorizontalIcon class="size-4 shrink-0 text-slate-600" /> Custom Pagination</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ImageIcon class="size-4 shrink-0 text-slate-600" /> Thumbnail Syncing</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ActivityIcon class="size-4 shrink-0 text-slate-600" /> Event Callbacks</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><AnchorIcon class="size-4 shrink-0 text-slate-600" /> Zero CLS</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><KeyboardIcon class="size-4 shrink-0 text-slate-600" /> Keyboard Nav</span>
-            </div>
-            <!-- Duplicated set -->
-            <div class="flex shrink-0 gap-3 md:gap-4" aria-hidden="true">
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><PlayIcon class="size-4 shrink-0 text-slate-600" /> Smooth Autoplay</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ColumnsIcon class="size-4 shrink-0 text-slate-600" /> Multi-Slide Views</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><RulerIcon class="size-4 shrink-0 text-slate-600" /> Responsive API</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><MoreHorizontalIcon class="size-4 shrink-0 text-slate-600" /> Custom Pagination</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ImageIcon class="size-4 shrink-0 text-slate-600" /> Thumbnail Syncing</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ActivityIcon class="size-4 shrink-0 text-slate-600" /> Event Callbacks</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><AnchorIcon class="size-4 shrink-0 text-slate-600" /> Zero CLS</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><KeyboardIcon class="size-4 shrink-0 text-slate-600" /> Keyboard Nav</span>
-            </div>
-            <!-- Third set for seamless fill and loop -->
-            <div class="flex shrink-0 gap-3 md:gap-4" aria-hidden="true">
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><PlayIcon class="size-4 shrink-0 text-slate-600" /> Smooth Autoplay</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ColumnsIcon class="size-4 shrink-0 text-slate-600" /> Multi-Slide Views</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><RulerIcon class="size-4 shrink-0 text-slate-600" /> Responsive API</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><MoreHorizontalIcon class="size-4 shrink-0 text-slate-600" /> Custom Pagination</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ImageIcon class="size-4 shrink-0 text-slate-600" /> Thumbnail Syncing</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><ActivityIcon class="size-4 shrink-0 text-slate-600" /> Event Callbacks</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><AnchorIcon class="size-4 shrink-0 text-slate-600" /> Zero CLS</span>
-              <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs transition-colors hover:border-slate-300 hover:bg-white"><KeyboardIcon class="size-4 shrink-0 text-slate-600" /> Keyboard Nav</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Install Widget -->
-        <div class="mb-8 flex justify-center">
-          <div class="w-full max-w-md">
-            <div id="install-widget" class="rounded-xl border border-slate-200 bg-slate-900 overflow-hidden shadow-sm">
-              <!-- Package Manager Tabs & Download -->
-              <div class="flex justify-between items-center border-b border-slate-700 bg-slate-800/50 pr-2">
-                <div class="flex justify-start overflow-x-auto no-scrollbar">
-                  <button type="button" data-pm="bun" class="install-tab px-4 py-2 text-xs font-medium text-slate-400 hover:text-white transition border-b-2 border-transparent data-[active]:border-emerald-400 data-[active]:text-white shrink-0">bun</button>
-                  <button type="button" data-pm="npm" class="install-tab px-4 py-2 text-xs font-medium text-slate-400 hover:text-white transition border-b-2 border-transparent data-[active]:border-emerald-400 data-[active]:text-white shrink-0">npm</button>
-                  <button type="button" data-pm="yarn" class="install-tab px-4 py-2 text-xs font-medium text-slate-400 hover:text-white transition border-b-2 border-transparent data-[active]:border-emerald-400 data-[active]:text-white shrink-0">yarn</button>
-                  <button type="button" data-pm="pnpm" class="install-tab px-4 py-2 text-xs font-medium text-slate-400 hover:text-white transition border-b-2 border-transparent data-[active]:border-emerald-400 data-[active]:text-white shrink-0">pnpm</button>
-                </div>
-                <a
-                  href="https://github.com/Negative-Space-Dev/aero-slider/releases/latest"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-white text-slate-900 hover:bg-slate-200 rounded-md transition shadow-sm shrink-0"
-                  title="Download .zip"
-                >
-                  <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                  </svg>
-                  .zip
-                </a>
-              </div>
-              <!-- Install Command -->
-              <div class="flex items-center justify-between px-4 py-3">
-                <code id="install-command" class="font-mono text-sm text-emerald-300">bun add aero-slider</code>
-                <button id="copy-install" type="button" class="p-1.5 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition" aria-label="Copy to clipboard">
-                  <svg id="copy-icon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                  </svg>
-                  <svg id="check-icon" class="h-4 w-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+    <section class="container-page py-12 sm:py-16" aria-labelledby="playground-title">
+      <div class="mb-4 flex items-baseline justify-between gap-4">
+        <h2 id="playground-title" class="caption">Playground</h2>
+        <p class="caption tracking-normal normal-case">Settings are saved in the URL</p>
       </div>
 
-      <div class="grid gap-8 lg:grid-cols-[1fr_320px]">
-        <!-- Slider Column -->
-        <div class="min-w-0">
-          <!-- Main Hero Slider -->
-          <div id="hero-slider" class="aero-slider w-full">
-            <div class="aero-slider__viewport relative rounded-2xl">
-              <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="m15 18-6-6 6-6"/>
-                </svg>
-              </button>
-              <button type="button" class="aero-slider__nav--next" aria-label="Next slide">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="m9 18 6-6-6-6"/>
-                </svg>
-              </button>
-              <div class="aero-slider__track">
-                <div class="bg-linear-to-br from-indigo-500 to-purple-600 text-white rounded-2xl">
-                  <div class="flex flex-col items-center justify-center gap-2 p-8 text-center">
-                    <span class="text-5xl font-bold">1</span>
-                    <span class="text-sm font-medium opacity-75">Slide One</span>
-                  </div>
-                </div>
-                <div class="bg-linear-to-br from-cyan-500 to-blue-600 text-white rounded-2xl">
-                  <div class="flex flex-col items-center justify-center gap-2 p-8 text-center">
-                    <span class="text-5xl font-bold">2</span>
-                    <span class="text-sm font-medium opacity-75">Slide Two</span>
-                  </div>
-                </div>
-                <div class="bg-linear-to-br from-emerald-500 to-teal-600 text-white rounded-2xl">
-                  <div class="flex flex-col items-center justify-center gap-2 p-8 text-center">
-                    <span class="text-5xl font-bold">3</span>
-                    <span class="text-sm font-medium opacity-75">Slide Three</span>
-                  </div>
-                </div>
-                <div class="bg-linear-to-br from-amber-500 to-orange-600 text-white rounded-2xl">
-                  <div class="flex flex-col items-center justify-center gap-2 p-8 text-center">
-                    <span class="text-5xl font-bold">4</span>
-                    <span class="text-sm font-medium opacity-75">Slide Four</span>
-                  </div>
-                </div>
-                <div class="bg-linear-to-br from-rose-500 to-pink-600 text-white rounded-2xl">
-                  <div class="flex flex-col items-center justify-center gap-2 p-8 text-center">
-                    <span class="text-5xl font-bold">5</span>
-                    <span class="text-sm font-medium opacity-75">Slide Five</span>
-                  </div>
+      <div class="grid overflow-hidden rounded-2xl border border-line bg-surface lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div class="flex min-w-0 flex-col">
+          <div class="p-3 sm:p-5">
+            <!-- Main Hero Slider -->
+            <div id="hero-slider" class="aero-slider w-full">
+              <div class="aero-slider__viewport relative">
+                <SliderNav />
+                <div class="aero-slider__track">
+                  <Slides items={heroSlides} />
                 </div>
               </div>
+              <Pagination />
             </div>
-            <div class="aero-slider__pagination">
-              <span class="aero-slider__dot h-2.5 w-2.5 rounded-full bg-slate-300 transition-all"
-              ></span>
-            </div>
-          </div>
 
-          <!-- Thumbnail Strip -->
-          <div id="hero-thumbs-wrapper" hidden class="mt-4">
-            <div
-              id="hero-thumbs"
-              class="aero-slider aero-slider--thumbnails rounded-lg"
-              style="--slide-aspect: 16/9; --slides-per-view: 5; --slide-gap: 8px;"
-            >
-              <div class="aero-slider__viewport relative">
-                <button type="button" class="aero-slider__nav--prev" aria-label="Previous thumbnail">
-                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="m15 18-6-6 6-6"/>
-                  </svg>
-                </button>
-                <button type="button" class="aero-slider__nav--next" aria-label="Next thumbnail">
-                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="m9 18 6-6-6-6"/>
-                  </svg>
-                </button>
-                <div class="aero-slider__track">
-                  <div
-                    class="rounded-md bg-linear-to-br from-indigo-500 to-purple-600 text-white"
-                  >
-                    <div class="flex items-center justify-center text-xs font-bold">1</div>
-                  </div>
-                  <div class="rounded-md bg-linear-to-br from-cyan-500 to-blue-600 text-white">
-                    <div class="flex items-center justify-center text-xs font-bold">2</div>
-                  </div>
-                  <div class="rounded-md bg-linear-to-br from-emerald-500 to-teal-600 text-white">
-                    <div class="flex items-center justify-center text-xs font-bold">3</div>
-                  </div>
-                  <div class="rounded-md bg-linear-to-br from-amber-500 to-orange-600 text-white">
-                    <div class="flex items-center justify-center text-xs font-bold">4</div>
-                  </div>
-                  <div class="rounded-md bg-linear-to-br from-rose-500 to-pink-600 text-white">
-                    <div class="flex items-center justify-center text-xs font-bold">5</div>
+            <!-- Thumbnail Strip -->
+            <div id="hero-thumbs-wrapper" hidden class="mt-1">
+              <div
+                id="hero-thumbs"
+                class="aero-slider aero-slider--thumbnails"
+                style="--slide-aspect: 16/9; --slides-per-view: 5; --slide-gap: 8px;"
+              >
+                <div class="aero-slider__viewport relative">
+                  <SliderNav noun="thumbnail" />
+                  <div class="aero-slider__track">
+                    <Slides items={heroThumbs} />
                   </div>
                 </div>
               </div>
@@ -308,245 +336,96 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
           </div>
 
           <!-- Event Log -->
-          <div id="event-log-container" class="mt-6 rounded-xl border border-slate-200 bg-white">
-            <button type="button" id="event-log-toggle" class="w-full flex items-center justify-between border-b border-slate-200 px-4 py-3 text-left sm:cursor-default">
-              <h3 class="text-sm font-semibold text-slate-900">Event Log</h3>
-              <span id="event-log-icon" class="sm:hidden text-slate-400 transition-transform">
-                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" />
-                </svg>
-              </span>
+          <div id="event-log-container" class="flex flex-1 flex-col border-t border-line">
+            <button
+              type="button"
+              id="event-log-toggle"
+              class="flex w-full items-center justify-between px-5 py-3 text-left sm:cursor-default"
+            >
+              <span class="caption">Event log</span>
+              <span id="event-log-icon" class="text-faint sm:hidden"></span>
             </button>
-            <div id="event-log-content" class="h-48 overflow-auto transition-all">
-              <!-- Empty State -->
-              <div id="event-log-empty" class="flex flex-col items-center justify-center h-full text-center px-4">
-                <svg class="h-12 w-12 text-slate-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                <p class="text-sm text-slate-400">Interact with the slider to see events</p>
+            <div id="event-log-content" class="relative min-h-44 flex-1 border-t border-line">
+              <div class="absolute inset-0 overflow-auto">
+                <div id="event-log-empty" class="flex h-full items-center justify-center px-4 text-center">
+                  <p class="text-sm text-faint">Interact with the slider to see events</p>
+                </div>
+                <table class="hidden w-full min-w-[300px] font-mono text-xs" id="event-log-table">
+                  <thead>
+                    <tr class="text-left">
+                      <th class="caption px-5 pt-3 pb-2">Event</th>
+                      <th class="caption px-5 pt-3 pb-2">Data</th>
+                      <th class="caption px-5 pt-3 pb-2">Time</th>
+                    </tr>
+                  </thead>
+                  <tbody id="event-log"></tbody>
+                </table>
               </div>
-              <table class="w-full text-sm min-w-[300px] hidden" id="event-log-table">
-                <thead>
-                  <tr class="border-b border-slate-100 text-left text-xs text-slate-400">
-                    <th class="px-4 py-2 font-medium">Event</th>
-                    <th class="px-4 py-2 font-medium">Data</th>
-                    <th class="px-4 py-2 font-medium">Time</th>
-                  </tr>
-                </thead>
-                <tbody id="event-log"></tbody>
-              </table>
             </div>
           </div>
         </div>
 
         <!-- Config Panel -->
-        <aside class="rounded-xl border border-slate-200 bg-white p-5">
-          <h2 class="mb-4 text-sm font-bold uppercase tracking-wider text-slate-600">
-            Configuration
-          </h2>
+        <aside class="border-t border-line p-5 lg:border-t-0 lg:border-l">
+          <h2 class="caption mb-5">Configuration</h2>
           <form id="config-form" class="space-y-5">
-            <!-- Number of Slides -->
-            <div>
-              <div class="mb-1 flex items-center justify-between text-sm">
-                <label for="slideCount" class="font-medium text-slate-700">Number of Slides</label>
-                <output id="out-slideCount" class="tabular-nums text-slate-600">5</output>
-              </div>
-              <input
-                id="slideCount"
-                type="range"
-                name="slideCount"
-                min="3"
-                max="20"
-                step="1"
-                value="5"
-                class="w-full accent-slate-800"
-              />
-            </div>
+            {
+              ranges.map((range) => (
+                <div id={range.wrapperId} class="transition-opacity">
+                  <div class="mb-1.5 flex items-center justify-between text-sm">
+                    <label for={range.id} class="text-muted">
+                      {range.label}
+                    </label>
+                    <output id={`out-${range.out}`} class="font-mono text-xs text-ink tabular-nums">
+                      {range.display}
+                    </output>
+                  </div>
+                  <input
+                    id={range.id}
+                    type="range"
+                    name={range.name}
+                    min={range.min}
+                    max={range.max}
+                    step={range.step}
+                    value={range.value}
+                  />
+                </div>
+              ))
+            }
 
-            <!-- Slides Per View -->
-            <div>
-              <div class="mb-1 flex items-center justify-between text-sm">
-                <label for="spv" class="font-medium text-slate-700">Slides per View</label>
-                <output id="out-spv" class="tabular-nums text-slate-600">1</output>
-              </div>
-              <input
-                id="spv"
-                type="range"
-                name="slidesPerView"
-                min="0"
-                max="16"
-                step="1"
-                value="0"
-                class="w-full accent-slate-800"
-              />
-            </div>
+            {
+              choices.map((choice) => (
+                <fieldset>
+                  <legend class="mb-1.5 text-sm text-muted">{choice.label}</legend>
+                  <div class="segmented flex w-full">
+                    {choice.options.map(([value, label]) => (
+                      <label>
+                        <input
+                          type="radio"
+                          name={choice.name}
+                          value={value}
+                          checked={value === choice.selected}
+                          class="sr-only"
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              ))
+            }
 
-            <!-- Gap -->
-            <div>
-              <div class="mb-1 flex items-center justify-between text-sm">
-                <label for="gap" class="font-medium text-slate-700">Gap</label>
-                <output id="out-gap" class="tabular-nums text-slate-600">10px</output>
-              </div>
-              <input
-                id="gap"
-                type="range"
-                name="gap"
-                min="0"
-                max="32"
-                step="2"
-                value="10"
-                class="w-full accent-slate-800"
-              />
-            </div>
-
-            <!-- Autoplay Interval -->
-            <div id="interval-control">
-              <div class="mb-1 flex items-center justify-between text-sm">
-                <label for="interval" class="font-medium text-slate-700">Autoplay Interval</label>
-                <output id="out-interval" class="tabular-nums text-slate-600">4000ms</output>
-              </div>
-              <input
-                id="interval"
-                type="range"
-                name="autoplayInterval"
-                min="1000"
-                max="8000"
-                step="500"
-                value="4000"
-                class="w-full accent-slate-800"
-              />
-            </div>
-
-            <!-- Max Dots -->
-            <div>
-              <div class="mb-1 flex items-center justify-between text-sm">
-                <label for="maxDots" class="font-medium text-slate-700">Max Dots</label>
-                <output id="out-maxDots" class="tabular-nums text-slate-600">9</output>
-              </div>
-              <input
-                id="maxDots"
-                type="range"
-                name="maxDots"
-                min="3"
-                max="21"
-                step="1"
-                value="9"
-                class="w-full accent-slate-800"
-              />
-            </div>
-
-            <!-- Alignment -->
-            <div>
-              <label for="alignment" class="mb-1 block text-sm font-medium text-slate-700">Alignment</label>
-              <select id="alignment" name="alignment" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-                <option value="left">Left</option>
-                <option value="center" selected>Center (default)</option>
-                <option value="right">Right</option>
-              </select>
-            </div>
-
-            <!-- Direction -->
-            <div>
-              <label for="direction" class="mb-1 block text-sm font-medium text-slate-700">Direction</label>
-              <select id="direction" name="direction" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-                <option value="ltr" selected>LTR (default)</option>
-                <option value="rtl">RTL</option>
-                <option value="ttb">Vertical (TTB)</option>
-              </select>
-            </div>
-
-            <!-- Per Move -->
-            <div>
-              <div class="mb-1 flex items-center justify-between text-sm">
-                <label for="perMove" class="font-medium text-slate-700">Per Move</label>
-                <output id="out-perMove" class="tabular-nums text-slate-600">1</output>
-              </div>
-              <input
-                id="perMove"
-                type="range"
-                name="perMove"
-                min="1"
-                max="4"
-                step="1"
-                value="1"
-                class="w-full accent-slate-800"
-              />
-            </div>
-
-            <hr class="border-slate-200" />
-
-            <!-- Toggles -->
-            <fieldset>
+            <fieldset class="border-t border-line pt-5">
               <legend class="sr-only">Feature toggles</legend>
-              <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 mt-2">
-                <label class="relative cursor-pointer">
-                  <input type="checkbox" name="loop" class="peer sr-only" />
-                  <div class="flex flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-slate-600 transition hover:bg-slate-50 peer-checked:border-slate-800 peer-checked:bg-slate-800 peer-checked:text-white peer-checked:hover:border-slate-700 peer-checked:hover:bg-slate-700">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="m17 2 4 4-4 4"/>
-                      <path d="M3 11v-1a4 4 0 0 1 4-4h14"/>
-                      <path d="m7 22-4-4 4-4"/>
-                      <path d="M21 13v1a4 4 0 0 1-4 4H3"/>
-                    </svg>
-                    <span class="text-xs font-medium">Loop</span>
-                  </div>
-                </label>
-                <label class="relative cursor-pointer">
-                  <input type="checkbox" name="pagination" checked class="peer sr-only" />
-                  <div class="flex flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-slate-600 transition hover:bg-slate-50 peer-checked:border-slate-800 peer-checked:bg-slate-800 peer-checked:text-white peer-checked:hover:border-slate-700 peer-checked:hover:bg-slate-700">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <circle cx="12" cy="12" r="1.5"/>
-                      <circle cx="19" cy="12" r="1.5"/>
-                      <circle cx="5" cy="12" r="1.5"/>
-                    </svg>
-                    <span class="text-xs font-medium">Pagination</span>
-                  </div>
-                </label>
-                <label class="relative cursor-pointer">
-                  <input type="checkbox" name="navigation" checked class="peer sr-only" />
-                  <div class="flex flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-slate-600 transition hover:bg-slate-50 peer-checked:border-slate-800 peer-checked:bg-slate-800 peer-checked:text-white peer-checked:hover:border-slate-700 peer-checked:hover:bg-slate-700">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="m8 3-5 5 5 5"/>
-                      <path d="M3 8h18"/>
-                      <path d="m16 21 5-5-5-5"/>
-                      <path d="M21 16H3"/>
-                    </svg>
-                    <span class="text-xs font-medium text-center">Navigation</span>
-                  </div>
-                </label>
-                <label class="relative cursor-pointer">
-                  <input type="checkbox" name="draggable" checked class="peer sr-only" />
-                  <div class="flex flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-slate-600 transition hover:bg-slate-50 peer-checked:border-slate-800 peer-checked:bg-slate-800 peer-checked:text-white peer-checked:hover:border-slate-700 peer-checked:hover:bg-slate-700">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/>
-                      <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/>
-                      <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/>
-                      <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
-                    </svg>
-                    <span class="text-xs font-medium">Draggable</span>
-                  </div>
-                </label>
-                <label class="relative cursor-pointer">
-                  <input type="checkbox" name="autoplay" class="peer sr-only" />
-                  <div class="flex flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-slate-600 transition hover:bg-slate-50 peer-checked:border-slate-800 peer-checked:bg-slate-800 peer-checked:text-white peer-checked:hover:border-slate-700 peer-checked:hover:bg-slate-700">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <polygon points="6 3 20 12 6 21 6 3"/>
-                    </svg>
-                    <span class="text-xs font-medium">Autoplay</span>
-                  </div>
-                </label>
-                <label class="relative cursor-pointer">
-                  <input type="checkbox" name="thumbnails" class="peer sr-only" />
-                  <div class="flex flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-slate-600 transition hover:bg-slate-50 peer-checked:border-slate-800 peer-checked:bg-slate-800 peer-checked:text-white peer-checked:hover:border-slate-700 peer-checked:hover:bg-slate-700">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M18 22H4a2 2 0 0 1-2-2V6"/>
-                      <path d="m22 13-1.296-1.296a2.41 2.41 0 0 0-3.408 0L11 18"/>
-                      <circle cx="12" cy="8" r="2"/>
-                      <rect width="16" height="16" x="6" y="2" rx="2"/>
-                    </svg>
-                    <span class="text-xs font-medium">Thumbnails</span>
-                  </div>
-                </label>
+              <div class="grid grid-cols-2 gap-2">
+                {
+                  toggles.map((toggle) => (
+                    <label class="toggle">
+                      <input type="checkbox" name={toggle.name} checked={toggle.checked} class="sr-only" />
+                      <span>{toggle.label}</span>
+                    </label>
+                  ))
+                }
               </div>
             </fieldset>
           </form>
@@ -589,172 +468,76 @@ import KeyboardIcon from '../components/icons/KeyboardIcon.astro';
     <!-- ════════════════════════════════════════════════════════════
          EXAMPLES
          ════════════════════════════════════════════════════════════ -->
-    <section id="examples" class="mb-12 sm:mb-20 space-y-10 sm:space-y-16">
-      <h2 class="text-2xl font-bold text-slate-900">Examples</h2>
+    <section id="examples" class="container-page py-12 sm:py-16">
+      <h2 class="mb-10 text-3xl font-medium tracking-[-0.03em] sm:mb-14 sm:text-4xl">Examples</h2>
 
-      <!-- Multi-slide -->
-      <div>
-        <h3 class="mb-1 text-lg font-semibold text-slate-800">Multi-Slide View</h3>
-        <p class="mb-4 text-sm text-slate-600">Show multiple slides at once with gap spacing.</p>
-        <div id="multi" class="aero-slider" style="--slides-per-view: 2.25; --slide-gap: 16px;">
-          <div class="aero-slider__viewport relative">
-            <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">
-              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="m15 18-6-6 6-6"/>
-              </svg>
-            </button>
-            <button type="button" class="aero-slider__nav--next" aria-label="Next slide">
-              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="m9 18 6-6-6-6"/>
-              </svg>
-            </button>
-            <div class="aero-slider__track">
-              <div class="rounded-lg bg-linear-to-br from-violet-400 to-fuchsia-500 text-white">
-                <div class="flex items-center justify-center text-3xl font-bold">A</div>
-              </div>
-              <div class="rounded-lg bg-linear-to-br from-sky-400 to-indigo-500 text-white">
-                <div class="flex items-center justify-center text-3xl font-bold">B</div>
-              </div>
-              <div class="rounded-lg bg-linear-to-br from-lime-400 to-green-500 text-white">
-                <div class="flex items-center justify-center text-3xl font-bold">C</div>
-              </div>
-              <div class="rounded-lg bg-linear-to-br from-yellow-400 to-amber-500 text-white">
-                <div class="flex items-center justify-center text-3xl font-bold">D</div>
-              </div>
-              <div class="rounded-lg bg-linear-to-br from-red-400 to-rose-500 text-white">
-                <div class="flex items-center justify-center text-3xl font-bold">E</div>
-              </div>
-              <div class="rounded-lg bg-linear-to-br from-teal-400 to-cyan-500 text-white">
-                <div class="flex items-center justify-center text-3xl font-bold">F</div>
-              </div>
-            </div>
+      <div class="space-y-14 sm:space-y-20">
+        <!-- Multi-slide -->
+        <Entry tag="01" title="Multi-Slide View">
+          <div class="copy">
+            <p>Show multiple slides at once with gap spacing.</p>
           </div>
-          <div class="aero-slider__pagination">
-            <span class="aero-slider__dot h-2.5 w-2.5 rounded-full bg-slate-300 transition-all"
-            ></span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Breakout / bleed -->
-      <div>
-        <h3 class="mb-1 text-lg font-semibold text-slate-800">Viewport Breakout</h3>
-        <p class="mb-4 text-sm text-slate-600">
-          Let slides overflow past the content column while the scroll track spans the full
-          viewport. The active card's left edge stays locked to the normal content column, and the
-          neighboring slides bleed off toward the screen edges.
-        </p>
-        <p class="mb-4 text-sm text-slate-600">
-          Set the outer wrapper to full bleed, add the library's
-          <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">aero-slider--breakout</code>
-          class, and tie slide sizing to the content column with
-          <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">--aero-layout-width</code>.
-          The library derives the edge gutter automatically, so the first and last cards land on the
-          column. This demo uses
-          <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">alignment: "left"</code>
-          for the Apple-style left-flush layout.
-        </p>
-        <div class="mb-4 flex items-center gap-2 text-sm">
-          <span class="font-medium text-slate-600">Alignment</span>
-          <div
-            id="breakout-align"
-            class="inline-flex rounded-lg border border-slate-200 bg-white p-0.5"
-            role="group"
-            aria-label="Breakout alignment"
-          >
-            <button
-              type="button"
-              data-align="left"
-              class="rounded-md px-3 py-1 font-medium text-slate-600 transition-colors data-[active]:bg-slate-900 data-[active]:text-white"
-            >
-              Left
-            </button>
-            <button
-              type="button"
-              data-align="center"
-              class="rounded-md px-3 py-1 font-medium text-slate-600 transition-colors data-[active]:bg-slate-900 data-[active]:text-white"
-            >
-              Center
-            </button>
-            <button
-              type="button"
-              data-align="right"
-              class="rounded-md px-3 py-1 font-medium text-slate-600 transition-colors data-[active]:bg-slate-900 data-[active]:text-white"
-            >
-              Right
-            </button>
-          </div>
-        </div>
-        <div class="docs-breakout-guide mb-4">
-          <div class="docs-breakout-guide-column">
-            <div class="mx-3 rounded-xl border border-dashed border-slate-300 bg-white/80 px-4 py-3 text-sm text-slate-600 sm:mx-4">
-              The dashed lines mark the content column the active card aligns to. Nearby slides
-              bleed past it to the screen edges.
-            </div>
-          </div>
-        </div>
-        <div class="docs-breakout-clip py-2 sm:py-3">
-          <div
-            id="breakout-bleed"
-            class="aero-slider aero-slider--breakout aero-slider--viewport-breakout-demo"
-          >
+          <div id="multi" class="aero-slider" style="--slides-per-view: 2.25; --slide-gap: 16px;">
             <div class="aero-slider__viewport relative">
-              <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="m15 18-6-6 6-6"/>
-                </svg>
-              </button>
-              <button type="button" class="aero-slider__nav--next" aria-label="Next slide">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="m9 18 6-6-6-6"/>
-                </svg>
-              </button>
+              <SliderNav />
               <div class="aero-slider__track">
-                <div class="rounded-2xl bg-linear-to-br from-slate-900 via-indigo-900 to-violet-700 text-white">
-                  <div class="flex min-h-full flex-col justify-end gap-2 p-5 sm:gap-3 sm:p-8">
-                    <span class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60 sm:text-xs sm:tracking-[0.2em]">Aligned</span>
-                    <span class="text-3xl font-bold sm:text-4xl">01</span>
-                    <span class="max-w-56 text-sm leading-snug text-white/75 sm:max-w-xs">The active card is still positioned from the main content column.</span>
-                  </div>
-                </div>
-                <div class="rounded-2xl bg-linear-to-br from-cyan-400 via-sky-400 to-blue-500 text-slate-950">
-                  <div class="flex min-h-full flex-col justify-end gap-2 p-5 sm:gap-3 sm:p-8">
-                    <span class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-900/50 sm:text-xs sm:tracking-[0.2em]">Bleed</span>
-                    <span class="text-3xl font-bold sm:text-4xl">02</span>
-                    <span class="max-w-56 text-sm leading-snug text-slate-900/65 sm:max-w-xs">The scroll area reaches the page edge, but slide sizing still keys off the content width.</span>
-                  </div>
-                </div>
-                <div class="rounded-2xl bg-linear-to-br from-lime-300 via-emerald-300 to-green-400 text-slate-950">
-                  <div class="flex min-h-full flex-col justify-end gap-2 p-5 sm:gap-3 sm:p-8">
-                    <span class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-900/50 sm:text-xs sm:tracking-[0.2em]">Viewport</span>
-                    <span class="text-3xl font-bold sm:text-4xl">03</span>
-                    <span class="max-w-56 text-sm leading-snug text-slate-900/65 sm:max-w-xs">That makes the next and previous slides feel like they continue off-screen.</span>
-                  </div>
-                </div>
-                <div class="rounded-2xl bg-linear-to-br from-amber-300 via-orange-300 to-rose-400 text-slate-950">
-                  <div class="flex min-h-full flex-col justify-end gap-2 p-5 sm:gap-3 sm:p-8">
-                    <span class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-900/50 sm:text-xs sm:tracking-[0.2em]">Host Layout</span>
-                    <span class="text-3xl font-bold sm:text-4xl">04</span>
-                    <span class="max-w-56 text-sm leading-snug text-slate-900/65 sm:max-w-xs">The site still owns the breakout wrapper and gutter math around the slider.</span>
-                  </div>
-                </div>
-                <div class="rounded-2xl bg-linear-to-br from-fuchsia-400 via-pink-400 to-rose-500 text-white">
-                  <div class="flex min-h-full flex-col justify-end gap-2 p-5 sm:gap-3 sm:p-8">
-                    <span class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60 sm:text-xs sm:tracking-[0.2em]">Edges</span>
-                    <span class="text-3xl font-bold sm:text-4xl">05</span>
-                    <span class="max-w-56 text-sm leading-snug text-white/75 sm:max-w-xs">The edge gutter is derived from the track width, so it stays scrollbar-correct on its own.</span>
-                  </div>
-                </div>
+                <Slides items={letters("ABCDEF")} />
               </div>
             </div>
-            <div class="aero-slider__pagination">
-              <span class="aero-slider__dot h-2.5 w-2.5 rounded-full bg-slate-300 transition-all"
-              ></span>
+            <Pagination />
+          </div>
+        </Entry>
+
+        <!-- Breakout / bleed -->
+        <Entry tag="02" title="Viewport Breakout">
+          <div class="copy">
+            <p>
+              Let slides overflow past the content column while the scroll track spans the full
+              viewport. The active card's left edge stays locked to the normal content column, and
+              the neighboring slides bleed off toward the screen edges.
+            </p>
+            <p>
+              Set the outer wrapper to full bleed, add the library's
+              <code>aero-slider--breakout</code>
+              class, and tie slide sizing to the content column with
+              <code>--aero-layout-width</code>. The library derives the edge gutter automatically,
+              so the first and last cards land on the column. This demo uses
+              <code>alignment: "left"</code>
+              for the Apple-style left-flush layout.
+            </p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="caption">Alignment</span>
+            <div id="breakout-align" class="segmented" role="group" aria-label="Breakout alignment">
+              <button type="button" data-align="left">Left</button>
+              <button type="button" data-align="center">Center</button>
+              <button type="button" data-align="right">Right</button>
             </div>
           </div>
-        </div>
-        <div class="mt-4 overflow-x-auto rounded-lg">
-          <Code
+          <div class="docs-breakout-guide">
+            <div class="docs-breakout-guide-column">
+              <p class="mx-3 rounded-lg border border-dashed border-line-strong px-4 py-3 text-sm text-muted sm:mx-4">
+                The dashed lines mark the content column the active card aligns to. Nearby slides
+                bleed past it to the screen edges.
+              </p>
+            </div>
+          </div>
+          <div class="docs-breakout-clip">
+            <div
+              id="breakout-bleed"
+              class="aero-slider aero-slider--breakout aero-slider--viewport-breakout-demo"
+            >
+              <div class="aero-slider__viewport relative">
+                <SliderNav />
+                <div class="aero-slider__track">
+                  <Slides items={breakoutSlides} />
+                </div>
+              </div>
+              <Pagination />
+            </div>
+          </div>
+          <CodeBlock
+            lang="css"
             code={`:root {
   --page-gutter: 1.5rem;
 }
@@ -778,153 +561,69 @@ body {
 }
 
 /* createSlider(el, { alignment: "left" }); */`}
-            lang="css"
-            class="!rounded-lg !p-4 text-sm"
           />
-        </div>
-      </div>
+        </Entry>
 
-      <!-- Alignment -->
-      <div>
-        <h3 class="mb-1 text-lg font-semibold text-slate-800">Alignment</h3>
-        <p class="mb-4 text-sm text-slate-600">
-          Use <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">alignment</code>
-          to snap the active slide to the left, center, or right side of the viewport. Center is
-          the default.
-        </p>
-        <div class="grid gap-6 lg:grid-cols-3">
-          <div class="min-w-0">
-            <p class="mb-2 text-xs font-medium text-slate-600">Left</p>
-            <div
-              id="alignment-left"
-              class="aero-slider"
-              data-aero-defer-visibility
-              data-aero-alignment="left"
-              style="--slides-per-view: 1.5; --slide-gap: 12px;"
-            >
-              <div class="aero-slider__viewport rounded-lg">
-                <div class="aero-slider__track">
-                  <div class="rounded-lg bg-linear-to-br from-slate-700 to-slate-900 text-white"><div class="flex items-center justify-center text-2xl font-bold">A</div></div>
-                  <div class="rounded-lg bg-linear-to-br from-indigo-500 to-purple-600 text-white"><div class="flex items-center justify-center text-2xl font-bold">B</div></div>
-                  <div class="rounded-lg bg-linear-to-br from-cyan-500 to-blue-600 text-white"><div class="flex items-center justify-center text-2xl font-bold">C</div></div>
-                  <div class="rounded-lg bg-linear-to-br from-emerald-500 to-teal-600 text-white"><div class="flex items-center justify-center text-2xl font-bold">D</div></div>
-                </div>
-              </div>
-            </div>
+        <!-- Alignment -->
+        <Entry tag="03" title="Alignment">
+          <div class="copy">
+            <p>
+              Use <code>alignment</code>
+              to snap the active slide to the left, center, or right side of the viewport. Center
+              is the default.
+            </p>
           </div>
-          <div class="min-w-0">
-            <p class="mb-2 text-xs font-medium text-slate-600">Center</p>
-            <div
-              id="alignment-center"
-              class="aero-slider"
-              data-aero-defer-visibility
-              data-aero-alignment="center"
-              style="--slides-per-view: 1.5; --slide-gap: 12px;"
-            >
-              <div class="aero-slider__viewport rounded-lg">
-                <div class="aero-slider__track">
-                  <div class="rounded-lg bg-linear-to-br from-slate-700 to-slate-900 text-white"><div class="flex items-center justify-center text-2xl font-bold">A</div></div>
-                  <div class="rounded-lg bg-linear-to-br from-indigo-500 to-purple-600 text-white"><div class="flex items-center justify-center text-2xl font-bold">B</div></div>
-                  <div class="rounded-lg bg-linear-to-br from-cyan-500 to-blue-600 text-white"><div class="flex items-center justify-center text-2xl font-bold">C</div></div>
-                  <div class="rounded-lg bg-linear-to-br from-emerald-500 to-teal-600 text-white"><div class="flex items-center justify-center text-2xl font-bold">D</div></div>
+          <div class="grid gap-6 lg:grid-cols-3">
+            {
+              alignments.map((alignment) => (
+                <div class="min-w-0">
+                  <p class="caption mb-2">{alignment}</p>
+                  <div
+                    id={`alignment-${alignment}`}
+                    class="aero-slider"
+                    data-aero-defer-visibility
+                    data-aero-alignment={alignment}
+                    style="--slides-per-view: 1.5; --slide-gap: 12px;"
+                  >
+                    <div class="aero-slider__viewport">
+                      <div class="aero-slider__track">
+                        <Slides items={letters("ABCD")} />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              ))
+            }
           </div>
-          <div class="min-w-0">
-            <p class="mb-2 text-xs font-medium text-slate-600">Right</p>
-            <div
-              id="alignment-right"
-              class="aero-slider"
-              data-aero-defer-visibility
-              data-aero-alignment="right"
-              style="--slides-per-view: 1.5; --slide-gap: 12px;"
-            >
-              <div class="aero-slider__viewport rounded-lg">
-                <div class="aero-slider__track">
-                  <div class="rounded-lg bg-linear-to-br from-slate-700 to-slate-900 text-white"><div class="flex items-center justify-center text-2xl font-bold">A</div></div>
-                  <div class="rounded-lg bg-linear-to-br from-indigo-500 to-purple-600 text-white"><div class="flex items-center justify-center text-2xl font-bold">B</div></div>
-                  <div class="rounded-lg bg-linear-to-br from-cyan-500 to-blue-600 text-white"><div class="flex items-center justify-center text-2xl font-bold">C</div></div>
-                  <div class="rounded-lg bg-linear-to-br from-emerald-500 to-teal-600 text-white"><div class="flex items-center justify-center text-2xl font-bold">D</div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="mt-4 overflow-x-auto rounded-lg">
-          <Code
+          <CodeBlock
+            lang="typescript"
             code={`createSlider(leftEl, { alignment: "left", loop: true });
 createSlider(centerEl, { alignment: "center", loop: true });
 createSlider(rightEl, { alignment: "right", loop: true });`}
-            lang="typescript"
-            class="!rounded-lg !p-4 text-sm"
           />
-        </div>
-      </div>
+        </Entry>
 
-      <!-- Responsive (media queries) -->
-      <div>
-        <h3 class="mb-1 text-lg font-semibold text-slate-800">Responsive with Media Queries</h3>
-        <p class="mb-4 text-sm text-slate-600">
-          Layout adapts to viewport: 1 slide on mobile, 2 on tablet, 3 on desktop. Resize the
-          window to see the slider re-read
-          <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs"
-            >--slides-per-view</code
-          >
-          from CSS.
-        </p>
-        <div id="responsive" class="aero-slider aero-slider--responsive">
-          <div class="aero-slider__viewport relative rounded-xl">
-            <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">
-              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="m15 18-6-6 6-6"/>
-              </svg>
-            </button>
-            <button type="button" class="aero-slider__nav--next" aria-label="Next slide">
-              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="m9 18 6-6-6-6"/>
-              </svg>
-            </button>
-            <div class="aero-slider__track">
-              <div class="rounded-lg bg-linear-to-br from-slate-600 to-slate-800 text-white">
-                <div class="flex flex-col items-center justify-center gap-1 p-6 text-center">
-                  <span class="text-2xl font-bold">1</span>
-                  <span class="text-xs opacity-75">Mobile</span>
-                </div>
-              </div>
-              <div class="rounded-lg bg-linear-to-br from-indigo-600 to-indigo-800 text-white">
-                <div class="flex flex-col items-center justify-center gap-1 p-6 text-center">
-                  <span class="text-2xl font-bold">2</span>
-                  <span class="text-xs opacity-75">Tablet</span>
-                </div>
-              </div>
-              <div class="rounded-lg bg-linear-to-br from-violet-600 to-violet-800 text-white">
-                <div class="flex flex-col items-center justify-center gap-1 p-6 text-center">
-                  <span class="text-2xl font-bold">3</span>
-                  <span class="text-xs opacity-75">Desktop</span>
-                </div>
-              </div>
-              <div class="rounded-lg bg-linear-to-br from-purple-600 to-purple-800 text-white">
-                <div class="flex flex-col items-center justify-center gap-1 p-6 text-center">
-                  <span class="text-2xl font-bold">4</span>
-                  <span class="text-xs opacity-75">Wide</span>
-                </div>
-              </div>
-              <div class="rounded-lg bg-linear-to-br from-fuchsia-600 to-fuchsia-800 text-white">
-                <div class="flex flex-col items-center justify-center gap-1 p-6 text-center">
-                  <span class="text-2xl font-bold">5</span>
-                  <span class="text-xs opacity-75">Extra</span>
-                </div>
+        <!-- Responsive (media queries) -->
+        <Entry tag="04" title="Responsive with Media Queries">
+          <div class="copy">
+            <p>
+              Layout adapts to viewport: 1 slide on mobile, 2 on tablet, 3 on desktop. Resize the
+              window to see the slider re-read
+              <code>--slides-per-view</code>
+              from CSS.
+            </p>
+          </div>
+          <div id="responsive" class="aero-slider aero-slider--responsive">
+            <div class="aero-slider__viewport relative">
+              <SliderNav />
+              <div class="aero-slider__track">
+                <Slides items={responsiveSlides} />
               </div>
             </div>
+            <Pagination />
           </div>
-          <div class="aero-slider__pagination">
-            <span class="aero-slider__dot h-2.5 w-2.5 rounded-full bg-slate-300 transition-all"
-            ></span>
-          </div>
-        </div>
-        <div class="mt-4 overflow-x-auto rounded-lg">
-          <Code
+          <CodeBlock
+            lang="css"
             code={`/* 1 slide on mobile, 2 on tablet, 3 on desktop */
 .aero-slider--responsive {
   --slides-per-view: 1;
@@ -942,161 +641,85 @@ createSlider(rightEl, { alignment: "right", loop: true });`}
     --slide-gap: 16px;
   }
 }`}
-            lang="css"
-            class="!rounded-lg !p-4 text-sm"
           />
-        </div>
-      </div>
+        </Entry>
 
-      <!-- Autoplay -->
-      <div>
-        <h3 class="mb-1 text-lg font-semibold text-slate-800">Autoplay + Loop</h3>
-        <p class="mb-4 text-sm text-slate-600">
-          Auto-advances every 3 seconds with infinite looping. The countdown restarts after any manual change. Pauses on hover, keyboard focus, press, drag, and hidden tabs, and stops whenever prefers-reduced-motion is on.
-        </p>
-        <div id="autoplay" class="aero-slider">
-          <div class="aero-slider__viewport relative rounded-2xl">
-            <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">
-              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="m15 18-6-6 6-6"/>
-              </svg>
-            </button>
-            <button type="button" class="aero-slider__nav--next" aria-label="Next slide">
-              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="m9 18 6-6-6-6"/>
-              </svg>
-            </button>
-            <div class="aero-slider__track">
-              <div class="bg-linear-to-br from-slate-700 to-slate-900 text-white">
-                <div class="flex flex-col items-center justify-center gap-1 p-8">
-                  <span class="text-4xl font-bold">🌙</span>
-                  <span class="text-sm font-medium opacity-75">Night</span>
-                </div>
-              </div>
-              <div class="bg-linear-to-br from-orange-400 to-red-500 text-white">
-                <div class="flex flex-col items-center justify-center gap-1 p-8">
-                  <span class="text-4xl font-bold">🌅</span>
-                  <span class="text-sm font-medium opacity-75">Sunset</span>
-                </div>
-              </div>
-              <div class="bg-linear-to-br from-sky-300 to-blue-500 text-white">
-                <div class="flex flex-col items-center justify-center gap-1 p-8">
-                  <span class="text-4xl font-bold">☀️</span>
-                  <span class="text-sm font-medium opacity-75">Day</span>
-                </div>
-              </div>
-              <div class="bg-linear-to-br from-amber-200 to-orange-400 text-white">
-                <div class="flex flex-col items-center justify-center gap-1 p-8">
-                  <span class="text-4xl font-bold">🌄</span>
-                  <span class="text-sm font-medium opacity-75">Dawn</span>
-                </div>
+        <!-- Autoplay -->
+        <Entry tag="05" title="Autoplay + Loop">
+          <div class="copy">
+            <p>
+              Auto-advances every 3 seconds with infinite looping. The countdown restarts after any
+              manual change. Pauses on hover, keyboard focus, press, drag, and hidden tabs, and
+              stops whenever prefers-reduced-motion is on.
+            </p>
+          </div>
+          <div id="autoplay" class="aero-slider" style="--slide-aspect: 21/9;">
+            <div class="aero-slider__viewport relative">
+              <SliderNav />
+              <div class="aero-slider__track">
+                <Slides items={autoplaySlides} />
               </div>
             </div>
+            <Pagination />
           </div>
-          <div class="aero-slider__pagination">
-            <span class="aero-slider__dot h-2.5 w-2.5 rounded-full bg-slate-300 transition-all"
-            ></span>
-          </div>
-        </div>
-      </div>
+        </Entry>
 
-      <!-- Thumbnail Sync -->
-      <div>
-        <h3 class="mb-1 text-lg font-semibold text-slate-800">Thumbnail Sync</h3>
-        <p class="mb-4 text-sm text-slate-600">
-          A main slider plus a thumbnail strip: clicking a thumbnail navigates the main slider,
-          and when you change slides (drag, arrows, etc.), the thumbnail strip scrolls to keep the
-          active thumb in view. Use the
-          <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">syncThumbnails()</code>
-          function — both sliders must have the same number of slides. If you want the active
-          thumb centered, set
-          <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">alignment: "center"</code>
-          on the thumbnail slider.
-        </p>
-        <div class="space-y-4">
-          <!-- Main slider -->
-          <div id="thumbnail-main" class="aero-slider" style="--slide-aspect: 16/9;">
-            <div class="aero-slider__viewport relative rounded-xl overflow-hidden">
-              <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="m15 18-6-6 6-6"/>
-                </svg>
-              </button>
-              <button type="button" class="aero-slider__nav--next" aria-label="Next slide">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="m9 18 6-6-6-6"/>
-                </svg>
-              </button>
-              <div class="aero-slider__track">
-                <div class="rounded-lg bg-linear-to-br from-indigo-500 to-purple-600 text-white">
-                  <div class="flex flex-col items-center justify-center gap-1 p-8 text-center">
-                    <span class="text-4xl font-bold">1</span>
-                    <span class="text-sm opacity-80">Main slide</span>
-                  </div>
+        <!-- Thumbnail Sync -->
+        <Entry tag="06" title="Thumbnail Sync">
+          <div class="copy">
+            <p>
+              A main slider plus a thumbnail strip: clicking a thumbnail navigates the main slider,
+              and when you change slides (drag, arrows, etc.), the thumbnail strip scrolls to keep
+              the active thumb in view. Use the
+              <code>syncThumbnails()</code>
+              function — both sliders must have the same number of slides. If you want the active
+              thumb centered, set
+              <code>alignment: "center"</code>
+              on the thumbnail slider.
+            </p>
+          </div>
+          <div class="max-w-3xl space-y-2">
+            <!-- Main slider -->
+            <div id="thumbnail-main" class="aero-slider" style="--slide-aspect: 16/9;">
+              <div class="aero-slider__viewport relative">
+                <SliderNav />
+                <div class="aero-slider__track">
+                  <Slides items={thumbnailMainSlides} />
                 </div>
-                <div class="rounded-lg bg-linear-to-br from-cyan-500 to-blue-600 text-white">
-                  <div class="flex flex-col items-center justify-center gap-1 p-8 text-center">
-                    <span class="text-4xl font-bold">2</span>
-                    <span class="text-sm opacity-80">Main slide</span>
-                  </div>
-                </div>
-                <div class="rounded-lg bg-linear-to-br from-emerald-500 to-teal-600 text-white">
-                  <div class="flex flex-col items-center justify-center gap-1 p-8 text-center">
-                    <span class="text-4xl font-bold">3</span>
-                    <span class="text-sm opacity-80">Main slide</span>
-                  </div>
-                </div>
-                <div class="rounded-lg bg-linear-to-br from-amber-500 to-orange-600 text-white">
-                  <div class="flex flex-col items-center justify-center gap-1 p-8 text-center">
-                    <span class="text-4xl font-bold">4</span>
-                    <span class="text-sm opacity-80">Main slide</span>
-                  </div>
+              </div>
+            </div>
+            <!-- Thumbnail strip -->
+            <div
+              id="thumbnail-thumbs"
+              class="aero-slider aero-slider--thumbnails"
+              style="--slide-aspect: 16/9; --slides-per-view: 4; --slide-gap: 8px;"
+            >
+              <div class="aero-slider__viewport">
+                <div class="aero-slider__track">
+                  <Slides items={4} />
                 </div>
               </div>
             </div>
           </div>
-          <!-- Thumbnail strip -->
-          <div
-            id="thumbnail-thumbs"
-            class="aero-slider rounded-lg border border-slate-200"
-            style="--slide-aspect: 16/9; --slides-per-view: 4; --slide-gap: 8px;"
-          >
-            <div class="aero-slider__viewport">
-              <div class="aero-slider__track">
-                <div class="rounded-md border-2 border-transparent bg-linear-to-br from-indigo-500 to-purple-600 text-white cursor-pointer">
-                  <div class="flex items-center justify-center text-sm font-bold py-3">1</div>
-                </div>
-                <div class="rounded-md border-2 border-transparent bg-linear-to-br from-cyan-500 to-blue-600 text-white cursor-pointer">
-                  <div class="flex items-center justify-center text-sm font-bold py-3">2</div>
-                </div>
-                <div class="rounded-md border-2 border-transparent bg-linear-to-br from-emerald-500 to-teal-600 text-white cursor-pointer">
-                  <div class="flex items-center justify-center text-sm font-bold py-3">3</div>
-                </div>
-                <div class="rounded-md border-2 border-transparent bg-linear-to-br from-amber-500 to-orange-600 text-white cursor-pointer">
-                  <div class="flex items-center justify-center text-sm font-bold py-3">4</div>
-                </div>
-              </div>
-            </div>
+          <div class="copy">
+            <h4 class="text-sm font-medium text-ink">How it works</h4>
+            <p>
+              Create two sliders: the main (primary) slider and a thumbnail slider with the same
+              number of slides. Call
+              <code>syncThumbnails(primary, thumbnail)</code>
+              to wire them up. The function adds click handlers to thumbnails, listens to
+              <code>slideChange</code> events on the primary, scrolls the thumbnail strip to keep the
+              active one in view, and adds
+              <code>aero-slider__thumb--active</code>
+              to the active thumbnail. It returns a teardown function — call it before destroying
+              the sliders.
+            </p>
           </div>
-        </div>
-        <div class="mt-4 space-y-4">
-          <p class="text-sm font-medium text-slate-700">How it works</p>
-          <p class="text-sm text-slate-600">
-            Create two sliders: the main (primary) slider and a thumbnail slider with the same
-            number of slides. Call
-            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">syncThumbnails(primary, thumbnail)</code>
-            to wire them up. The function adds click handlers to thumbnails, listens to
-            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">slideChange</code> events
-            on the primary, scrolls the thumbnail strip to keep the active one in view, and adds
-            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">aero-slider__thumb--active</code>
-            to the active thumbnail. It returns a teardown function — call it before destroying the
-            sliders.
-          </p>
-          <div class="grid gap-4 sm:grid-cols-2">
-            <div class="overflow-x-auto rounded-lg">
-              <p class="mb-2 text-xs font-medium text-slate-600">HTML — main slider</p>
-              <Code
-                code={`<div id="main-slider" class="aero-slider">
+          <div class="grid gap-5 sm:grid-cols-2">
+            <CodeBlock
+              label="HTML — main slider"
+              lang="html"
+              code={`<div id="main-slider" class="aero-slider">
   <div class="aero-slider__viewport relative">
     <button type="button" class="aero-slider__nav--prev" aria-label="Previous">…</button>
     <button type="button" class="aero-slider__nav--next" aria-label="Next">…</button>
@@ -1107,14 +730,11 @@ createSlider(rightEl, { alignment: "right", loop: true });`}
     </div>
   </div>
 </div>`}
-                lang="html"
-                class="!rounded-lg !p-4 text-sm"
-              />
-            </div>
-            <div class="overflow-x-auto rounded-lg">
-              <p class="mb-2 text-xs font-medium text-slate-600">HTML — thumbnail slider</p>
-              <Code
-                code={`<div id="thumb-slider" class="aero-slider" style="--slides-per-view: 3; --slide-gap: 8px;">
+            />
+            <CodeBlock
+              label="HTML — thumbnail slider"
+              lang="html"
+              code={`<div id="thumb-slider" class="aero-slider" style="--slides-per-view: 3; --slide-gap: 8px;">
   <div class="aero-slider__viewport">
     <div class="aero-slider__track">
       <div>Thumb 1</div>
@@ -1123,15 +743,12 @@ createSlider(rightEl, { alignment: "right", loop: true });`}
     </div>
   </div>
 </div>`}
-                lang="html"
-                class="!rounded-lg !p-4 text-sm"
-              />
-            </div>
+            />
           </div>
-          <div class="overflow-x-auto rounded-lg">
-            <p class="mb-2 text-xs font-medium text-slate-600">JavaScript</p>
-            <Code
-              code={`import { createSlider, syncThumbnails } from "aero-slider";
+          <CodeBlock
+            label="JavaScript"
+            lang="typescript"
+            code={`import { createSlider, syncThumbnails } from "aero-slider";
 
 const main = createSlider(document.getElementById("main-slider"));
 const thumbs = createSlider(document.getElementById("thumb-slider"), {
@@ -1143,102 +760,77 @@ const teardown = syncThumbnails(main, thumbs);
 // teardown();
 // main.destroy();
 // thumbs.destroy();`}
-              lang="typescript"
-              class="!rounded-lg !p-4 text-sm"
-            />
-          </div>
-        </div>
-      </div>
+          />
+        </Entry>
 
-      <!-- Direction (RTL + Vertical) -->
-      <div>
-        <h3 class="mb-1 text-lg font-semibold text-slate-800">Direction</h3>
-        <p class="mb-4 text-sm text-slate-600">
-          Set <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">direction</code>
-          to <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">"rtl"</code> for
-          right-to-left or
-          <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">"ttb"</code> for
-          vertical (top-to-bottom). Keyboard arrows, drag axis, and scroll axis all adapt
-          automatically.
-        </p>
-        <div class="grid gap-6 sm:grid-cols-2">
-          <div>
-            <p class="mb-2 text-xs font-medium text-slate-600">RTL</p>
-            <div id="direction-rtl" class="aero-slider" style="--slides-per-view: 1;">
-              <div class="aero-slider__viewport relative rounded-lg">
-                <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-                </button>
-                <button type="button" class="aero-slider__nav--next" aria-label="Next slide">
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-                </button>
-                <div class="aero-slider__track">
-                  <div class="rounded-lg bg-linear-to-br from-indigo-500 to-purple-600 text-white"><div class="flex items-center justify-center text-3xl font-bold">א</div></div>
-                  <div class="rounded-lg bg-linear-to-br from-cyan-500 to-blue-600 text-white"><div class="flex items-center justify-center text-3xl font-bold">ב</div></div>
-                  <div class="rounded-lg bg-linear-to-br from-emerald-500 to-teal-600 text-white"><div class="flex items-center justify-center text-3xl font-bold">ג</div></div>
-                  <div class="rounded-lg bg-linear-to-br from-amber-500 to-orange-600 text-white"><div class="flex items-center justify-center text-3xl font-bold">ד</div></div>
-                </div>
-              </div>
-              <div class="aero-slider__pagination"><span class="aero-slider__dot h-2.5 w-2.5 rounded-full bg-slate-300 transition-all"></span></div>
-            </div>
+        <!-- Direction (RTL + Vertical) -->
+        <Entry tag="07" title="Direction">
+          <div class="copy">
+            <p>
+              Set <code>direction</code>
+              to <code>"rtl"</code> for right-to-left or
+              <code>"ttb"</code> for vertical (top-to-bottom). Keyboard arrows, drag axis, and scroll
+              axis all adapt automatically.
+            </p>
           </div>
-          <div>
-            <p class="mb-2 text-xs font-medium text-slate-600">Vertical (ttb)</p>
-            <div id="direction-vertical" class="aero-slider" style="--slides-per-view: 1;">
-              <div class="aero-slider__viewport relative rounded-lg">
-                <div class="aero-slider__track">
-                  <div class="rounded-lg bg-linear-to-br from-rose-500 to-pink-600 text-white"><div class="flex items-center justify-center text-3xl font-bold">1</div></div>
-                  <div class="rounded-lg bg-linear-to-br from-violet-500 to-purple-600 text-white"><div class="flex items-center justify-center text-3xl font-bold">2</div></div>
-                  <div class="rounded-lg bg-linear-to-br from-sky-500 to-blue-600 text-white"><div class="flex items-center justify-center text-3xl font-bold">3</div></div>
+          <div class="grid gap-6 sm:grid-cols-2">
+            <div class="min-w-0">
+              <p class="caption mb-2">RTL</p>
+              <div id="direction-rtl" class="aero-slider" style="--slides-per-view: 1;">
+                <div class="aero-slider__viewport relative">
+                  <SliderNav />
+                  <div class="aero-slider__track">
+                    <Slides items={letters("אבגד")} />
+                  </div>
+                </div>
+                <Pagination />
+              </div>
+            </div>
+            <div class="min-w-0">
+              <p class="caption mb-2">Vertical (ttb)</p>
+              <div id="direction-vertical" class="aero-slider" style="--slides-per-view: 1;">
+                <div class="aero-slider__viewport relative">
+                  <div class="aero-slider__track">
+                    <Slides items={3} />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <div class="mt-4 overflow-x-auto rounded-lg">
-          <Code
+          <CodeBlock
+            lang="typescript"
             code={`// RTL
 createSlider(rtlEl, { direction: "rtl" });
 
 // Vertical
 createSlider(verticalEl, { direction: "ttb" });`}
-            lang="typescript"
-            class="!rounded-lg !p-4 text-sm"
           />
-        </div>
-      </div>
+        </Entry>
 
-      <!-- Dynamic Slides -->
-      <div>
-        <h3 class="mb-1 text-lg font-semibold text-slate-800">Dynamic Slides</h3>
-        <p class="mb-4 text-sm text-slate-600">
-          Use <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">add()</code> and
-          <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">remove()</code> to
-          dynamically insert or remove slides. The slider rebuilds pagination, navigation, and
-          loop clones automatically.
-        </p>
-        <div class="mb-3 flex gap-2">
-          <button id="dynamic-add" type="button" class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50">Add slide</button>
-          <button id="dynamic-remove" type="button" class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50">Remove last</button>
-        </div>
-        <div id="dynamic-slides" class="aero-slider" style="--slides-per-view: 2.25; --slide-gap: 12px;">
-          <div class="aero-slider__viewport relative rounded-lg">
-            <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">
-              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-            </button>
-            <button type="button" class="aero-slider__nav--next" aria-label="Next slide">
-              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-            </button>
-            <div class="aero-slider__track">
-              <div class="rounded-lg bg-slate-700 text-white"><div class="flex items-center justify-center text-2xl font-bold">1</div></div>
-              <div class="rounded-lg bg-slate-600 text-white"><div class="flex items-center justify-center text-2xl font-bold">2</div></div>
-              <div class="rounded-lg bg-slate-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">3</div></div>
-            </div>
+        <!-- Dynamic Slides -->
+        <Entry tag="08" title="Dynamic Slides">
+          <div class="copy">
+            <p>
+              Use <code>add()</code> and
+              <code>remove()</code> to dynamically insert or remove slides. The slider rebuilds
+              pagination, navigation, and loop clones automatically.
+            </p>
           </div>
-          <div class="aero-slider__pagination"><span class="aero-slider__dot h-2.5 w-2.5 rounded-full bg-slate-300 transition-all"></span></div>
-        </div>
-        <div class="mt-4 overflow-x-auto rounded-lg">
-          <Code
+          <div class="flex gap-2">
+            <button id="dynamic-add" type="button" class="btn">Add slide</button>
+            <button id="dynamic-remove" type="button" class="btn">Remove last</button>
+          </div>
+          <div id="dynamic-slides" class="aero-slider" style="--slides-per-view: 2.25; --slide-gap: 12px;">
+            <div class="aero-slider__viewport relative">
+              <SliderNav />
+              <div class="aero-slider__track">
+                <Slides items={3} />
+              </div>
+            </div>
+            <Pagination />
+          </div>
+          <CodeBlock
+            lang="typescript"
             code={`const slider = createSlider(el);
 
 // Add a new slide at the end
@@ -1254,177 +846,125 @@ slider.remove(slider.slideCount - 1);
 
 // Remove multiple slides
 slider.remove([0, 1]);`}
-            lang="typescript"
-            class="!rounded-lg !p-4 text-sm"
           />
-        </div>
-      </div>
+        </Entry>
 
-      <!-- perMove -->
-      <div>
-        <h3 class="mb-1 text-lg font-semibold text-slate-800">Per-Move</h3>
-        <p class="mb-4 text-sm text-slate-600">
-          Set <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">perMove</code>
-          to control how many slides advance per arrow/keyboard press. Here, 3 slides are visible
-          but each press moves by 2, with looping enabled.
-        </p>
-        <div id="per-move" class="aero-slider" style="--slides-per-view: 3; --slide-gap: 12px;">
-          <div class="aero-slider__viewport relative rounded-lg">
-            <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">
-              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-            </button>
-            <button type="button" class="aero-slider__nav--next" aria-label="Next slide">
-              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-            </button>
-            <div class="aero-slider__track">
-              <div class="rounded-lg bg-linear-to-br from-violet-400 to-fuchsia-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">1</div></div>
-              <div class="rounded-lg bg-linear-to-br from-sky-400 to-indigo-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">2</div></div>
-              <div class="rounded-lg bg-linear-to-br from-lime-400 to-green-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">3</div></div>
-              <div class="rounded-lg bg-linear-to-br from-yellow-400 to-amber-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">4</div></div>
-              <div class="rounded-lg bg-linear-to-br from-red-400 to-rose-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">5</div></div>
-              <div class="rounded-lg bg-linear-to-br from-teal-400 to-cyan-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">6</div></div>
-              <div class="rounded-lg bg-linear-to-br from-indigo-400 to-purple-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">7</div></div>
-              <div class="rounded-lg bg-linear-to-br from-blue-400 to-indigo-600 text-white"><div class="flex items-center justify-center text-2xl font-bold">8</div></div>
-              <div class="rounded-lg bg-linear-to-br from-green-400 to-teal-600 text-white"><div class="flex items-center justify-center text-2xl font-bold">9</div></div>
-              <div class="rounded-lg bg-linear-to-br from-orange-400 to-red-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">10</div></div>
-              <div class="rounded-lg bg-linear-to-br from-rose-400 to-pink-600 text-white"><div class="flex items-center justify-center text-2xl font-bold">11</div></div>
-              <div class="rounded-lg bg-linear-to-br from-cyan-400 to-blue-600 text-white"><div class="flex items-center justify-center text-2xl font-bold">12</div></div>
-            </div>
+        <!-- perMove -->
+        <Entry tag="09" title="Per-Move">
+          <div class="copy">
+            <p>
+              Set <code>perMove</code>
+              to control how many slides advance per arrow/keyboard press. Here, 3 slides are
+              visible but each press moves by 2, with looping enabled.
+            </p>
           </div>
-          <div class="aero-slider__pagination"><span class="aero-slider__dot h-2.5 w-2.5 rounded-full bg-slate-300 transition-all"></span></div>
-        </div>
-        <div class="mt-4 overflow-x-auto rounded-lg">
-          <Code
+          <div id="per-move" class="aero-slider" style="--slides-per-view: 3; --slide-gap: 12px;">
+            <div class="aero-slider__viewport relative">
+              <SliderNav />
+              <div class="aero-slider__track">
+                <Slides items={12} />
+              </div>
+            </div>
+            <Pagination />
+          </div>
+          <CodeBlock
+            lang="typescript"
             code={`createSlider(el, { perMove: 2, loop: true });
 // With CSS: --slides-per-view: 3; --slide-gap: 12px;`}
-            lang="typescript"
-            class="!rounded-lg !p-4 text-sm"
           />
-        </div>
-      </div>
+        </Entry>
 
-      <!-- Continuous autoplay -->
-      <div>
-        <h3 class="mb-1 text-lg font-semibold text-slate-800">Continuous Autoplay</h3>
-        <p class="mb-4 text-sm text-slate-600">
-          <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">autoplay: "continuous"</code> drifts the track like a ticker at
-          <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">autoplaySpeed</code> pixels per second, looping seamlessly. It's a single CSS
-          animation with no per-frame JavaScript, so browsers can run it off the main thread. It keeps drifting under the
-          pointer, holds while the slider is pressed or keyboard focus is inside, and
-          <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">pause()</code> / <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">resume()</code> apply on top. Wheel and trackpad
-          scrolling add to the drift. Under <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">prefers-reduced-motion</code> the track stays
-          still. <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">currentIndex</code> catches up whenever the drift pauses.
-        </p>
-        <div id="continuous" class="aero-slider" style="--slides-per-view: 4; --slide-gap: 12px;">
-          <div class="aero-slider__viewport relative rounded-lg">
-            <div class="aero-slider__track">
-              <div class="rounded-lg bg-linear-to-br from-violet-400 to-fuchsia-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">1</div></div>
-              <div class="rounded-lg bg-linear-to-br from-sky-400 to-indigo-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">2</div></div>
-              <div class="rounded-lg bg-linear-to-br from-lime-400 to-green-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">3</div></div>
-              <div class="rounded-lg bg-linear-to-br from-yellow-400 to-amber-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">4</div></div>
-              <div class="rounded-lg bg-linear-to-br from-red-400 to-rose-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">5</div></div>
-              <div class="rounded-lg bg-linear-to-br from-teal-400 to-cyan-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">6</div></div>
-              <div class="rounded-lg bg-linear-to-br from-indigo-400 to-purple-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">7</div></div>
-              <div class="rounded-lg bg-linear-to-br from-orange-400 to-red-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">8</div></div>
+        <!-- Continuous autoplay -->
+        <Entry tag="10" title="Continuous Autoplay">
+          <div class="copy">
+            <p>
+              <code>autoplay: "continuous"</code> drifts the track like a ticker at
+              <code>autoplaySpeed</code> pixels per second, looping seamlessly. It's a single CSS
+              animation with no per-frame JavaScript, so browsers can run it off the main thread.
+              It keeps drifting under the pointer, holds while the slider is pressed or keyboard
+              focus is inside, and
+              <code>pause()</code> / <code>resume()</code> apply on top. Wheel and trackpad scrolling
+              add to the drift. Under <code>prefers-reduced-motion</code> the track stays still.
+              <code>currentIndex</code> catches up whenever the drift pauses.
+            </p>
+          </div>
+          <div id="continuous" class="aero-slider" style="--slides-per-view: 4; --slide-gap: 12px;">
+            <div class="aero-slider__viewport relative">
+              <div class="aero-slider__track">
+                <Slides items={8} />
+              </div>
             </div>
           </div>
-        </div>
-        <div class="mt-4 overflow-x-auto rounded-lg">
-          <Code
+          <CodeBlock
+            lang="typescript"
             code={`createSlider(el, { autoplay: "continuous", autoplaySpeed: 36, draggable: false });
 // With CSS: --slides-per-view: 4; --slide-gap: 12px;`}
-            lang="typescript"
-            class="!rounded-lg !p-4 text-sm"
           />
-        </div>
-      </div>
+        </Entry>
 
-      <!-- Snap modes -->
-      <div>
-        <h3 class="mb-1 text-lg font-semibold text-slate-800">Snap Modes</h3>
-        <p class="mb-4 text-sm text-slate-600">
-          By default the track uses native CSS scroll snapping. With
-          <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">snap: "settle"</code> it scrolls freely under a drag, swipe or trackpad, then
-          eases onto the nearest slide once scrolling stops, using <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">scrollDuration</code>
-          and <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">scrollEasing</code>. On a loop it eases onto whichever slide is nearest on
-          screen. Try a slow trackpad scroll on the first slider.
-        </p>
-        <div id="snap-settle" class="aero-slider" style="--slides-per-view: 3; --slide-gap: 12px;">
-          <div class="aero-slider__viewport relative rounded-lg">
-            <div class="aero-slider__track">
-              <div class="rounded-lg bg-linear-to-br from-violet-400 to-fuchsia-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">1</div></div>
-              <div class="rounded-lg bg-linear-to-br from-sky-400 to-indigo-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">2</div></div>
-              <div class="rounded-lg bg-linear-to-br from-lime-400 to-green-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">3</div></div>
-              <div class="rounded-lg bg-linear-to-br from-yellow-400 to-amber-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">4</div></div>
-              <div class="rounded-lg bg-linear-to-br from-red-400 to-rose-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">5</div></div>
-              <div class="rounded-lg bg-linear-to-br from-teal-400 to-cyan-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">6</div></div>
-              <div class="rounded-lg bg-linear-to-br from-indigo-400 to-purple-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">7</div></div>
-              <div class="rounded-lg bg-linear-to-br from-orange-400 to-red-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">8</div></div>
+        <!-- Snap modes -->
+        <Entry tag="11" title="Snap Modes">
+          <div class="copy">
+            <p>
+              By default the track uses native CSS scroll snapping. With
+              <code>snap: "settle"</code> it scrolls freely under a drag, swipe or trackpad, then
+              eases onto the nearest slide once scrolling stops, using <code>scrollDuration</code>
+              and <code>scrollEasing</code>. On a loop it eases onto whichever slide is nearest on
+              screen. Try a slow trackpad scroll on the first slider.
+            </p>
+          </div>
+          <div id="snap-settle" class="aero-slider" style="--slides-per-view: 3; --slide-gap: 12px;">
+            <div class="aero-slider__viewport relative">
+              <div class="aero-slider__track">
+                <Slides items={8} />
+              </div>
             </div>
           </div>
-        </div>
-        <p class="mt-6 mb-4 text-sm text-slate-600">
-          With <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">snap: "none"</code> the track rests wherever it stops, and a mouse drag
-          coasts on its release speed.
-        </p>
-        <div id="snap-none" class="aero-slider" style="--slides-per-view: 3; --slide-gap: 12px;">
-          <div class="aero-slider__viewport relative rounded-lg">
-            <div class="aero-slider__track">
-              <div class="rounded-lg bg-linear-to-br from-violet-400 to-fuchsia-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">1</div></div>
-              <div class="rounded-lg bg-linear-to-br from-sky-400 to-indigo-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">2</div></div>
-              <div class="rounded-lg bg-linear-to-br from-lime-400 to-green-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">3</div></div>
-              <div class="rounded-lg bg-linear-to-br from-yellow-400 to-amber-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">4</div></div>
-              <div class="rounded-lg bg-linear-to-br from-red-400 to-rose-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">5</div></div>
-              <div class="rounded-lg bg-linear-to-br from-teal-400 to-cyan-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">6</div></div>
-              <div class="rounded-lg bg-linear-to-br from-indigo-400 to-purple-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">7</div></div>
-              <div class="rounded-lg bg-linear-to-br from-orange-400 to-red-500 text-white"><div class="flex items-center justify-center text-2xl font-bold">8</div></div>
+          <div class="copy">
+            <p>
+              With <code>snap: "none"</code> the track rests wherever it stops, and a mouse drag
+              coasts on its release speed.
+            </p>
+          </div>
+          <div id="snap-none" class="aero-slider" style="--slides-per-view: 3; --slide-gap: 12px;">
+            <div class="aero-slider__viewport relative">
+              <div class="aero-slider__track">
+                <Slides items={8} />
+              </div>
             </div>
           </div>
-        </div>
-        <div class="mt-4 overflow-x-auto rounded-lg">
-          <Code
+          <CodeBlock
+            lang="typescript"
             code={`createSlider(el, { loop: true, snap: "settle", scrollDuration: 550 });
 createSlider(el, { snap: "none" });
 // With CSS: --slides-per-view: 3; --slide-gap: 12px;`}
-            lang="typescript"
-            class="!rounded-lg !p-4 text-sm"
           />
-        </div>
-      </div>
+        </Entry>
 
-      <!-- Pagination & Navigation (minimal requirements) -->
-      <div id="example-pagination-nav">
-        <h3 class="mb-1 text-lg font-semibold text-slate-800">Pagination & Navigation</h3>
-        <div
-          class="mb-6 rounded-lg border-l-4 border-amber-400 bg-amber-50 px-3 py-2.5 text-sm text-slate-700"
-        >
-          <p>
+        <!-- Pagination & Navigation (minimal requirements) -->
+        <Entry tag="12" title="Pagination & Navigation" id="example-pagination-nav">
+          <p class="note">
             <strong>Pagination and navigation are not configured through JavaScript.</strong> You
             create the DOM elements yourself. If they exist inside the container, the slider
             discovers and wires them automatically.
           </p>
-        </div>
-        <div class="space-y-8">
+
           <!-- Pagination example -->
-          <div
-            class="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 lg:flex-row lg:items-start lg:gap-6"
-          >
-            <div class="min-w-0 flex-1 lg:flex-[1_1_0%]">
-              <h4 class="mb-2 text-sm font-semibold text-slate-700">Pagination</h4>
-              <p class="mb-4 text-sm text-slate-600">
-                A container with class
-                <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs"
-                  >aero-slider__pagination</code
-                >
-                and <strong>one</strong> dot template with class
-                <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs"
-                  >aero-slider__dot</code
-                >. The slider clones the dot for each slide and manages active state via
-                <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs"
-                  >aero-slider__dot--active</code
-                >.
-              </p>
-              <Code
+          <div class="grid gap-6 rounded-2xl border border-line bg-surface p-5 lg:grid-cols-2">
+            <div class="min-w-0 space-y-4">
+              <h4 class="text-sm font-medium text-ink">Pagination</h4>
+              <div class="copy">
+                <p>
+                  A container with class
+                  <code>aero-slider__pagination</code>
+                  and <strong>one</strong> dot template with class
+                  <code>aero-slider__dot</code>. The slider clones the dot for each slide and
+                  manages active state via
+                  <code>aero-slider__dot--active</code>.
+                </p>
+              </div>
+              <CodeBlock
+                lang="html"
                 code={`<div class="aero-slider">
   <div class="aero-slider__viewport relative">
     <div class="aero-slider__track">
@@ -1437,54 +977,41 @@ createSlider(el, { snap: "none" });
     <span class="aero-slider__dot"></span>
   </div>
 </div>`}
-                lang="html"
-                class="!rounded-lg !p-4 text-sm overflow-x-auto"
               />
             </div>
-            <div class="min-w-0 flex-1 lg:flex-[1_1_0%]">
-              <div id="pagination-minimal" class="aero-slider w-full min-w-0" style="--slides-per-view: 1;">
-                <div class="aero-slider__viewport relative rounded-lg overflow-hidden">
+            <div class="min-w-0">
+              <div id="pagination-minimal" class="aero-slider" style="--slides-per-view: 1;">
+                <div class="aero-slider__viewport relative">
                   <div class="aero-slider__track">
-                    <div class="rounded-lg bg-slate-200 p-4 text-center text-sm font-bold">1</div>
-                    <div class="rounded-lg bg-slate-200 p-4 text-center text-sm font-bold">2</div>
-                    <div class="rounded-lg bg-slate-200 p-4 text-center text-sm font-bold">3</div>
+                    <Slides items={3} />
                   </div>
                 </div>
-                <div class="aero-slider__pagination flex justify-center gap-2 mt-2">
-                  <span class="aero-slider__dot h-2.5 w-2.5 rounded-full bg-slate-300 transition-all"></span>
-                </div>
+                <Pagination />
               </div>
             </div>
           </div>
+
           <!-- Navigation example -->
-          <div
-            class="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 lg:flex-row lg:items-start lg:gap-6"
-          >
-            <div class="min-w-0 flex-1 lg:flex-[1_1_0%]">
-              <h4 class="mb-2 text-sm font-semibold text-slate-700">Navigation</h4>
-              <p class="mb-4 text-sm text-slate-600">
-                Two buttons inside the viewport (before the track): one with
-                <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs"
-                  >aero-slider__nav--prev</code
-                >
-                and one with
-                <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs"
-                  >aero-slider__nav--next</code
-                >. Include
-                <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">aria-label</code>
-                for accessibility. The slider enables/disables them based on loop mode and current
-                index.
-              </p>
-              <div
-                class="mb-4 rounded-lg border-l-4 border-sky-400 bg-sky-50 px-3 py-2.5 text-sm text-slate-700"
-              >
+          <div class="grid gap-6 rounded-2xl border border-line bg-surface p-5 lg:grid-cols-2">
+            <div class="min-w-0 space-y-4">
+              <h4 class="text-sm font-medium text-ink">Navigation</h4>
+              <div class="copy">
                 <p>
-                  Placing the buttons before the track in the DOM improves keyboard
-                  navigation—users reach the prev/next controls before tabbing through slide
-                  content.
+                  Two buttons inside the viewport (before the track): one with
+                  <code>aero-slider__nav--prev</code>
+                  and one with
+                  <code>aero-slider__nav--next</code>. Include
+                  <code>aria-label</code>
+                  for accessibility. The slider enables/disables them based on loop mode and
+                  current index.
                 </p>
               </div>
-              <Code
+              <p class="note">
+                Placing the buttons before the track in the DOM improves keyboard
+                navigation—users reach the prev/next controls before tabbing through slide content.
+              </p>
+              <CodeBlock
+                lang="html"
                 code={`<div class="aero-slider">
   <div class="aero-slider__viewport relative">
     <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">‹</button>
@@ -1496,456 +1023,191 @@ createSlider(el, { snap: "none" });
     </div>
   </div>
 </div>`}
-                lang="html"
-                class="!rounded-lg !p-4 text-sm overflow-x-auto"
               />
             </div>
-            <div class="min-w-0 flex-1 lg:flex-[1_1_0%]">
-              <div id="nav-minimal" class="aero-slider w-full min-w-0" style="--slides-per-view: 1;">
-                <div class="aero-slider__viewport relative rounded-lg overflow-hidden">
-                  <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">
-                    ‹
-                  </button>
-                  <button type="button" class="aero-slider__nav--next" aria-label="Next slide">
-                    ›
-                  </button>
+            <div class="min-w-0">
+              <div id="nav-minimal" class="aero-slider" style="--slides-per-view: 1;">
+                <div class="aero-slider__viewport relative">
+                  <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">‹</button>
+                  <button type="button" class="aero-slider__nav--next" aria-label="Next slide">›</button>
                   <div class="aero-slider__track">
-                    <div class="rounded-lg bg-slate-200 p-4 text-center text-sm font-bold">1</div>
-                    <div class="rounded-lg bg-slate-200 p-4 text-center text-sm font-bold">2</div>
-                    <div class="rounded-lg bg-slate-200 p-4 text-center text-sm font-bold">3</div>
+                    <Slides items={3} />
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </Entry>
       </div>
     </section>
 
     <!-- ════════════════════════════════════════════════════════════
          API REFERENCE
          ════════════════════════════════════════════════════════════ -->
-    <section id="api" class="mb-12 sm:mb-20">
-      <h2 class="mb-6 text-2xl font-bold text-slate-900">API Reference</h2>
+    <section id="api" class="container-page py-12 sm:py-16">
+      <h2 class="mb-10 text-3xl font-medium tracking-[-0.03em] sm:mb-14 sm:text-4xl">API Reference</h2>
 
-      <div class="space-y-8">
+      <div class="space-y-14 sm:space-y-16">
         <!-- createSlider -->
-        <div class="rounded-xl border border-slate-200 bg-white p-6">
-          <h3 class="font-mono text-base font-semibold text-slate-900">
-            createSlider(element, config?)
-          </h3>
-          <p class="mt-2 text-sm text-slate-600">
-            Creates a new slider instance on the given container element. Pagination and navigation
-            are configured via DOM structure, not JavaScript—see the
-            <a href="#example-pagination-nav" class="font-medium text-slate-700 underline hover:text-slate-900"
-              >Pagination &amp; Navigation example</a
-            >
-            for required HTML.
-          </p>
-          <div class="mt-4 overflow-x-auto rounded-lg">
-            <Code
-              code={`import { createSlider } from "aero-slider";
+        <Entry tag="Function" title="createSlider(element, config?)" mono>
+          <div class="copy">
+            <p>
+              Creates a new slider instance on the given container element. Pagination and
+              navigation are configured via DOM structure, not JavaScript—see the
+              <a href="#example-pagination-nav">Pagination &amp; Navigation example</a>
+              for required HTML.
+            </p>
+          </div>
+          <CodeBlock
+            lang="typescript"
+            code={`import { createSlider } from "aero-slider";
 import "aero-slider/slider.css";
 
-const slider = createSlider(document.getElementById("my-slider"), { 
+const slider = createSlider(document.getElementById("my-slider"), {
   loop: true,
   draggable: true,
 });`}
-              lang="typescript"
-              class="!rounded-lg !p-4 text-sm"
-            />
+          />
+          <div class="copy">
+            <p>
+              <strong>Without a bundler:</strong> Use the global script — see
+              <a href="#aeroslider-global">window.AeroSlider</a>.
+            </p>
           </div>
-          <p class="mt-4 text-sm text-slate-600">
-            <strong>Without a bundler:</strong> Use the global script — see
-            <a href="#aeroslider-global" class="font-medium text-slate-700 underline hover:text-slate-900"
-              >window.AeroSlider</a
-            >.
-          </p>
-        </div>
+        </Entry>
 
         <!-- Global script (window.AeroSlider) -->
-        <div class="rounded-xl border border-slate-200 bg-white p-6" id="aeroslider-global">
-          <h3 class="font-mono text-base font-semibold text-slate-900">
-            window.AeroSlider (global script)
-          </h3>
-          <p class="mt-2 text-sm text-slate-600">
-            When using the standalone script (no bundler), the library attaches an
-            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">AeroSlider</code>
-            object to <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">window</code>
-            with two methods: <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">createSlider</code> and
-            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">syncThumbnails</code>.
-            Include the CSS and JS files, then call <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">AeroSlider.createSlider()</code> and optionally
-            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">AeroSlider.syncThumbnails()</code>.
-          </p>
-          <p class="mt-3 text-sm text-slate-600">
-            Use <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">aero-slider.min.js</code> with
-            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">type="module"</code>
-            from <a href="https://unpkg.com/aero-slider/dist/" target="_blank" rel="noopener noreferrer" class="font-medium text-slate-700 underline hover:text-slate-900">unpkg</a>
-            or the <a href="https://github.com/Negative-Space-Dev/aero-slider/releases" target="_blank" rel="noopener noreferrer" class="font-medium text-slate-700 underline hover:text-slate-900">releases</a> page.
-          </p>
-          <div class="mt-4 overflow-x-auto rounded-lg">
-            <Code
-              code={`<link rel="stylesheet" href="https://unpkg.com/aero-slider/dist/aero-slider.min.css" />
+        <Entry tag="Global" title="window.AeroSlider (global script)" mono id="aeroslider-global">
+          <div class="copy">
+            <p>
+              When using the standalone script (no bundler), the library attaches an
+              <code>AeroSlider</code>
+              object to <code>window</code>
+              with two methods: <code>createSlider</code> and
+              <code>syncThumbnails</code>. Include the CSS and JS files, then call
+              <code>AeroSlider.createSlider()</code> and optionally
+              <code>AeroSlider.syncThumbnails()</code>.
+            </p>
+            <p>
+              Use <code>aero-slider.min.js</code> with
+              <code>type="module"</code>
+              from
+              <a href="https://unpkg.com/aero-slider/dist/" target="_blank" rel="noopener noreferrer">unpkg</a>
+              or the
+              <a href={`${REPO}/releases`} target="_blank" rel="noopener noreferrer">releases</a> page.
+            </p>
+          </div>
+          <CodeBlock
+            lang="html"
+            code={`<link rel="stylesheet" href="https://unpkg.com/aero-slider/dist/aero-slider.min.css" />
 <script type="module" src="https://unpkg.com/aero-slider/dist/aero-slider.min.js"></script>
 <script type="module">
   // AeroSlider is on window after the module loads
   const slider = AeroSlider.createSlider(document.getElementById("my-slider"), { loop: true });
 </script>`}
-              lang="html"
-              class="!rounded-lg !p-4 text-sm"
-            />
-          </div>
-          <p class="mt-4 text-sm font-medium text-slate-700">With thumbnails:</p>
-          <div class="mt-2 overflow-x-auto rounded-lg">
-            <Code
-              code={`const main = AeroSlider.createSlider(mainEl);
+          />
+          <CodeBlock
+            label="With thumbnails"
+            lang="javascript"
+            code={`const main = AeroSlider.createSlider(mainEl);
 const thumbs = AeroSlider.createSlider(thumbsEl);
 const teardown = AeroSlider.syncThumbnails(main, thumbs);
 
 // On unmount: teardown(); main.destroy(); thumbs.destroy();`}
-              lang="javascript"
-              class="!rounded-lg !p-4 text-sm"
-            />
-          </div>
-          <div class="mt-4 overflow-x-auto">
-            <table class="w-full text-sm min-w-[400px]">
-              <thead>
-                <tr class="border-b border-slate-200 text-left text-xs text-slate-600">
-                  <th class="pb-2 pr-4 font-medium">Property</th>
-                  <th class="pb-2 font-medium">Description</th>
-                </tr>
-              </thead>
-              <tbody class="text-slate-700">
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">AeroSlider.createSlider</td><td class="py-2"
-                    >Same as the module <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">createSlider</code> — creates a slider instance</td
-                  ></tr
-                >
-                <tr
-                  ><td class="py-2 pr-4 font-mono text-xs">AeroSlider.syncThumbnails</td><td class="py-2"
-                    >Same as the module <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">syncThumbnails</code> — syncs primary and thumbnail sliders</td
-                  ></tr
-                >
-              </tbody>
-            </table>
-          </div>
-        </div>
+          />
+          <DocTable
+            minWidth={400}
+            columns={[{ label: "Property", mono: true, nowrap: true }, { label: "Description" }]}
+            rows={globalRows}
+          />
+        </Entry>
 
         <!-- CSS Custom Properties -->
-        <div class="rounded-xl border border-slate-200 bg-white p-6">
-          <h3 class="font-mono text-base font-semibold text-slate-900">CSS Custom Properties</h3>
-          <p class="mt-2 text-sm text-slate-600">
-            Layout is controlled via CSS custom properties on the container.
-          </p>
-          <div class="mt-4 overflow-x-auto">
-            <table class="w-full text-sm min-w-[540px]">
-              <thead>
-                <tr class="border-b border-slate-200 text-left text-xs text-slate-600">
-                  <th class="pb-2 pr-4 font-medium">Property</th>
-                  <th class="pb-2 pr-4 font-medium">Default</th>
-                  <th class="pb-2 font-medium">Description</th>
-                </tr>
-              </thead>
-              <tbody class="text-slate-700">
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">--slides-per-view</td><td
-                    class="py-2 pr-4">1</td
-                  ><td class="py-2">Number of visible slides (supports fractional, e.g. 1.5)</td
-                  ></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">--slide-gap</td><td class="py-2 pr-4"
-                    >0px</td
-                  ><td class="py-2">Gap between slides</td></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">--slide-aspect</td><td class="py-2 pr-4"
-                    >16 / 9</td
-                  ><td class="py-2">Aspect ratio for slides</td></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">--aero-layout-width</td><td class="py-2 pr-4"
-                    >100%</td
-                  ><td class="py-2"
-                    >Content column width for <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">aero-slider--breakout</code> sliders. Slides size to this column while the track spans the full width; edge gutters are derived automatically.</td
-                  ></tr
-                >
-                <tr
-                  ><td class="py-2 pr-4 font-mono text-xs">data-aero-defer-visibility</td><td
-                    class="py-2 pr-4">—</td
-                  ><td class="py-2"
-                    >Prevents layout shift before JS init in loop mode by reserving space for prepended clones. Pair it with <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">data-aero-alignment</code> in HTML when mirroring a non-default pre-init alignment; center is assumed otherwise.</td
-                  ></tr
-                >
-              </tbody>
-            </table>
+        <Entry tag="CSS" title="CSS Custom Properties">
+          <div class="copy">
+            <p>Layout is controlled via CSS custom properties on the container.</p>
           </div>
-        </div>
+          <DocTable
+            columns={[
+              { label: "Property", mono: true, nowrap: true },
+              { label: "Default", mono: "soft", nowrap: true },
+              { label: "Description" },
+            ]}
+            rows={cssPropertyRows}
+          />
+        </Entry>
 
         <!-- State classes -->
-        <div class="rounded-xl border border-slate-200 bg-white p-6">
-          <h3 class="font-mono text-base font-semibold text-slate-900">State Classes</h3>
-          <p class="mt-2 text-sm text-slate-600">
-            The slider toggles these classes on the container, so you can style each state.
-          </p>
-          <div class="mt-4 overflow-x-auto">
-            <table class="w-full text-sm min-w-[540px]">
-              <thead>
-                <tr class="border-b border-slate-200 text-left text-xs text-slate-600">
-                  <th class="pb-2 pr-4 font-medium">Class</th>
-                  <th class="pb-2 font-medium">Present when</th>
-                </tr>
-              </thead>
-              <tbody class="text-slate-700">
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">aero-slider--ready</td><td class="py-2"
-                    >The slider has initialized</td
-                  ></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">aero-slider--draggable</td><td class="py-2"
-                    ><code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">draggable</code> is on. The track shows the <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">grab</code> cursor only then</td
-                  ></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">aero-slider--dragging</td><td class="py-2"
-                    >A mouse or pen drag is in progress (<code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">grabbing</code> cursor)</td
-                  ></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">aero-slider--free</td><td class="py-2"
-                    ><code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">snap</code> is <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">"settle"</code> or <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">"none"</code>. Turns CSS scroll snapping off</td
-                  ></tr
-                >
-                <tr
-                  ><td class="py-2 pr-4 font-mono text-xs">aero-slider--vertical</td><td class="py-2"
-                    ><code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">direction</code> is <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">"ttb"</code></td
-                  ></tr
-                >
-              </tbody>
-            </table>
+        <Entry tag="CSS" title="State Classes">
+          <div class="copy">
+            <p>The slider toggles these classes on the container, so you can style each state.</p>
           </div>
-        </div>
+          <DocTable
+            columns={[{ label: "Class", mono: true, nowrap: true }, { label: "Present when" }]}
+            rows={stateClassRows}
+          />
+        </Entry>
 
         <!-- Config -->
-        <div class="rounded-xl border border-slate-200 bg-white p-6">
-          <h3 class="font-mono text-base font-semibold text-slate-900">SliderConfig</h3>
-          <p class="mt-2 text-sm text-slate-600">
-            All configuration options (all optional with sensible defaults).
-          </p>
-          <div class="mt-4 overflow-x-auto">
-            <table class="w-full text-sm min-w-[540px]">
-              <thead>
-                <tr class="border-b border-slate-200 text-left text-xs text-slate-600">
-                  <th class="pb-2 pr-4 font-medium">Option</th>
-                  <th class="pb-2 pr-4 font-medium">Type</th>
-                  <th class="pb-2 pr-4 font-medium">Default</th>
-                  <th class="pb-2 font-medium">Description</th>
-                </tr>
-              </thead>
-              <tbody class="text-slate-700">
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">loop</td><td class="py-2 pr-4"
-                    >boolean</td
-                  ><td class="py-2 pr-4">false</td><td class="py-2">Infinite looping</td></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">alignment</td><td class="py-2 pr-4"
-                    >"left" | "center" | "right"</td
-                  ><td class="py-2 pr-4">"center"</td><td class="py-2">Align the active slide to the left, center, or right when possible. At non-loop edges the scroll position clamps, but <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">currentIndex</code> still reflects the focused slide.</td></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">draggable</td><td class="py-2 pr-4"
-                    >boolean</td
-                  ><td class="py-2 pr-4">true</td><td class="py-2">Enable mouse and pen dragging. Touch always swipes natively</td></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">autoplay</td><td class="py-2 pr-4"
-                    >boolean | "continuous"</td
-                  ><td class="py-2 pr-4">false</td><td class="py-2"><code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">true</code> advances one move every <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">autoplayInterval</code>. <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">"continuous"</code> drifts the track smoothly like a ticker at <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">autoplaySpeed</code>; it implies <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">loop</code> and <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">snap: "none"</code></td></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">autoplaySpeed</td><td class="py-2 pr-4"
-                    >number</td
-                  ><td class="py-2 pr-4">40</td><td class="py-2">Continuous autoplay speed in pixels per second. <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">0</code> or less keeps the track still</td></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">autoplayInterval</td><td
-                    class="py-2 pr-4">number</td
-                  ><td class="py-2 pr-4">5000</td><td class="py-2"
-                    >Delay between auto-advances (ms). Restarts after any manual change, and holds while the slider is pressed</td
-                  ></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">maxDots</td><td class="py-2 pr-4"
-                    >number</td
-                  ><td class="py-2 pr-4">0</td><td class="py-2"
-                    >Max pagination dots (0 = unlimited); shows iOS-style sliding window when exceeded</td
-                  ></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">noDrag</td><td class="py-2 pr-4"
-                    >string</td
-                  ><td class="py-2 pr-4">""</td><td class="py-2">CSS selector for elements inside slides that should not trigger drag (e.g. <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">"a, button, input"</code>)</td></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">perMove</td><td class="py-2 pr-4"
-                    >number</td
-                  ><td class="py-2 pr-4">1</td><td class="py-2">Number of slides to advance per <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">next()</code> / <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">prev()</code> call</td></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">direction</td><td class="py-2 pr-4"
-                    >"ltr" | "rtl" | "ttb"</td
-                  ><td class="py-2 pr-4">"ltr"</td><td class="py-2">Carousel direction: left-to-right, right-to-left, or top-to-bottom (vertical)</td></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">snap</td><td class="py-2 pr-4"
-                    >"native" | "settle" | "none"</td
-                  ><td class="py-2 pr-4">"native"</td><td class="py-2">How the track comes to rest. <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">"native"</code> uses CSS scroll snapping. <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">"settle"</code> scrolls freely, then eases onto the nearest slide once scrolling stops (with <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">scrollDuration</code> / <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">scrollEasing</code>). <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">"none"</code> rests wherever the track stops</td></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">scrollDuration</td><td class="py-2 pr-4"
-                    >number</td
-                  ><td class="py-2 pr-4">0</td><td class="py-2">Length of <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">next()</code> / <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">prev()</code> / <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">goTo()</code> scrolls in ms, eased by <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">scrollEasing</code>, so they move the same way in every browser. <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">0</code> uses the browser's native smooth scrolling. Reduced motion makes every scroll instant either way</td></tr
-                >
-                <tr
-                  ><td class="py-2 pr-4 font-mono text-xs">scrollEasing</td><td class="py-2 pr-4"
-                    >(t: number) =&gt; number</td
-                  ><td class="py-2 pr-4">ease-out cubic</td><td class="py-2">Maps linear progress 0–1 to eased progress for <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">scrollDuration</code> scrolls, e.g. <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">{"(t) => t"}</code> for linear</td></tr
-                >
-              </tbody>
-            </table>
+        <Entry tag="Options" title="SliderConfig" mono>
+          <div class="copy">
+            <p>All configuration options (all optional with sensible defaults).</p>
           </div>
-        </div>
+          <DocTable
+            minWidth={820}
+            columns={[
+              { label: "Option", mono: true, nowrap: true },
+              { label: "Type", mono: "soft", nowrap: true },
+              { label: "Default", mono: "soft", nowrap: true },
+              { label: "Description" },
+            ]}
+            rows={configRows}
+          />
+        </Entry>
 
         <!-- Instance Methods -->
-        <div class="rounded-xl border border-slate-200 bg-white p-6">
-          <h3 class="font-mono text-base font-semibold text-slate-900">SliderInstance</h3>
-          <p class="mt-2 text-sm text-slate-600">
-            Returned by <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs"
-              >createSlider()</code
-            >.
+        <Entry tag="Instance" title="SliderInstance" mono>
+          <div class="copy">
+            <p>Returned by <code>createSlider()</code>.</p>
+          </div>
+          <p class="note">
+            The instance is also attached to the container element. You can access it via
+            <code>container.aeroSlider</code> when you have a reference to the DOM element.
           </p>
-          <div
-            class="mt-3 flex gap-3 rounded-lg border-l-4 border-sky-400 bg-sky-50 px-3 py-2.5 text-sm text-slate-700"
-          >
+          <DocTable
+            columns={[{ label: "Method / Property", mono: true, nowrap: true }, { label: "Description" }]}
+            rows={instanceRows}
+          />
+          <div class="copy">
             <p>
-              The instance is also attached to the container element. You can access it via <code
-                class="rounded bg-sky-100/80 px-1 py-0.5 font-mono text-xs"
-                >container.aeroSlider</code
-              > when you have a reference to the DOM element.
+              For syncing a main slider with a thumbnail strip, use the standalone
+              <code>syncThumbnails(primary, thumbnail)</code>
+              function (see below).
             </p>
           </div>
-          <div class="mt-4 overflow-x-auto">
-            <table class="w-full text-sm min-w-[540px]">
-              <thead>
-                <tr class="border-b border-slate-200 text-left text-xs text-slate-600">
-                  <th class="pb-2 pr-4 font-medium">Method / Property</th>
-                  <th class="pb-2 font-medium">Description</th>
-                </tr>
-              </thead>
-              <tbody class="text-slate-700">
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">.next()</td><td class="py-2"
-                    >Go to next slide</td
-                  ></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">.prev()</td><td class="py-2"
-                    >Go to previous slide</td
-                  ></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">.goTo(index, options?)</td><td class="py-2"
-                    >Scroll to a specific slide index. Pass <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">{'{ instant: true }'}</code> to jump there with no animation</td
-                  ></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">.pause()</td><td class="py-2"
-                    >Hold autoplay until <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">.resume()</code>. Hover, focus and drag pauses still apply on top</td
-                  ></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">.resume()</td><td class="py-2"
-                    >Release a <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">.pause()</code> and restart the autoplay countdown</td
-                  ></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">.update(config?)</td><td class="py-2"
-                    >Update config and re-render</td
-                  ></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">.destroy()</td><td class="py-2"
-                    >Tear down and clean up</td
-                  ></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">.refresh()</td><td class="py-2"
-                    >Re-read slides from DOM and rebuild (call after external DOM changes)</td
-                  ></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">.add(slides, index?)</td><td class="py-2"
-                    >Insert one or more slides into the track; calls refresh() automatically</td
-                  ></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">.remove(index)</td><td class="py-2"
-                    >Remove slide(s) by index (number or array); calls refresh() automatically</td
-                  ></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">.element</td><td class="py-2"
-                    >The container element the slider is attached to (read-only)</td
-                  ></tr
-                >
-                <tr class="border-b border-slate-100"
-                  ><td class="py-2 pr-4 font-mono text-xs">.currentIndex</td><td class="py-2"
-                    >Current active slide index (read-only)</td
-                  ></tr
-                >
-                <tr
-                  ><td class="py-2 pr-4 font-mono text-xs">.slideCount</td><td class="py-2"
-                    >Total number of slides (read-only)</td
-                  ></tr
-                >
-              </tbody>
-            </table>
-          </div>
-          <p class="mt-3 text-sm text-slate-600">
-            For syncing a main slider with a thumbnail strip, use the standalone
-            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs"
-              >syncThumbnails(primary, thumbnail)</code
-            >
-            function (see below).
-          </p>
-        </div>
+        </Entry>
 
         <!-- syncThumbnails -->
-        <div class="rounded-xl border border-slate-200 bg-white p-6">
-          <h3 class="font-mono text-base font-semibold text-slate-900">
-            syncThumbnails(primary, thumbnail, options?)
-          </h3>
-          <p class="mt-2 text-sm text-slate-600">
-            Syncs a primary slider with a thumbnail slider. Clicking a thumbnail navigates the
-            primary to that slide; when the primary changes (drag, arrows, etc.), the thumbnail
-            slider scrolls to keep the active thumbnail in view and adds
-            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs"
-              >aero-slider__thumb--active</code
-            >
-            to it. The function does not force thumbnail alignment; set
-            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">alignment: "center"</code>
-            on the thumbnail slider if you want the active thumb centered when possible. Both
-            sliders must have the same number of slides. Pass an optional third argument
-            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">{"{ loop }"}</code>
-            to control whether the thumbnail strip loops (defaults to
-            <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">true</code>). Returns a
-            teardown function — call it before destroying the sliders.
-          </p>
-          <div class="mt-4 overflow-x-auto rounded-lg">
-            <Code
-              code={`import { createSlider, syncThumbnails } from "aero-slider";
+        <Entry tag="Function" title="syncThumbnails(primary, thumbnail, options?)" mono>
+          <div class="copy">
+            <p>
+              Syncs a primary slider with a thumbnail slider. Clicking a thumbnail navigates the
+              primary to that slide; when the primary changes (drag, arrows, etc.), the thumbnail
+              slider scrolls to keep the active thumbnail in view and adds
+              <code>aero-slider__thumb--active</code>
+              to it. The function does not force thumbnail alignment; set
+              <code>alignment: "center"</code>
+              on the thumbnail slider if you want the active thumb centered when possible. Both
+              sliders must have the same number of slides. Pass an optional third argument
+              <code>{"{ loop }"}</code>
+              to control whether the thumbnail strip loops (defaults to
+              <code>true</code>). Returns a teardown function — call it before destroying the
+              sliders.
+            </p>
+          </div>
+          <CodeBlock
+            lang="typescript"
+            code={`import { createSlider, syncThumbnails } from "aero-slider";
 
 const main = createSlider(mainEl);
 const thumbs = createSlider(thumbsEl, {
@@ -1957,137 +1219,85 @@ const teardown = syncThumbnails(main, thumbs);
 // teardown();
 // main.destroy();
 // thumbs.destroy();`}
-              lang="typescript"
-              class="!rounded-lg !p-4 text-sm"
-            />
-          </div>
-        </div>
+          />
+        </Entry>
+
         <!-- Events -->
-        <div class="rounded-xl border border-slate-200 bg-white p-6">
-          <h3 class="font-mono text-base font-semibold text-slate-900">Events</h3>
-          <p class="mt-2 text-sm text-slate-600">
-            Aero Slider dispatches native DOM events on the container element, prefixed with <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">aero:</code>.
-            Event data is available via <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">event.detail</code>.
-          </p>
-          <div class="mt-3 rounded-lg border-l-4 border-sky-400 bg-sky-50 px-3 py-2.5 text-sm text-slate-700">
+        <Entry tag="DOM events" title="Events">
+          <div class="copy">
             <p>
-              Listen with <code class="rounded bg-sky-100/80 px-1 py-0.5 font-mono text-xs">addEventListener</code>
-              on the container. Access the slider instance via <code class="rounded bg-sky-100/80 px-1 py-0.5 font-mono text-xs">event.currentTarget.aeroSlider</code> in any handler.
+              Aero Slider dispatches native DOM events on the container element, prefixed with
+              <code>aero:</code>. Event data is available via <code>event.detail</code>.
             </p>
           </div>
-          <div class="mt-4 overflow-x-auto rounded-lg">
-            <Code
-              code={`const el = document.getElementById("my-slider");
+          <p class="note">
+            Listen with <code>addEventListener</code>
+            on the container. Access the slider instance via
+            <code>event.currentTarget.aeroSlider</code> in any handler.
+          </p>
+          <CodeBlock
+            lang="typescript"
+            code={`const el = document.getElementById("my-slider");
 const slider = createSlider(el, { loop: true });
 
 el.addEventListener("aero:slideChange", (event) => {
   console.log("active slide:", event.detail.index);
 });`}
-              lang="typescript"
-              class="!rounded-lg !p-4 text-sm"
-            />
-          </div>
-          <div class="mt-4 overflow-x-auto">
-            <table class="w-full text-sm min-w-[820px]">
-              <thead>
-                <tr class="border-b border-slate-200 text-left text-xs text-slate-600">
-                  <th class="pb-2 pr-4 font-medium">Event</th>
-                  <th class="pb-2 pr-4 font-medium">Data (event.detail, TS type)</th>
-                  <th class="pb-2 font-medium">Description</th>
-                </tr>
-              </thead>
-              <tbody class="text-slate-700">
-                <tr class="border-b border-slate-100"><td class="py-2 pr-4 font-mono text-xs">aero:ready</td><td class="py-2 pr-4 font-mono text-xs text-slate-600">{"{}"}</td><td class="py-2">Fired once after initialization (listen before <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">createSlider</code>)</td></tr>
-                <tr class="border-b border-slate-100"><td class="py-2 pr-4 font-mono text-xs">aero:slideChange</td><td class="py-2 pr-4 font-mono text-xs text-slate-600">{"{ index: number }"}</td><td class="py-2">Fired when the active slide changes</td></tr>
-                <tr class="border-b border-slate-100"><td class="py-2 pr-4 font-mono text-xs">aero:dragStart</td><td class="py-2 pr-4 font-mono text-xs text-slate-600">{"{ index: number }"}</td><td class="py-2">Fired when a mouse or pen drag starts (touch scrolls natively and doesn't fire drag events)</td></tr>
-                <tr class="border-b border-slate-100"><td class="py-2 pr-4 font-mono text-xs">aero:dragEnd</td><td class="py-2 pr-4 font-mono text-xs text-slate-600">{"{ index: number; fromIndex: number }"}</td><td class="py-2">Fired when a mouse or pen drag is released, after the target slide is chosen</td></tr>
-                <tr class="border-b border-slate-100"><td class="py-2 pr-4 font-mono text-xs">aero:autoplayStart</td><td class="py-2 pr-4 font-mono text-xs text-slate-600">{"{}"}</td><td class="py-2">Fired when autoplay starts or resumes</td></tr>
-                <tr class="border-b border-slate-100"><td class="py-2 pr-4 font-mono text-xs">aero:autoplayStop</td><td class="py-2 pr-4 font-mono text-xs text-slate-600">{"{}"}</td><td class="py-2">Fired when autoplay pauses</td></tr>
-                <tr class="border-b border-slate-100"><td class="py-2 pr-4 font-mono text-xs">aero:visible</td><td class="py-2 pr-4 font-mono text-xs text-slate-600">{"{ index: number }"}</td><td class="py-2">Fired per slide when it enters the visible range</td></tr>
-                <tr class="border-b border-slate-100"><td class="py-2 pr-4 font-mono text-xs">aero:hidden</td><td class="py-2 pr-4 font-mono text-xs text-slate-600">{"{ index: number }"}</td><td class="py-2">Fired per slide when it leaves the visible range</td></tr>
-                <tr class="border-b border-slate-100"><td class="py-2 pr-4 font-mono text-xs">aero:resize</td><td class="py-2 pr-4 font-mono text-xs text-slate-600">{"{}"}</td><td class="py-2">Fired when the track or slide size changes, e.g. a window resize or a CSS variable such as <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">--slides-per-view</code> changing (before re-measuring)</td></tr>
-                <tr class="border-b border-slate-100"><td class="py-2 pr-4 font-mono text-xs">aero:resized</td><td class="py-2 pr-4 font-mono text-xs text-slate-600">{"{}"}</td><td class="py-2">Fired after the slider finishes updating from a resize</td></tr>
-                <tr><td class="py-2 pr-4 font-mono text-xs">aero:destroy</td><td class="py-2 pr-4 font-mono text-xs text-slate-600">{"{}"}</td><td class="py-2">Fired at the start of <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">destroy()</code>, before teardown</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+          />
+          <DocTable
+            minWidth={720}
+            columns={[
+              { label: "Event", mono: true, nowrap: true },
+              { label: "Data (event.detail, TS type)", mono: "soft" },
+              { label: "Description" },
+            ]}
+            rows={eventRows}
+          />
+        </Entry>
       </div>
     </section>
 
     <!-- ════════════════════════════════════════════════════════════
          BROWSER SUPPORT
          ════════════════════════════════════════════════════════════ -->
-    <section id="browser-support" class="mb-12 sm:mb-20">
-      <h2 class="mb-6 text-2xl font-bold text-slate-900">Browser Support</h2>
-      <div class="rounded-xl border border-slate-200 bg-white p-6">
-        <p class="mb-6 text-sm text-slate-600">
-          Aero Slider relies on modern CSS features to achieve a lightweight, JS-free layout. It
-          degrades gracefully on older browsers, but for the optimal experience, the following
-          minimum versions are recommended:
-        </p>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm min-w-[540px]">
-            <thead>
-              <tr
-                class="border-b border-slate-200 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider"
-              >
-                <th class="pb-3 pr-4">CSS Feature</th>
-                <th class="pb-3 pr-4">Chrome</th>
-                <th class="pb-3 pr-4">Safari</th>
-                <th class="pb-3 pr-4">Firefox</th>
-                <th class="pb-3">Used For</th>
-              </tr>
-            </thead>
-            <tbody class="text-slate-700">
-              <tr class="border-b border-slate-100">
-                <td class="py-3 pr-4 font-mono text-xs font-semibold">CSS Variables</td>
-                <td class="py-3 pr-4">49+</td>
-                <td class="py-3 pr-4">9.1+</td>
-                <td class="py-3 pr-4">31+</td>
-                <td class="py-3 text-slate-600">Configuring layout and gap size.</td>
-              </tr>
-              <tr class="border-b border-slate-100">
-                <td class="py-3 pr-4 font-mono text-xs font-semibold">Scroll Snapping</td>
-                <td class="py-3 pr-4">69+</td>
-                <td class="py-3 pr-4">11+</td>
-                <td class="py-3 pr-4">68+</td>
-                <td class="py-3 text-slate-600">Locking slides into place after scrolling.</td>
-              </tr>
-              <tr class="border-b border-slate-100">
-                <td class="py-3 pr-4 font-mono text-xs font-semibold">aspect-ratio</td>
-                <td class="py-3 pr-4">88+</td>
-                <td class="py-3 pr-4">15+</td>
-                <td class="py-3 pr-4">89+</td>
-                <td class="py-3 text-slate-600">Maintaining proper height for the slider track.</td>
-              </tr>
-              <tr class="border-b border-slate-100">
-                <td class="py-3 pr-4 font-mono text-xs font-semibold">contain: paint</td>
-                <td class="py-3 pr-4">52+</td>
-                <td class="py-3 pr-4">15.4+</td>
-                <td class="py-3 pr-4">69+</td>
-                <td class="py-3 text-slate-600">Performance optimization for painting slides.</td>
-              </tr>
-              <tr>
-                <td class="py-3 pr-4 font-mono text-xs font-semibold">overscroll-behavior-x</td>
-                <td class="py-3 pr-4">63+</td>
-                <td class="py-3 pr-4">16+</td>
-                <td class="py-3 pr-4">59+</td>
-                <td class="py-3 text-slate-600">Preventing rubber-banding when hitting the edge.</td
-                >
-              </tr>
-            </tbody>
-          </table>
+    <section id="browser-support" class="container-page py-12 sm:py-16">
+      <h2 class="mb-6 text-3xl font-medium tracking-[-0.03em] sm:text-4xl">Browser Support</h2>
+      <div class="space-y-8">
+        <div class="copy">
+          <p>
+            Aero Slider relies on modern CSS features to achieve a lightweight, JS-free layout. It
+            degrades gracefully on older browsers, but for the optimal experience, the following
+            minimum versions are recommended:
+          </p>
+        </div>
+        <div class="border-t border-line pt-8">
+          <DocTable
+            columns={[
+              { label: "CSS Feature", mono: true, nowrap: true },
+              { label: "Chrome", mono: "soft" },
+              { label: "Safari", mono: "soft" },
+              { label: "Firefox", mono: "soft" },
+              { label: "Used For" },
+            ]}
+            rows={browserRows}
+          />
         </div>
       </div>
     </section>
   </main>
 
   <!-- Footer -->
-  <footer class="border-t border-slate-200 bg-slate-50">
-    <div class="mx-auto max-w-6xl px-6 py-8 text-center text-sm text-slate-600">
-      <p>Aero Slider — CSS-first, dependency-free slider for the modern web.</p>
+  <footer class="border-t border-line">
+    <div class="container-page flex flex-col gap-4 py-8 text-sm text-faint sm:flex-row sm:items-center sm:justify-between">
+      <p class="flex items-center gap-2.5">
+        <Logo class="size-4 shrink-0 text-ink" />
+        Aero Slider — CSS-first, dependency-free slider for the modern web.
+      </p>
+      <nav class="flex gap-6" aria-label="Footer">
+        <a href={REPO} target="_blank" rel="noopener" class="transition-colors hover:text-ink">GitHub</a>
+        <a href="https://www.npmjs.com/package/aero-slider" target="_blank" rel="noopener" class="transition-colors hover:text-ink">npm</a>
+        <a href={`${REPO}/blob/main/LICENSE`} target="_blank" rel="noopener" class="transition-colors hover:text-ink">MIT License</a>
+      </nav>
     </div>
   </footer>
 </BaseLayout>

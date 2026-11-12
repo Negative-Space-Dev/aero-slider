@@ -1,6 +1,8 @@
 ---
 import "aero-slider/slider.css";
 import "../styles/global.css";
+import geistUrl from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url";
+import geistMonoUrl from "@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2?url";
 
 interface Props {
   title: string;
@@ -20,6 +22,8 @@ const {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#08090a" />
     <title>{title}</title>
     <meta name="title" content={title} />
     <meta name="description" content={description} />
@@ -38,26 +42,15 @@ const {
     <meta property="twitter:description" content={description} />
     <meta property="twitter:image" content={new URL(image, Astro.url)} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="preload"
-      href="https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=block"
-      rel="stylesheet"
-    />
+    <link rel="preload" href={geistUrl} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={geistMonoUrl} as="font" type="font/woff2" crossorigin />
     <!-- Hero slider defaults match config form to prevent layout shift before JS -->
     <style is:inline id="hero-defaults">
       #hero-slider{--slides-per-view:1;--slide-gap:10px}
     </style>
     <slot name="head" />
   </head>
-  <body class="bg-slate-50 text-slate-950 selection:bg-indigo-100 selection:text-indigo-900 overflow-x-hidden">
+  <body class="overflow-x-hidden">
     <!-- Critical: inject hero slider CSS from URL params before first paint -->
     <script is:inline>
       (function(){

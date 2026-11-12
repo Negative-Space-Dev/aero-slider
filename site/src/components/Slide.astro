@@ -1,0 +1,12 @@
+---
+import { slideInnerHtml, toneFor, type SlideContent } from "../lib/slide";
+
+interface Props extends SlideContent {
+  /** 1-based position in the track, used to pick a tone when none is given. */
+  position: number;
+}
+
+const { position, ...content } = Astro.props;
+---
+
+<div class="slide" data-tone={content.tone ?? toneFor(position)} set:html={slideInnerHtml(content)} />

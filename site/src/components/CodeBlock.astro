@@ -1,0 +1,17 @@
+---
+import { Code } from "astro:components";
+import type { ComponentProps } from "astro/types";
+
+interface Props {
+  code: string;
+  lang: ComponentProps<typeof Code>["lang"];
+  label?: string;
+}
+
+const { code, lang, label } = Astro.props;
+---
+
+<figure class="code">
+  {label && <figcaption class="caption">{label}</figcaption>}
+  <Code code={code} lang={lang} theme="css-variables" />
+</figure>

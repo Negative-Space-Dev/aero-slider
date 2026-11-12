@@ -1,0 +1,41 @@
+---
+interface Column {
+  label: string;
+  /** "mono" renders the cell as code; "soft" is mono in the muted colour. */
+  mono?: boolean | "soft";
+  nowrap?: boolean;
+}
+
+interface Props {
+  columns: Column[];
+  /** Cell contents as HTML strings, one array per row. */
+  rows: string[][];
+  /** Minimum width in px before the table scrolls sideways. */
+  minWidth?: number;
+}
+
+const { columns, rows, minWidth = 540 } = Astro.props;
+---
+
+<div class="overflow-x-auto">
+  <table class="doc-table" style={`min-width: ${minWidth}px`}>
+    <thead>
+      <tr>{columns.map((column) => <th class="caption">{column.label}</th>)}</tr>
+    </thead>
+    <tbody>
+      {
+        rows.map((row) => (
+          <tr>
+            {row.map((cell, i) => (
+              <td
+                data-mono={columns[i].mono === "soft" ? "soft" : columns[i].mono ? "" : undefined}
+                data-nowrap={columns[i].nowrap ? "" : undefined}
+                set:html={cell}
+              />
+            ))}
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</div>
