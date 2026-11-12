@@ -2,18 +2,15 @@
 import CodeBlock from "../components/CodeBlock.astro";
 import Create from "./api/Create.astro";
 import Css from "./api/Css.astro";
+import Methods from "./api/Methods.astro";
 import Options from "./api/Options.astro";
 import "../styles/api.css";
 import DocTable from "../components/DocTable.astro";
 import Entry from "../components/Entry.astro";
 import {
   eventRefGroups,
-  instanceRefGroups,
 } from "../data/api";
 
-const instanceRows = instanceRefGroups
-  .flatMap((group) => group.entries)
-  .map((entry) => [entry.name, entry.description]);
 const eventRows = eventRefGroups
   .flatMap((group) => group.entries)
   .map((entry) => [entry.name, entry.type ?? "", entry.description]);
@@ -29,27 +26,7 @@ const eventRows = eventRefGroups
 
     <Css />
 
-    <!-- Instance Methods -->
-    <Entry tag="Instance" title="SliderInstance" mono id="api-methods">
-      <div class="copy">
-        <p>Returned by <code>createSlider()</code>.</p>
-      </div>
-      <p class="note">
-        The instance is also attached to the container element. You can access it via
-        <code>container.aeroSlider</code> when you have a reference to the DOM element.
-      </p>
-      <DocTable
-        columns={[{ label: "Method / Property", mono: true, nowrap: true }, { label: "Description" }]}
-        rows={instanceRows}
-      />
-      <div class="copy">
-        <p>
-          For syncing a main slider with a thumbnail strip, use the standalone
-          <code>syncThumbnails(primary, thumbnail)</code>
-          function (see below).
-        </p>
-      </div>
-    </Entry>
+    <Methods />
 
     <!-- syncThumbnails -->
     <Entry tag="Function" title="syncThumbnails(primary, thumbnail, options?)" mono id="api-sync">
@@ -120,3 +97,7 @@ el.addEventListener("aero:slideChange", (event) => {
     </Entry>
   </div>
 </section>
+
+<script>
+  import "../scripts/api.ts";
+</script>

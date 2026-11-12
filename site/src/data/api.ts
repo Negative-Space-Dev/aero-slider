@@ -31,6 +31,7 @@ export const instanceGroups = [
   "Read state",
   "Lifecycle",
 ] as const;
+type InstanceGroup = (typeof instanceGroups)[number];
 export const eventGroups = [
   "Navigation",
   "Visibility",
@@ -144,62 +145,175 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
   },
 };
 
-export const instanceMembers: Record<keyof SliderInstance, Doc<(typeof instanceGroups)[number]>> = {
-  next: { group: "Navigate", name: ".next()", description: "Go to next slide" },
-  prev: { group: "Navigate", name: ".prev()", description: "Go to previous slide" },
+export const instanceMembers: Record<keyof SliderInstance, Doc<InstanceGroup>> = {
+  next: {
+    group: "Navigate",
+    name: ".next()",
+    description:
+      "Moves forward by <code>perMove</code> slides. Stops at the last slide unless <code>loop</code> is on.",
+  },
+  prev: {
+    group: "Navigate",
+    name: ".prev()",
+    description:
+      "Moves back by <code>perMove</code> slides. Stops at the first slide unless <code>loop</code> is on.",
+  },
   goTo: {
     group: "Navigate",
     name: ".goTo(index, options?)",
     description:
-      "Scroll to a specific slide index. Pass <code>{ instant: true }</code> to jump there with no animation",
+      "Scrolls to slide <code>index</code>. Out-of-range indexes wrap on a loop and clamp otherwise. <code>{ instant: true }</code> jumps there with no animation.",
   },
   pause: {
     group: "Autoplay",
     name: ".pause()",
     description:
-      "Hold autoplay until <code>.resume()</code>. Hover, focus and drag pauses still apply on top",
+      "Holds autoplay until <code>resume()</code>. Hover, focus and drag pauses still apply on top.",
   },
   resume: {
     group: "Autoplay",
     name: ".resume()",
-    description: "Release a <code>.pause()</code> and restart the autoplay countdown",
+    description: "Releases <code>pause()</code> and starts a fresh autoplay countdown.",
   },
-  update: { group: "Change", name: ".update(config?)", description: "Update config and re-render" },
+  update: {
+    group: "Change",
+    name: ".update(config?)",
+    description: "Merges new options into the config and rebuilds, keeping the current slide.",
+  },
   refresh: {
     group: "Change",
     name: ".refresh()",
-    description: "Re-read slides from DOM and rebuild (call after external DOM changes)",
+    description:
+      "Re-reads the slides from the DOM and rebuilds. Call it after changing the track yourself.",
   },
   add: {
     group: "Change",
     name: ".add(slides, index?)",
-    description: "Insert one or more slides into the track; calls refresh() automatically",
+    description:
+      "Inserts one element or an array of them before slide <code>index</code>, or at the end, then rebuilds.",
   },
   remove: {
     group: "Change",
     name: ".remove(index)",
-    description: "Remove slide(s) by index (number or array); calls refresh() automatically",
+    description:
+      "Removes the slide at <code>index</code>, or each slide in an array of indexes, then rebuilds.",
   },
   element: {
     group: "Read state",
     name: ".element",
     type: "HTMLElement",
-    description: "The container element the slider is attached to (read-only)",
+    description: "The container the slider runs on.",
   },
   currentIndex: {
     group: "Read state",
     name: ".currentIndex",
     type: "number",
-    description: "Current active slide index (read-only)",
+    description: "Index of the active slide. Loop clones are not counted.",
   },
   slideCount: {
     group: "Read state",
     name: ".slideCount",
     type: "number",
-    description: "Total number of slides (read-only)",
+    description: "Number of slides, not counting loop clones.",
   },
-  destroy: { group: "Lifecycle", name: ".destroy()", description: "Tear down and clean up" },
+  destroy: {
+    group: "Lifecycle",
+    name: ".destroy()",
+    description:
+      "Fires <code>aero:destroy</code>, then removes its listeners, clones and classes and deletes <code>element.aeroSlider</code>. Your markup stays, so <code>createSlider</code> can start it again.",
+  },
 };
+
+/** What a button in the control demo works with. */
+export interface ControlContext {
+  /** The latest instance; destroyed once `slider.destroy()` has run. */
+  slider: SliderInstance;
+  el: HTMLElement;
+  config: SliderConfig;
+  createSlider: (element: HTMLElement, config?: SliderConfig) => SliderInstance;
+  /** A new slide element, built like the others. */
+  slide: () => HTMLElement;
+}
+
+export interface ControlAction {
+  group: InstanceGroup;
+  /** The call the button runs, shown as its label. */
+  label: string;
+  /** Whether the button needs a live slider or a destroyed one. */
+  needs: "live" | "destroyed";
+  /** Fewest slides the call leaves the demo usable with. */
+  minSlides?: number;
+  /** Returns the new instance when the call creates one. */
+  run: (ctx: ControlContext) => SliderInstance | void;
+}
+
+// The control demo renders a button per row and runs `run` on click, so a
+// label can't drift from what it does.
+export const controlActions: ControlAction[] = [
+  { group: "Navigate", label: "slider.prev()", needs: "live", run: ({ slider }) => slider.prev() },
+  { group: "Navigate", label: "slider.next()", needs: "live", run: ({ slider }) => slider.next() },
+  {
+    group: "Navigate",
+    label: "slider.goTo(3)",
+    needs: "live",
+    run: ({ slider }) => slider.goTo(3),
+  },
+  {
+    group: "Navigate",
+    label: "slider.goTo(0, { instant: true })",
+    needs: "live",
+    run: ({ slider }) => slider.goTo(0, { instant: true }),
+  },
+  {
+    group: "Autoplay",
+    label: "slider.pause()",
+    needs: "live",
+    run: ({ slider }) => slider.pause(),
+  },
+  {
+    group: "Autoplay",
+    label: "slider.resume()",
+    needs: "live",
+    run: ({ slider }) => slider.resume(),
+  },
+  {
+    group: "Change",
+    label: "slider.add(slide)",
+    needs: "live",
+    run: ({ slider, slide }) => slider.add(slide()),
+  },
+  {
+    group: "Change",
+    label: "slider.remove(slider.slideCount - 1)",
+    needs: "live",
+    minSlides: 2,
+    run: ({ slider }) => slider.remove(slider.slideCount - 1),
+  },
+  {
+    group: "Change",
+    label: 'slider.update({ alignment: "left" })',
+    needs: "live",
+    run: ({ slider }) => slider.update({ alignment: "left" }),
+  },
+  {
+    group: "Change",
+    label: 'slider.update({ alignment: "center" })',
+    needs: "live",
+    run: ({ slider }) => slider.update({ alignment: "center" }),
+  },
+  {
+    group: "Lifecycle",
+    label: "slider.destroy()",
+    needs: "live",
+    run: ({ slider }) => slider.destroy(),
+  },
+  {
+    group: "Lifecycle",
+    label: "slider = createSlider(el, config)",
+    needs: "destroyed",
+    run: ({ el, config, createSlider }) => createSlider(el, config),
+  },
+];
 
 export const events: Record<SliderEvent, Doc<(typeof eventGroups)[number]>> = {
   slideChange: {
