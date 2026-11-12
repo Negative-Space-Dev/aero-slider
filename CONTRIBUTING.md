@@ -13,10 +13,15 @@ bun install
 ## Working on the library
 
 - **`bun run build`** — Build the slider (`build.ts`: bundles JS and CSS with Bun, emits types with `tsc`)
-- **`bun run test`** — Build, then run the headless-Chrome smoke test in `test/smoke.ts` (needs Google Chrome, or set `CHROME=/path/to/chrome`)
-- **`bun run typecheck`** — Run TypeScript checks
+- **`bun run test`** — Build, then run the Playwright tests in `test/*.spec.ts` on Chromium, Firefox and WebKit (first run `bunx playwright install chromium firefox webkit`)
+- **`bun run test:ui`** — Build, then open the tests in Playwright's UI mode
+- **`bun run test:smoke`** — Build, then run the older headless-Chrome smoke test in `test/smoke.ts` (needs Google Chrome, or set `CHROME=/path/to/chrome`)
+- **`bun run size`** — Print the raw and gzipped size of the built JS and CSS, and fail if either is over budget
+- **`bun run typecheck`** — Run TypeScript checks on the library, the tests and the build scripts
 - **`bun run format`** — Format code with Prettier
 - **`bun run format:check`** — Check formatting
+
+To run one spec file on one engine, pass both to Playwright after a build: `bunx playwright test test/basic.spec.ts --project firefox`. Tests import their helpers from `test/fixtures.ts`. Set `TEST_PORT` when two checkouts run tests at once.
 
 ## Working on the site
 

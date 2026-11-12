@@ -31,14 +31,18 @@
     "site:dev": "cd site && bun run dev",
     "site:build": "cd site && bun run build",
     "prepare": "bun run build",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tools.json",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "bun run build && bun run ./test/smoke.ts",
+    "size": "bun run ./scripts/size.ts",
+    "test": "bun run build && playwright test",
+    "test:ui": "bun run build && playwright test --ui",
+    "test:smoke": "bun run build && bun run ./test/smoke.ts",
     "pack": "bun pm pack"
   },
   "devDependencies": {
-    "@types/bun": "latest",
+    "@playwright/test": "1.65.0",
+    "@types/bun": "1.3.10",
     "prettier": "^3.4.2",
     "typescript": "^5"
   }
