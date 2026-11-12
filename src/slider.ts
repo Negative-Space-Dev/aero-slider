@@ -200,6 +200,17 @@ export function createSlider(
 
   const isVertical = () => config.direction === "ttb";
   const isRtl = () => rtl;
+  const computedRtl = () => !isVertical() && getComputedStyle(container).direction === "rtl";
+  /**
+   * No observer reports the page's direction changing under a slider that follows it, so the
+   * paths that turn a scroll offset into a slide, or a slide into an offset, ask first.
+   */
+  function directionChanged(): boolean {
+    if (rtl === computedRtl()) return false;
+    rtl = !rtl; // before relayout(), which asks again on its way
+    relayout();
+    return true;
+  }
   const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(value, max));
   const wrap = (index: number) => ((index % slideCount) + slideCount) % slideCount;
 
@@ -476,6 +487,7 @@ export function createSlider(
   /** `towards` is the sign of a next()/prev() step: it picks the way round when both are equally short. */
   function goTo(index: number, options: GoToOptions = {}, towards = 0): void {
     if (destroyed || !slideCount || !Number.isFinite(index)) return;
+    directionChanged();
     // Continuous autoplay hands its lap back to the scroll offset before we measure from it.
     play.interrupt();
     const logical = loop() ? wrap(Math.trunc(index)) : clamp(Math.trunc(index), 0, maxIndex());
@@ -525,7 +537,7 @@ export function createSlider(
         scrollFrame = 0;
         // A goTo() since this frame was queued (a drag's release) has already set the index. A
         // resize can clamp the offset before the observer re-measures; relayout() places it then.
-        if (programmaticScroll || observedSize() !== measuredSize) return;
+        if (programmaticScroll || directionChanged() || observedSize() !== measuredSize) return;
         const position = scrollPosition();
         // Several slides can share a stop; a scroll that stays on it keeps the one that was asked for.
         if (loop() || Math.abs(position - stopPositions[stopOf(current)]!) > 1) {
@@ -759,14 +771,28 @@ export function createSlider(
   // Sizes the layout was last measured at. The first callback after observe() may already carry a
   // change (no frame ran in between), so compare rather than skip it.
   let measuredSize = "";
+  // Computed sizes keep their fractions, which clientWidth rounds away: a 0.4px change to each of
+  // 100 slides moves the last one 40px.
   const observedSize = () =>
-    [track, track.firstElementChild].map((el) => `${el?.clientWidth},${el?.clientHeight}`).join();
+    [track, track.firstElementChild]
+      .map((el) => {
+        const style = el && getComputedStyle(el);
+        return `${style?.width},${style?.height}`;
+      })
+      .join();
   const resizeObserver = new ResizeObserver(() => {
     if (destroyed || observedSize() === measuredSize) return;
     measuredSize = observedSize();
     emit("resize", {});
     relayout();
     emit("resized", {});
+  });
+
+  // A page that switches language sets dir on <html> or an ancestor, which resizes nothing.
+  const directionObserver = new MutationObserver(directionChanged);
+  directionObserver.observe(document.documentElement, {
+    attributeFilter: ["dir"],
+    subtree: true,
   });
 
   let intersectionObserver: IntersectionObserver | undefined;
@@ -817,6 +843,7 @@ export function createSlider(
       index = indexOfDom(children.indexOf(showing));
     }
     play.reset(); // continuous autoplay's transforms would skew every measurement
+    rtl = computedRtl();
     readSlidesPerView();
     if (cloneCount() !== clonesBefore) return rebuild(index);
     measure();
@@ -875,7 +902,7 @@ export function createSlider(
       if (authorDir === undefined) authorDir = container.getAttribute("dir");
       container.setAttribute("dir", direction);
     } else restoreDir();
-    rtl = !isVertical() && getComputedStyle(container).direction === "rtl";
+    rtl = computedRtl();
     container.setAttribute("data-aero-alignment", config.alignment);
     attr(container, "role", "region");
     attr(container, "aria-roledescription", label("carousel"));
@@ -888,7 +915,7 @@ export function createSlider(
     for (let i = 0; i < clonesBefore; i++) track.append(cloneOf(slides[i % slideCount]!));
     // WebKit never starts loading media that arrived from another document with <source> children.
     for (const media of track.querySelectorAll<HTMLMediaElement>(
-      `[${CLONE_ATTR}] video, [${CLONE_ATTR}] audio`
+      `:is(video, audio)[${CLONE_ATTR}], [${CLONE_ATTR}] :is(video, audio)`
     )) {
       if (media.networkState === media.NETWORK_EMPTY) media.load();
     }
@@ -943,6 +970,7 @@ export function createSlider(
     destroyed = true;
     controller.abort(); // removes every listener; features clean up on this signal too
     resizeObserver.disconnect();
+    directionObserver.disconnect();
     intersectionObserver?.disconnect();
     clearTimeout(settleTimer);
     cancelAnimationFrame(scrollFrame);

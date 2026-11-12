@@ -97,3 +97,45 @@ test("a dir the page sets after creation survives a refresh and destroy", async 
   await page.evaluate(() => window.sliders.s!.destroy());
   await expect(container).toHaveAttribute("dir", "rtl");
 });
+
+test.describe("a page that turns right-to-left after creation", () => {
+  test.beforeEach(async ({ page }) => {
+    await mount(page, slider("s", 5, gap));
+    await create(page, "s");
+  });
+
+  test("next() in the same task as the dir change moves the track", async ({ page }) => {
+    await page.evaluate(() => {
+      document.documentElement.dir = "rtl";
+      window.sliders.s!.next();
+    });
+    await settled(page, "s");
+    expect(await state(page, "s")).toEqual({ index: 1, position: -610 });
+  });
+
+  test("a direction set in CSS, with no dir attribute, is picked up by the next move", async ({
+    page,
+  }) => {
+    await page.evaluate(() => {
+      document.body.style.direction = "rtl";
+      window.sliders.s!.goTo(2);
+    });
+    await settled(page, "s");
+    expect(await state(page, "s")).toEqual({ index: 2, position: -1220 });
+  });
+
+  test("the first arrow key after the dir change goes the right-to-left way", async ({ page }) => {
+    await page.evaluate(() => (document.documentElement.dir = "rtl"));
+    await page.locator("#s").focus();
+    await page.keyboard.press("ArrowLeft");
+    await settled(page, "s");
+    expect(await state(page, "s")).toEqual({ index: 1, position: -610 });
+  });
+
+  test("the slider keeps its slide when the page turns", async ({ page }) => {
+    await page.evaluate(() => window.sliders.s!.goTo(2, { instant: true }));
+    await page.evaluate(() => (document.documentElement.dir = "rtl"));
+    await settled(page, "s");
+    expect(await state(page, "s")).toEqual({ index: 2, position: -1220 });
+  });
+});
