@@ -115,3 +115,64 @@ test("list item thumbnails are list items again after teardown", async ({ page }
   for (const item of await items.all()) await expect(item).not.toHaveAttribute("role");
   await expect(page.locator("#thumbs").getByRole("listitem")).toHaveCount(4);
 });
+
+const PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+
+test("image thumbnails become buttons named by their alt text, and images again after teardown", async ({
+  page,
+}) => {
+  const images = ["Red", "Green", "", "Blue"]
+    .map((alt) => `<img alt="${alt}" src="${PIXEL}" style="height:40px">`)
+    .join("");
+  await mount(
+    page,
+    slider("main", 4) +
+      `<div id="thumbs" class="aero-slider" style="width:600px;--slides-per-view:5"><div class="aero-slider__viewport"><div class="aero-slider__track">${images}</div></div></div>`
+  );
+  await create(page, "main");
+  await create(page, "thumbs");
+  await page.evaluate(() => {
+    (window as unknown as { unsync: () => void }).unsync = window.syncThumbnails(
+      window.sliders.main!,
+      window.sliders.thumbs!,
+      { loop: false }
+    );
+  });
+  const track = page.locator("#thumbs .aero-slider__track");
+  await expect(track).toMatchAriaSnapshot(`
+    - button "Red"
+    - button "Green"
+    - button "Go to slide 3"
+    - button "Blue"
+  `);
+
+  await track.getByRole("button", { name: "Green" }).focus();
+  await page.keyboard.press("Enter");
+  await settled(page, "main");
+  expect(await index(page)).toBe(1);
+
+  await page.evaluate(() => (window as unknown as { unsync: () => void }).unsync());
+  await expect(track.locator("[role], [tabindex], [aria-label]")).toHaveCount(0);
+});
+
+test("thumbnails the author made buttons take Enter and Space", async ({ page }) => {
+  await mount(page, slider("main", 4) + slider("thumbs", 4, strip));
+  await page.evaluate(() => {
+    for (const slide of document.querySelectorAll("#thumbs .aero-slider__track > *")) {
+      slide.setAttribute("role", "button");
+      slide.setAttribute("tabindex", "0");
+    }
+  });
+  await create(page, "main");
+  await create(page, "thumbs");
+  await sync(page);
+  const thumbnails = page.locator("#thumbs [data-aero-slider-index]");
+  await thumbnails.nth(1).focus();
+  await page.keyboard.press("Enter");
+  await settled(page, "main");
+  expect(await index(page)).toBe(1);
+  await thumbnails.nth(3).focus();
+  await page.keyboard.press(" ");
+  await settled(page, "main");
+  expect(await index(page)).toBe(3);
+});

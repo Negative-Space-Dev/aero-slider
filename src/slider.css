@@ -85,7 +85,8 @@
   outline: none;
 }
 
-.aero-slider:focus-visible {
+.aero-slider:focus-visible,
+.aero-slider__track:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 2px;
 }
@@ -135,8 +136,13 @@
   white-space: nowrap;
 }
 
-/* Slides and the viewport clip, so focus rings draw inside the focused box. */
-:where(.aero-slider__track > :focus-visible, .aero-slider__track > * :focus-visible) {
+/* Slides and the viewport clip, so focus rings draw inside the focused box. The track takes
+   focus only when the author gives it a tabindex. */
+:where(
+  .aero-slider__track:focus-visible,
+  .aero-slider__track > :focus-visible,
+  .aero-slider__track > * :focus-visible
+) {
   outline-offset: -2px;
 }
 

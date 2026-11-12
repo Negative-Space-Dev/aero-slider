@@ -53,9 +53,20 @@ test("the container is the slider's one tab stop, and shows focus", async ({ pag
   await expect(page.locator("#s .aero-slider__track")).toHaveAttribute("tabindex", "-1");
 });
 
-test("the author's tabindex on the track stays", async ({ page }) => {
-  await mount(page, slider("s", 3).replace('class="aero-slider__track"', '$& tabindex="0"'));
+test("the author's tabindex on the track stays, and the track shows focus", async ({ page }) => {
+  await mount(
+    page,
+    slider("s", 3, { nav: false, dots: false }).replace(
+      'class="aero-slider__track"',
+      '$& tabindex="0"'
+    )
+  );
   await create(page, "s");
+  const track = page.locator("#s .aero-slider__track");
+  await page.locator("#s").focus();
+  await page.keyboard.press("Tab");
+  await expect(track).toBeFocused();
+  expect(await track.evaluate((el) => getComputedStyle(el).outlineStyle)).not.toBe("none");
   await page.evaluate(() => window.sliders.s!.destroy());
   await expect(page.locator("#s .aero-slider__track")).toHaveAttribute("tabindex", "0");
 });

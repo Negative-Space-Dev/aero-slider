@@ -66,7 +66,12 @@ export function syncThumbnails(
     },
     { signal }
   );
-  pressable(track, (target) => core.written.get(target)?.role === "button", signal);
+  // Thumbnails the author marked up as buttons count too, not only the ones made into buttons here.
+  pressable(
+    track,
+    (target) => target.hasAttribute(SLIDE_INDEX_ATTR) && target.getAttribute("role") === "button",
+    signal
+  );
 
   activate(primary.currentIndex);
   return () => {

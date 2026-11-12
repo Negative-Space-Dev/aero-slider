@@ -98,3 +98,21 @@ test("End from the first windowed dot moves focus to the last dot", async ({ pag
   await settled(page, "s");
   await expect(page.getByRole("button", { name: "Go to slide 12" })).toBeFocused();
 });
+
+test("a focused dot keeps focus when the dots are rebuilt", async ({ page }) => {
+  await mount(page, slider("s", 3));
+  await create(page, "s", { alignment: "left" });
+  const buttons = page.locator("#s .aero-slider__dot");
+  await buttons.nth(1).focus();
+  await page.evaluate(() => window.sliders.s!.refresh());
+  await expect(buttons.nth(1)).toBeFocused();
+
+  // With two slides in view, left aligned, there are two stops: the third dot's place is gone.
+  await buttons.nth(2).focus();
+  await page.evaluate(() => {
+    document.getElementById("s")!.style.setProperty("--slides-per-view", "2");
+    window.sliders.s!.refresh();
+  });
+  await expect(buttons).toHaveCount(2);
+  await expect(buttons.nth(1)).toBeFocused();
+});
