@@ -216,14 +216,17 @@ export function createSlider(
 
   /** Smooth scrolls honour prefers-reduced-motion, and use scrollDuration's easing when set. */
   function scrollTo(position: number, smooth = false): void {
-    cancelEase();
-    if (!smooth || reducedMotion.matches) return nativeScrollTo(position, "instant");
-    if (config.scrollDuration <= 0) return nativeScrollTo(position, "smooth");
-
+    if (!smooth || reducedMotion.matches || config.scrollDuration <= 0) {
+      cancelEase();
+      return nativeScrollTo(position, smooth && !reducedMotion.matches ? "smooth" : "instant");
+    }
+    // Snapping stays off from one eased move into the next: restoring it in between would let
+    // the browser snap the track to a slide before this move reads where it starts.
+    cancelAnimationFrame(easeFrame);
+    track.style.scrollSnapType = "none"; // mandatory snapping would pull every frame to a slide
     const from = scrollPosition();
     const distance = position - from;
     const started = performance.now();
-    track.style.scrollSnapType = "none"; // mandatory snapping would pull every frame to a slide
     const step = (now: number) => {
       // Frame timestamps can predate `started`, so clamp before easing.
       const t = Math.min(1, Math.max(0, (now - started) / config.scrollDuration));
@@ -496,7 +499,9 @@ export function createSlider(
     const userScroll = !programmaticScroll;
     programmaticScroll = false;
     track.style.scrollSnapType = "";
-    if (userScroll && snapMode() === "settle" && settleNear(scrollPosition())) return;
+    // Native snapping normally has the track on a slide by now, and settleNear() then does
+    // nothing. WebKit doesn't re-snap when an interrupted eased move restores snapping.
+    if (userScroll && snapMode() !== "none" && settleNear(scrollPosition())) return;
     teleportToRealSlides();
     const position = scrollPosition();
     const landed = indexAt(position);
@@ -563,7 +568,7 @@ export function createSlider(
     // Fingers are counted from touch events (see touchstart below).
     if (event.pointerType !== "touch") pressed.add(event.pointerId);
     // A wheel settle that was still pending waits for the pointer or finger to lift.
-    if (fallbackSettle) settleDeferred = true;
+    if (fallbackSettle || easeFrame) settleDeferred = true;
     fallbackSettle = false;
     clearTimeout(settleTimer);
     cancelEase();
@@ -970,6 +975,9 @@ export function createSlider(
       programmaticScroll = false;
       fallbackSettle = true;
       cancelEase();
+      // A wheel too small to scroll sends no scroll event to settle after.
+      clearTimeout(settleTimer);
+      settleTimer = window.setTimeout(onSettle, WHEEL_SETTLE_MS);
     },
     { passive: true, signal }
   );

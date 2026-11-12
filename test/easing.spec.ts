@@ -138,11 +138,7 @@ test.describe("an eased move to the last slide", () => {
     );
   }
 
-  test("stops where it is on a wheel, then snaps to a slide", async ({ page, browserName }) => {
-    test.fixme(
-      browserName === "webkit",
-      "WebKit leaves the track between slides 0 and 1 (446, 472 or 491px, scroll-snap-type x mandatory), still there 3s later"
-    );
+  test("stops where it is on a wheel, then snaps to a slide", async ({ page }) => {
     const box = (await page.locator("#s .aero-slider__track").boundingBox())!;
     await page.mouse.move(box.x + 300, box.y + 60);
     await startMove(page);
@@ -160,7 +156,9 @@ test.describe("an eased move to the last slide", () => {
     await startMove(page);
     await page.mouse.down();
     await page.mouse.up();
-    await settled(page, "s");
+    await expect
+      .poll(async () => (await state(page, "s")).position % STRIDE, { timeout: 5000 })
+      .toBe(0);
     expect((await state(page, "s")).position).toBeLessThan(2340);
   });
 
@@ -176,10 +174,7 @@ test.describe("an eased move to the last slide", () => {
     });
   });
 
-  // Fails on every engine: restoring snapping between the two moves lets the browser snap the
-  // track to the nearest slide (offsets 21 to 287 become 0 or 610), so the second move starts
-  // from there, a visible jump back or forward.
-  test.fixme("a goTo() during the move carries on from where the track is", async ({ page }) => {
+  test("a goTo() during the move carries on from where the track is", async ({ page }) => {
     await page.evaluate(() => window.sliders.s!.goTo(4));
     await page.waitForFunction(() => {
       const offset = document.querySelector("#s .aero-slider__track")!.scrollLeft % 610;
