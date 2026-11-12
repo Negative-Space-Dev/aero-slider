@@ -97,6 +97,20 @@ el.addEventListener("aero:slideChange", (e) => console.log(e.detail.index));
 type SlideChange = SliderEventMap["slideChange"]; // { index: number }
 ```
 
+## Renamed in 1.0
+
+The old names still work as aliases, so existing markup and styles keep working:
+
+| Old                  | New                      |
+| -------------------- | ------------------------ |
+| `alignment: "left"`  | `alignment: "start"`     |
+| `alignment: "right"` | `alignment: "end"`       |
+| `--slides-per-view`  | `--aero-slides-per-view` |
+| `--slide-gap`        | `--aero-slide-gap`       |
+| `--slide-aspect`     | `--aero-slide-aspect`    |
+
+Alignment is logical: `"start"` is the right edge in an RTL slider and the top in a vertical one. The library writes `data-aero-alignment="start"` or `"end"`, and the stylesheet accepts `"left"` and `"right"` in server-rendered markup. When both a new and an old variable are set, the new one wins.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, working on the doc site, and publishing.
