@@ -70,8 +70,8 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
       dots.push(dot);
     }
 
+    if (dotTrack || !count) template.style.display = "none";
     if (dotTrack) {
-      template.style.display = "none";
       box.classList.add("aero-slider__pagination--windowed");
       box.append(dotTrack);
       dotPitch = dots[1]!.offsetLeft - dots[0]!.offsetLeft;

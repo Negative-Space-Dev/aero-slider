@@ -276,7 +276,7 @@ export function createSlider(
       : track.scrollWidth - track.clientWidth;
     stops = [];
     stopPositions = [];
-    for (let i = 0; i <= (loop() ? slideCount - 1 : maxIndex()); i++) {
+    for (let i = 0; i < slideCount && (loop() || i <= maxIndex()); i++) {
       const position = loop() ? 0 : restPositionOf(i);
       if (i && slideStride && !loop() && position - stopPositions.at(-1)! < 0.5) continue;
       stops.push(i);
@@ -298,16 +298,20 @@ export function createSlider(
   function indexAt(position: number): number {
     if (loop()) return indexOfDom(domIndexAt(position));
     const distance = (stop: number) => Math.abs(stopPositions[stop]! - position);
-    return stops[
-      stops.reduce((best, _, stop) => (distance(stop) < distance(best) ? stop : best), 0)
-    ]!;
+    const nearest = stops.reduce(
+      (best, _, stop) => (distance(stop) < distance(best) ? stop : best),
+      0
+    );
+    return stops[nearest] ?? 0;
   }
 
   const stopOf = (index: number) => stops.findLastIndex((slide) => slide <= index);
 
   /** Where the real copy of slide `index` rests. */
   function restPositionOf(index: number): number {
-    const position = snapPositionOf(track.children[clonesBefore + index]!);
+    const slide = track.children[clonesBefore + index];
+    if (!slide) return 0; // every slide removed
+    const position = snapPositionOf(slide);
     return loop() ? position : clamp(position, 0, maxScroll);
   }
 
@@ -758,7 +762,6 @@ export function createSlider(
     for (const clone of track.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
     slides = Array.from(track.children) as HTMLElement[];
     slideCount = slides.length;
-    if (!slideCount) return;
     slides.forEach((slide, i) => {
       slide.classList.add("aero-slider__slide");
       slide.setAttribute(SLIDE_INDEX_ATTR, String(i));

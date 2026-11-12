@@ -96,3 +96,36 @@ test("synced thumbnails follow a slide removed from both", async ({ page }) => {
   await expect(page.locator("#thumbs .aero-slider__thumb--active")).toHaveText("2");
   expect(await page.evaluate(() => window.sliders.thumbs!.currentIndex)).toBe(1);
 });
+
+for (const loop of [false, true]) {
+  test(`removing every slide${loop ? " from a loop" : ""} leaves a safe empty slider`, async ({
+    page,
+  }) => {
+    const errors: Error[] = [];
+    page.on("pageerror", (error) => errors.push(error));
+    await mount(page, slider("s", 4));
+    await create(page, "s", { loop });
+    await page.evaluate(() => window.sliders.s!.remove([0, 1, 2, 3]));
+    await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => setTimeout(done))));
+    expect(errors).toEqual([]);
+    await expect(page.locator("#s .aero-slider__track > *")).toHaveCount(0);
+    await expect(page.locator("#s .aero-slider__dot:visible")).toHaveCount(0);
+    await expect(page.locator("#s .aero-slider__nav--prev")).toBeDisabled();
+    await expect(page.locator("#s .aero-slider__nav--next")).toBeDisabled();
+    await page.evaluate(() => window.sliders.s!.next());
+
+    await page.evaluate(() => {
+      const make = (label: string) => {
+        const slide = document.createElement("div");
+        slide.innerHTML = `<div>${label}</div>`;
+        return slide;
+      };
+      window.sliders.s!.add([make("a"), make("b"), make("c")]);
+    });
+    await expect(page.locator("#s .aero-slider__dot:visible")).toHaveCount(3);
+    await page.evaluate(() => window.sliders.s!.next());
+    await settled(page, "s");
+    expect((await state(page, "s")).index).toBe(1);
+    expect(errors).toEqual([]);
+  });
+}
