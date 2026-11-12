@@ -41,3 +41,11 @@ const [dts] = generateDtsBundle(
   { preferredConfigPath: "tsconfig.json" }
 );
 await Bun.write("dist/index.d.ts", `${banner}\n${dts}`);
+
+// bun 1.3.14 applies this package's own "sideEffects" field to the build and writes an entry with
+// no code in it. Fail here rather than publish that.
+const entry = await import(`${import.meta.dir}/dist/index.js`);
+if (typeof entry.createSlider !== "function" || typeof entry.syncThumbnails !== "function") {
+  console.error("dist/index.js does not export createSlider and syncThumbnails");
+  process.exit(1);
+}
