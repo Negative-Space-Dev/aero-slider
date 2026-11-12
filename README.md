@@ -58,7 +58,7 @@ The bundler entry (`import ... from "aero-slider"`) sets no global, so bundlers 
 
 ## Working with AI agents
 
-[aeroslider.md](aeroslider.md) is a compact guide for coding agents: the markup to write, the CSS variables, options, events and the accessibility split. It ships in the package, so point your agent at `node_modules/aero-slider/aeroslider.md`.
+[aeroslider.md](aeroslider.md) is a compact guide for coding agents: the markup to write, the CSS variables, options, instance, events, how to extend the slider and the accessibility split. Point your agent at `node_modules/aero-slider/aeroslider.md` or at [aeroslider.com/aeroslider.md](https://aeroslider.com/aeroslider.md). It is also in every release zip, next to the JavaScript and CSS.
 
 ## Accessibility
 

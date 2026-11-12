@@ -1,21 +1,25 @@
-# Working with aero-slider
+# aero-slider agent guide
 
-Guidance for coding agents that add or edit an aero-slider. The library is CSS-first: layout lives in CSS variables and markup, and the JavaScript only handles events, loop clones, pagination and autoplay. Roles, names and controls are yours to write in the markup. The slider does not add them.
+For coding agents that add, edit or extend an aero-slider. Docs: https://aeroslider.com
 
-## Setup
+**Model.** The track is a native CSS scroll container. CSS variables set the layout. JavaScript adds only behaviour: navigation, loop clones, dots, autoplay, drag, events. You write the markup, the look and the accessibility names. The library ships no styles for arrows or dots.
+
+## Install
 
 ```js
 import { createSlider, syncThumbnails } from "aero-slider";
-import "aero-slider/slider.css";
+import "aero-slider/slider.css"; // required: nothing lays out without it
 
 const slider = createSlider(element, { loop: true });
 ```
 
-Without a bundler, load `dist/aero-slider.min.js` with `type="module"` and use `window.AeroSlider.createSlider`. Importing `aero-slider` through a bundler sets no global.
+No bundler: load `dist/aero-slider.min.css` and `dist/aero-slider.min.js` (`type="module"`), then call `window.AeroSlider.createSlider`. The package import sets no global.
+
+`createSlider` throws if the container has no `.aero-slider__track` or the track has no children. Bad option values never throw; they fall back to defaults.
 
 ## Markup
 
-Write all of this. Class names are fixed.
+Class names are fixed. Roles and names are yours to write; the slider does not add them.
 
 ```html
 <div
@@ -39,86 +43,120 @@ Write all of this. Class names are fixed.
 </div>
 ```
 
-- Every direct child of `.aero-slider__track` is a slide. Nav buttons and pagination are optional.
-- Give the container a name with `aria-label` or `aria-labelledby`.
-- Write one `.aero-slider__dot` as a template. The slider copies it once per stop and replaces `{index}` in its `aria-label`. Use `<button type="button">`. A `<span>` dot cannot be reached by keyboard.
-- A slide that is a link, a list item or an image keeps its own semantics. Do not add `role="group"` to it.
-- With `loop`, add `data-aero-defer-visibility` to the container to reserve the clones' space before init. If the alignment is not centred, also set `data-aero-alignment="start"` or `"end"` in the HTML.
+| Part                                             | Required | Notes                                                                                                                  |
+| ------------------------------------------------ | -------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `.aero-slider`                                   | yes      | Container. Receives events, state classes and the instance (`element.aeroSlider`).                                     |
+| `.aero-slider__viewport`                         | yes      | `position: relative`. Put arrows inside it, before the track.                                                          |
+| `.aero-slider__track`                            | yes      | The scroller. Every direct child is a slide.                                                                           |
+| `.aero-slider__nav--prev`, `--next`              | no       | Buttons. Disabled by the slider at an end it cannot pass. Never disabled with `loop`.                                  |
+| `.aero-slider__pagination` > `.aero-slider__dot` | no       | One dot as a template. Copied once per stop; `{index}` in its `aria-label` becomes the slide number. Use a `<button>`. |
 
-## Layout: CSS variables
+- A slide that is a link, list item or image keeps its own semantics. Do not add `role="group"` to it.
+- Real slides carry `data-aero-slider-index`. Loop clones carry `data-aero-slider-clone`. Select real slides with `.aero-slider__track > [data-aero-slider-index]`, never all track children.
 
-Set these on the slider or any ancestor, and change them in media or container queries. Do not size slides in JavaScript.
+## Layout
 
-| Variable                 | Default | Meaning                                                                         |
-| ------------------------ | ------- | ------------------------------------------------------------------------------- |
-| `--aero-slides-per-view` | `1`     | Slides in view. Fractions such as `1.5` show a peek.                            |
-| `--aero-slide-gap`       | `0px`   | Space between slides.                                                           |
-| `--aero-slide-aspect`    | `5 / 3` | Aspect ratio of each slide.                                                     |
-| `--aero-layout-width`    | `100%`  | Content column width, used with `aero-slider--breakout` for a full-bleed track. |
+CSS variables on the slider or any ancestor. Change them in media or container queries. Never size slides in JavaScript.
 
-- The variables stop at a slide's content. Set them on a nested slider itself.
-- After changing a variable from script, call `slider.refresh()`. A resize re-measures on its own.
-- The pre-1.0 names (`--slides-per-view`, `--slide-gap`, `--slide-aspect`) still work. Use the new names.
+| Variable                 | Default | Meaning                                              |
+| ------------------------ | ------- | ---------------------------------------------------- |
+| `--aero-slides-per-view` | `1`     | Slides in view. Fractions such as `1.5` show a peek. |
+| `--aero-slide-gap`       | `0px`   | Space between slides.                                |
+| `--aero-slide-aspect`    | `5 / 3` | Aspect ratio of each slide.                          |
+| `--aero-layout-width`    | `100%`  | Content column width, for a breakout slider.         |
+
+```css
+.products {
+  --aero-slides-per-view: 1.2;
+  --aero-slide-gap: 12px;
+}
+@media (min-width: 768px) {
+  .products {
+    --aero-slides-per-view: 3;
+  }
+}
+```
+
+- Resizes re-measure on their own. After changing a variable from script, call `slider.refresh()`.
+- The variables stop at a slide's content. Set them again on a nested slider.
+- Breakout (track runs off both window edges, active slide lines up with the content column): add `aero-slider--breakout`, make the container full-bleed, set `--aero-layout-width` to the column width.
+- With `loop`, add `data-aero-defer-visibility` to the container to avoid a layout shift before init. If alignment is not centred, also write `data-aero-alignment="start"` or `"end"` in the HTML.
+- Pre-1.0 names (`--slides-per-view`, `--slide-gap`, `--slide-aspect`, `alignment: "left" | "right"`) still work. Write the new ones.
 
 ## Options
 
-| Option             | Default        | Notes                                                                                             |
-| ------------------ | -------------- | ------------------------------------------------------------------------------------------------- |
-| `loop`             | `false`        | Turns itself off when every slide already fits in view.                                           |
-| `autoplay`         | `false`        | `true` moves every `autoplayInterval` ms. `"continuous"` drifts like a ticker and implies `loop`. |
-| `autoplayInterval` | `5000`         | Milliseconds, at least 100.                                                                       |
-| `autoplaySpeed`    | `40`           | Pixels per second for `"continuous"`.                                                             |
-| `draggable`        | `true`         | Mouse drag. Touch always scrolls natively.                                                        |
-| `alignment`        | `"center"`     | `"start"`, `"center"` or `"end"`. Logical, so `"start"` is the right edge in RTL.                 |
-| `maxDots`          | `0`            | Show at most this many dots, windowed. `0` shows all.                                             |
-| `noDrag`           | `""`           | Selector for content that must not start a drag, such as `"p, h2"` to keep text selectable.       |
-| `perMove`          | `1`            | Stops advanced by `next()` and `prev()`.                                                          |
-| `direction`        | `"auto"`       | Follows the page's direction. `"ltr"` and `"rtl"` force one. `"ttb"` is vertical.                 |
-| `snap`             | `"native"`     | `"settle"` scrolls freely then eases onto a slide. `"none"` rests anywhere.                       |
-| `scrollDuration`   | `0`            | Milliseconds for scripted moves. `0` uses native smooth scrolling.                                |
-| `scrollEasing`     | ease-out cubic | `(progress) => eased`, used with `scrollDuration`.                                                |
+`createSlider(element, options)`; change later with `slider.update(options)`.
+
+| Option             | Default        | Notes                                                                                            |
+| ------------------ | -------------- | ------------------------------------------------------------------------------------------------ |
+| `loop`             | `false`        | Turns itself off when every slide already fits in view.                                          |
+| `alignment`        | `"center"`     | `"start"`, `"center"`, `"end"`. Logical: `"start"` is the right edge in RTL, the top in `"ttb"`. |
+| `direction`        | `"auto"`       | Follows the page. `"ltr"` and `"rtl"` force one. `"ttb"` is vertical.                            |
+| `perMove`          | `1`            | Stops advanced by `next()`, `prev()`, the arrows, the arrow keys and autoplay.                   |
+| `snap`             | `"native"`     | `"settle"` scrolls freely, then eases onto a slide. `"none"` rests anywhere.                     |
+| `draggable`        | `true`         | Mouse drag. Touch always scrolls natively.                                                       |
+| `noDrag`           | `""`           | Selector for slide content that must not start a drag, e.g. `"a, button, input, p"`.             |
+| `autoplay`         | `false`        | `true` steps every `autoplayInterval`. `"continuous"` drifts like a ticker and implies `loop`.   |
+| `autoplayInterval` | `5000`         | Milliseconds, at least 100.                                                                      |
+| `autoplaySpeed`    | `40`           | Pixels per second for `"continuous"`.                                                            |
+| `maxDots`          | `0`            | Show at most this many dots, windowed. `0` shows all.                                            |
+| `scrollDuration`   | `0`            | Milliseconds for scripted moves. `0` uses native smooth scrolling.                               |
+| `scrollEasing`     | ease-out cubic | `(progress) => eased`, used with `scrollDuration`.                                               |
+
+Autoplay pauses on hover, on keyboard focus inside, during a press or drag and while the tab is hidden. It never runs under `prefers-reduced-motion`.
 
 ## Instance
 
-`currentIndex`, `slideCount`, `element`, `next()`, `prev()`, `goTo(index, { instant })`, `pause()`, `resume()`, `update(config)`, `refresh()`, `add(slides, index?)`, `remove(index)`, `destroy()`. The instance is also at `element.aeroSlider`.
+| Member                                  | Use                                                                |
+| --------------------------------------- | ------------------------------------------------------------------ |
+| `currentIndex`, `slideCount`, `element` | Read-only state.                                                   |
+| `next()`, `prev()`                      | Move by `perMove`.                                                 |
+| `goTo(index, { instant })`              | Go to a slide index. `instant: true` skips the animation.          |
+| `pause()`, `resume()`                   | Hold and release autoplay from code.                               |
+| `update(options)`                       | Change options in place.                                           |
+| `refresh()`                             | Re-measure after you change the DOM or a CSS variable from script. |
+| `add(slides, index?)`, `remove(index)`  | Insert or remove slides. The slide in view stays in view.          |
+| `destroy()`                             | Remove listeners and clones and restore the markup.                |
 
-- Add and remove slides with `add()` and `remove()`, or change the DOM and call `refresh()`.
-- Without `loop`, slides that rest at the same position near an end share one stop and one dot. `goTo()` and `currentIndex` still use slide indexes.
-- Calling `createSlider` again on the same element replaces the old instance. `destroy()` restores the markup.
+- Without `loop`, slides that rest at the same position near an end share one stop and one dot. Indexes are still slide indexes.
+- Calling `createSlider` again on the same element replaces the old instance.
 
 ## Events
 
-DOM `CustomEvent`s on the container, typed in TypeScript: `aero:ready`, `aero:slideChange` (`detail.index`), `aero:dragStart`, `aero:dragEnd`, `aero:autoplayStart`, `aero:autoplayStop`, `aero:resize`, `aero:resized`, `aero:visible` and `aero:hidden` (`detail.index`), `aero:destroy`.
+`CustomEvent`s on the container, typed in TypeScript. They bubble: with nested sliders, check `event.target === element`.
+
+| Event                                     | `detail`               | When                                          |
+| ----------------------------------------- | ---------------------- | --------------------------------------------- |
+| `aero:ready`                              | `{}`                   | Initialised.                                  |
+| `aero:slideChange`                        | `{ index }`            | The current slide changed.                    |
+| `aero:visible`, `aero:hidden`             | `{ index }`            | A slide entered or left the viewport.         |
+| `aero:dragStart`                          | `{ index }`            | A mouse drag began.                           |
+| `aero:dragEnd`                            | `{ index, fromIndex }` | A mouse drag ended.                           |
+| `aero:autoplayStart`, `aero:autoplayStop` | `{}`                   | Autoplay started or stopped, pauses included. |
+| `aero:resize`, `aero:resized`             | `{}`                   | Before and after a re-measure.                |
+| `aero:destroy`                            | `{}`                   | Destroyed.                                    |
+
+## Extending
+
+Build on the instance and the events. Do not patch the library or move the track's scroll position yourself.
+
+- **Custom controls** (any element, anywhere): call `next()`, `prev()` or `goTo(i)` from your own handlers.
+- **Derived UI** (counter, progress bar, caption, analytics): listen for `aero:slideChange` and read `detail.index` and `slider.slideCount`.
+- **Work per visible slide** (play a video, load data, animate in): use `aero:visible` and `aero:hidden`.
+- **Dynamic content**: `add()` and `remove()`, or edit the track's children and call `refresh()`. Rewrite the slide names ("2 of 5") when the count changes.
+- **Frameworks**: create the slider once the slides are in the DOM (mount effect) and call `destroy()` on unmount. After the framework re-renders the slides, call `refresh()`.
+- **Thumbnails**: two sliders and `syncThumbnails`.
 
 ```js
-element.addEventListener("aero:slideChange", (event) => console.log(event.detail.index));
+const main = createSlider(mainEl);
+const thumbs = createSlider(thumbsEl, { alignment: "center" });
+const teardown = syncThumbnails(main, thumbs, { loop: false }); // strip loops by default
+// later: teardown(); main.destroy(); thumbs.destroy();
 ```
 
-They bubble. Inside a nested setup, check `event.target === element`.
+Both need the same number of slides. Make each thumbnail a `<button type="button">` with an `aria-label`. The current one gets `aero-slider__thumb--active` and `aria-current="true"`.
 
-## Thumbnails
-
-```js
-const teardown = syncThumbnails(mainSlider, thumbSlider, { loop: false });
-```
-
-Make each thumbnail a `<button type="button">` with its own name. The slider marks the current one with `aria-current="true"` and the class `aero-slider__thumb--active`.
-
-## Accessibility
-
-The slider handles what changes at runtime:
-
-- The container is the one tab stop. Arrow keys, Home and End move the slider while the container, a nav button or a dot has focus.
-- The current dot and thumbnail carry `aria-current="true"`.
-- Loop clones are hidden from screen readers, the tab order and forms.
-- Focus is kept when a nav button disables or the dots are rebuilt, and focus moving into a partly shown slide brings it into view.
-- A hidden live region announces the position when a user changes slide. Word it with `data-aero-status="Slide {index} of {count}"` on the container.
-
-You write the rest:
-
-- The region role, role description and name on the container, and the group role and name on each slide, as in the markup above. Update the slide names if the slide count changes.
-- Names on the nav buttons, the dot template and the thumbnails.
-- A pause control for any autoplay that runs longer than five seconds:
+- **Pause control**, required for autoplay that runs longer than five seconds:
 
 ```js
 let paused = false;
@@ -129,20 +167,30 @@ toggle.addEventListener("click", () => {
 });
 ```
 
-Autoplay already pauses on hover, on keyboard focus inside, during a drag and while the tab is hidden, and never runs under `prefers-reduced-motion`.
+## Accessibility
+
+| The slider does                                                                                                    | You write                                                                                                                   |
+| ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Makes the container the one tab stop. Arrow keys, Home and End work from the container, a nav button or a dot.     | Region role, role description and name on the container.                                                                    |
+| Sets `aria-current="true"` on the current dot and thumbnail.                                                       | Group role and name on each slide.                                                                                          |
+| Hides loop clones from screen readers, the tab order and forms.                                                    | Names on nav buttons, the dot template and thumbnails.                                                                      |
+| Keeps focus when a nav button disables or dots rebuild. Scrolls a partly shown slide into view when it gets focus. | `<button>` for dots and thumbnails.                                                                                         |
+| Announces "2 of 5" in a hidden live region on a user change. Silent during autoplay.                               | A pause control for autoplay. `data-aero-status="Bild {index} von {count}"` on the container to translate the announcement. |
 
 ## Styling hooks
 
-- State classes on the container: `aero-slider--ready`, `aero-slider--dragging`, `aero-slider--draggable`, `aero-slider--vertical`, `aero-slider--free`.
-- Dots: `aero-slider__dot--active`, and with `maxDots`, `aero-slider__dot--edge`, `--near-edge` and `--hidden`.
-- Nav buttons are disabled at the ends of a slider without `loop`. Style `:disabled`.
-- The slider sets `data-aero-alignment` to `"start"`, `"center"` or `"end"` after init.
+- Container: `aero-slider--ready`, `--draggable`, `--dragging`, `--vertical`, `--free` (snap is not native), and `data-aero-alignment="start" | "center" | "end"`.
+- Slides: `aero-slider__slide` is added to each.
+- Dots: `aero-slider__dot--active`. With `maxDots`: `--edge`, `--near-edge`, `--hidden`.
+- Arrows: style `:disabled` for the end state.
+- Thumbnails: `aero-slider__thumb--active`.
 
-## Mistakes to avoid
+## Rules
 
-- Setting slide widths, gaps or counts in JavaScript, or passing them as options. They are CSS variables.
-- Leaving out `aero-slider/slider.css`. Nothing lays out without it.
-- Using `<span>` dots or `<div>` thumbnails, which a keyboard cannot reach.
-- Expecting the slider to add roles, labels or a pause button.
-- Selecting `[data-aero-alignment="left"]` in CSS. The slider writes `"start"`.
-- Creating the slider before its slides are in the DOM without calling `refresh()` afterwards.
+- Layout is CSS variables. Do not pass sizes as options or set widths in JavaScript.
+- Use `<button>` for dots and thumbnails. `<span>` and `<div>` cannot be reached by keyboard.
+- Do not expect roles, labels or a pause button from the slider.
+- Do not select `[data-aero-alignment="left"]`. The slider writes `"start"`.
+- Do not create the slider before its slides exist, unless you call `refresh()` afterwards.
+- Do not read or write loop clones. Filter on `[data-aero-slider-index]`.
+- Call `destroy()` before removing the element.
