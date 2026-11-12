@@ -21,13 +21,16 @@ export function navigation(core: SliderCore) {
       const stop = core.stop();
       const hasEdges = !core.loop();
       const off = [last < 1 || (hasEdges && stop <= 0), last < 1 || (hasEdges && stop >= last)];
+      // Enable first: a button about to take focus must already be able to hold it.
+      buttons.forEach((button, i) => button && !off[i] && (button.disabled = false));
       buttons.forEach((button, i) => {
-        if (!button) return;
-        // A focused button that disables would drop focus to the page.
-        if (off[i] && button === document.activeElement) {
-          ((!off[1 - i] && buttons[1 - i]) || container).focus();
+        if (!button || !off[i]) return;
+        // A focused button that disables would drop focus to the page. The page may have been
+        // scrolled away since the click, so the hand-over must not scroll it back.
+        if (button === document.activeElement) {
+          ((!off[1 - i] && buttons[1 - i]) || container).focus({ preventScroll: true });
         }
-        button.disabled = off[i]!;
+        button.disabled = true;
       });
     },
   };
@@ -155,7 +158,9 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
       );
       if (size) dot.classList.add(`aero-slider__dot--${size}`);
       // A dot about to leave the tab order hands focus to the current one.
-      if (size === "hidden" && dot === document.activeElement) dots[current]!.focus();
+      if (size === "hidden" && dot === document.activeElement) {
+        dots[current]!.focus({ preventScroll: true });
+      }
       dot.inert = size === "hidden";
     });
   }
@@ -247,12 +252,13 @@ export function autoplay(core: SliderCore) {
   let settleFallback = 0;
   const pressed = new Set<number>(); // pointerIds currently down on the track
 
-  /** The track speaks slide changes only while nothing moves it on its own. */
-  const announce = (on: boolean) => {
-    core.attr(track, "aria-live", on ? "off" : "polite");
-    core.emit(on ? "autoplayStart" : "autoplayStop", {});
-  };
-  core.attr(track, "aria-live", "polite");
+  const announce = (on: boolean) => core.emit(on ? "autoplayStart" : "autoplayStop", {});
+  // Scrolling changes nothing a screen reader can hear, so a hidden status line names the slide
+  // the user moved to. It stays quiet while autoplay moves the slides on its own.
+  const status = document.createElement("div");
+  status.className = "aero-slider__status";
+  status.setAttribute("aria-live", "polite");
+  container.append(status);
 
   const blocked = () =>
     signal.aborted ||
@@ -331,10 +337,14 @@ export function autoplay(core: SliderCore) {
     const paused = holds.has("api");
     container.classList.toggle("aero-slider--paused", paused);
     if (!button) return;
-    core.attr(button, "hidden", config.autoplay ? null : "");
-    core.attr(button, "aria-pressed", String(paused));
-    if (!button.textContent!.trim())
+    // Nothing autoplays under reduced motion, so there is nothing to pause.
+    core.attr(button, "hidden", config.autoplay && !reducedMotion.matches ? null : "");
+    // A name we supply says what a press will do. A button with its own name keeps it and
+    // carries the state in aria-pressed.
+    const named =
+      !button.textContent!.trim() &&
       core.attr(button, "aria-label", core.label(paused ? "play" : "pause"));
+    if (!named) button.setAttribute("aria-pressed", String(paused));
   }
 
   function start(): void {
@@ -391,8 +401,21 @@ export function autoplay(core: SliderCore) {
     settleFallback = window.setTimeout(() => release("settle"), SETTLE_FALLBACK_MS);
   }
 
-  const button = container.querySelector(".aero-slider__autoplay");
-  button?.addEventListener("click", () => (holds.has("api") ? release : hold)("api"), { signal });
+  // A nested slider's button belongs to that slider.
+  const button = [...container.querySelectorAll(".aero-slider__autoplay")].find(
+    (el) => el.closest(".aero-slider") === container
+  );
+  const pressedBefore = button?.getAttribute("aria-pressed");
+  button?.addEventListener(
+    "click",
+    () => {
+      if (!holds.has("api")) return hold("api");
+      // Starting autoplay from the keyboard: the focus that reached the button mustn't hold it.
+      holds.delete("focus");
+      release("api");
+    },
+    { signal }
+  );
 
   const listen = (target: EventTarget, type: string, handler: (event: Event) => void) =>
     target.addEventListener(type, handler, { passive: true, signal });
@@ -427,11 +450,21 @@ export function autoplay(core: SliderCore) {
   });
   // A manual change earns a full interval before the next automatic one.
   listen(container, "aero:slideChange", (event) => {
-    if (event.target === container && timer) countdown(); // not a nested slider's change
+    if (event.target !== container) return; // a nested slider's change
+    if (timer) countdown();
+    const { index } = (event as CustomEvent<{ index: number }>).detail;
+    status.textContent = timer || lap ? "" : core.label("slidePosition", index);
   });
   listen(document, "visibilitychange", () => (document.hidden ? stop() : start()));
-  listen(reducedMotion, "change", () => (reducedMotion.matches ? stop() : start()));
+  listen(reducedMotion, "change", () => {
+    if (reducedMotion.matches) stop();
+    else start();
+    paint();
+  });
   signal.addEventListener("abort", () => {
+    status.remove();
+    if (button && pressedBefore == null) button.removeAttribute("aria-pressed");
+    else button?.setAttribute("aria-pressed", pressedBefore!);
     clearTimeout(settleFallback);
     stopInterval();
     stopLap(false);

@@ -1,45 +1,45 @@
 import { type Page, create, expect, mount, slider, test } from "./fixtures";
 import { recordEvents, takeEvents } from "./helpers/state";
 
-test("the track is a polite live region without autoplay", async ({ page }) => {
-  await mount(page, slider("s", 3));
+const status = (page: Page) => page.locator("#s .aero-slider__status");
+
+test("a hidden status line names the slide a user moves to", async ({ page }) => {
+  await mount(page, slider("s", 5));
   await create(page, "s");
-  const track = page.locator("#s .aero-slider__track");
-  await expect(track).toHaveAttribute("aria-live", "polite");
+  await expect(status(page)).toHaveAttribute("aria-live", "polite");
+  await expect(status(page)).toHaveText("");
+  await page.evaluate(() => window.sliders.s!.next());
+  await expect(status(page)).toHaveText("2 of 5");
+  await page.locator("#s .aero-slider__dot").nth(3).click();
+  await expect(status(page)).toHaveText("4 of 5");
   await page.evaluate(() => window.sliders.s!.destroy());
-  await expect(track).not.toHaveAttribute("aria-live");
+  await expect(status(page)).toHaveCount(0);
 });
 
-test("the author's aria-live stays", async ({ page }) => {
-  await mount(
-    page,
-    slider("s", 3).replace('class="aero-slider__track"', '$& aria-live="assertive"')
-  );
-  await create(page, "s", { autoplay: true });
-  await expect(page.locator("#s .aero-slider__track")).toHaveAttribute("aria-live", "assertive");
+test("the status line uses the slidePosition label", async ({ page }) => {
+  await mount(page, slider("s", 3));
+  await create(page, "s", { labels: { slidePosition: "Bild {index} von {count}" } });
+  await page.evaluate(() => window.sliders.s!.next());
+  await expect(status(page)).toHaveText("Bild 2 von 3");
 });
 
-for (const autoplay of [true, "continuous"] as const) {
-  test(`autoplay ${autoplay} silences the track only while it runs`, async ({ page }) => {
-    await mount(page, slider("s", 5, { style: "--slides-per-view:2" }));
-    await recordEvents(page, "s");
-    await create(page, "s", { autoplay });
-    const track = page.locator("#s .aero-slider__track");
-    const live = () => track.getAttribute("aria-live");
-
-    expect(await takeEvents(page, "s")).toContain("autoplayStart");
-    expect(await live()).toBe("off");
-    await page.evaluate(() => window.sliders.s!.pause());
-    expect(await takeEvents(page, "s")).toContain("autoplayStop");
-    expect(await live()).toBe("polite");
-    await page.evaluate(() => window.sliders.s!.resume());
-    expect(await takeEvents(page, "s")).toContain("autoplayStart");
-    expect(await live()).toBe("off");
-    await page.evaluate(() => window.sliders.s!.update({ autoplay: false }));
-    expect(await takeEvents(page, "s")).toContain("autoplayStop");
-    expect(await live()).toBe("polite");
+test("the status line stays quiet while autoplay moves the slides", async ({ page }) => {
+  await mount(page, slider("s", 4));
+  await recordEvents(page, "s");
+  await create(page, "s", { autoplay: true, autoplayInterval: 150, loop: true });
+  await expect
+    .poll(async () => (await takeEvents(page, "s")).some((e) => e.startsWith("slideChange")))
+    .toBe(true);
+  await expect(status(page)).toHaveText("");
+  const target = await page.evaluate(() => {
+    const instance = window.sliders.s!;
+    instance.pause();
+    const index = (instance.currentIndex + 2) % 4;
+    instance.goTo(index);
+    return index;
   });
-}
+  await expect(status(page)).toHaveText(`${target + 1} of 4`);
+});
 
 const autoplayEvents = async (page: Page) =>
   (await takeEvents(page, "s")).filter((event) => event.startsWith("autoplay"));
@@ -63,11 +63,11 @@ test("the autoplay button pauses until pressed again, in step with pause() and r
   const press = () => toggle.evaluate((el: HTMLElement) => el.click());
 
   await expect(toggle).toHaveAccessibleName("Pause autoplay");
-  await expect(toggle).toHaveAttribute("aria-pressed", "false");
   await press();
   expect(await autoplayEvents(page)).toEqual(["autoplayStop"]);
   await expect(toggle).toHaveAccessibleName("Start autoplay");
-  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  // The name already says what a press does; a pressed state on top would contradict it.
+  await expect(toggle).not.toHaveAttribute("aria-pressed");
   await expect(root).toHaveClass(/aero-slider--paused/);
 
   await page.evaluate(() => window.sliders.s!.resume());
@@ -76,10 +76,61 @@ test("the autoplay button pauses until pressed again, in step with pause() and r
   await expect(root).not.toHaveClass(/aero-slider--paused/);
 
   await page.evaluate(() => window.sliders.s!.pause());
-  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(toggle).toHaveAccessibleName("Start autoplay");
   await press();
   expect(await autoplayEvents(page)).toEqual(["autoplayStop", "autoplayStart"]);
+  await expect(toggle).toHaveAccessibleName("Pause autoplay");
+});
+
+test("a button with its own name carries the state in aria-pressed", async ({ page }) => {
+  await mount(
+    page,
+    withToggle("s", 5, `<button class="aero-slider__autoplay" aria-pressed="false">Pause</button>`)
+  );
+  await create(page, "s", { autoplay: true });
+  const toggle = page.locator("#s .aero-slider__autoplay");
   await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  await toggle.evaluate((el: HTMLElement) => el.click());
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(toggle).toHaveAccessibleName("Pause");
+  await page.evaluate(() => window.sliders.s!.destroy());
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+});
+
+test("the keyboard can start autoplay again from the button", async ({ page }) => {
+  await mount(page, withToggle("s", 5));
+  await recordEvents(page, "s");
+  await create(page, "s", { autoplay: true, autoplayInterval: 150, loop: true });
+  await page.locator("#s .aero-slider__autoplay").focus();
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#s")).toHaveClass(/aero-slider--paused/);
+  await takeEvents(page, "s");
+  await page.keyboard.press("Enter");
+  await expect
+    .poll(async () => (await takeEvents(page, "s")).some((e) => e.startsWith("slideChange")))
+    .toBe(true);
+});
+
+test("an outer slider leaves a nested slider's autoplay button alone", async ({ page }) => {
+  const inner = withToggle("inner", 3);
+  await mount(page, slider("outer", 3, { inner: (i) => (i ? `<div>${i}</div>` : inner) }));
+  await create(page, "outer");
+  await create(page, "inner", { autoplay: true });
+  await expect(page.locator("#inner .aero-slider__autoplay")).toBeVisible();
+  await expect(page.locator("#inner .aero-slider__autoplay")).toHaveAccessibleName(
+    "Pause autoplay"
+  );
+});
+
+test("the autoplay button hides under reduced motion", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await mount(page, withToggle("s", 5));
+  await create(page, "s", { autoplay: true });
+  await expect(page.locator("#s .aero-slider__autoplay")).toBeHidden();
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await expect(page.locator("#s .aero-slider__autoplay")).toBeVisible();
 });
 
 test("a pointer that pauses the ticker leaves it paused when it moves away", async ({ page }) => {

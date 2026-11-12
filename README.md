@@ -58,13 +58,13 @@ The bundler entry (`import ... from "aero-slider"`) sets no global, so bundlers 
 
 ## Accessibility
 
-By default the container is a carousel region and the slider's one tab stop. Arrow keys, Home and End move it while the container, its nav buttons or its dots have focus. Keys pressed inside slide content stay with that content. Each slide is a group named by its position ("2 of 5"). Dots are a group of buttons with the current one marked, and loop clones are hidden from screen readers and the tab order. The track announces slide changes politely, and stays quiet while autoplay runs. Keyboard focus in a slide that is only partly shown brings it into view.
+By default the container is a carousel region and the slider's one tab stop. Arrow keys, Home and End move it while the container, its nav buttons or its dots have focus. Keys pressed inside slide content stay with that content. Each slide is a group named by its position ("2 of 5"). Dots are a group of buttons with the current one marked, and loop clones are hidden from screen readers and the tab order. A hidden status line announces the new position politely when a user changes slide, and stays quiet while autoplay runs. Keyboard focus in a slide that is only partly shown brings it into view.
 
 You provide:
 
 - A name for the slider: `aria-label` or `aria-labelledby` on the container.
 - A label on each nav button, such as `aria-label="Previous slide"`.
-- A pause button whenever autoplay runs for more than five seconds. Add a `<button class="aero-slider__autoplay">` inside the container. The slider names it, keeps `aria-pressed` in step, hides it while autoplay is off, and adds `aero-slider--paused` to the container while it is paused.
+- A pause button whenever autoplay runs for more than five seconds. Add a `<button class="aero-slider__autoplay">` inside the container. The slider names it by what a press will do, or keeps `aria-pressed` in step if it has its own name. It hides it while autoplay is off or the visitor prefers reduced motion, and adds `aero-slider--paused` to the container while it is paused.
 
 Use a `<button>` as the dot template. A `<span>` still works, and the slider makes it a keyboard button:
 

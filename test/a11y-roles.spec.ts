@@ -87,3 +87,16 @@ test("a slide keeps the role or label its author gave it", async ({ page }) => {
   `);
   await expect(track.getByRole("article")).not.toHaveAttribute("aria-roledescription");
 });
+
+test("list item slides keep their list semantics", async ({ page }) => {
+  await mount(
+    page,
+    `<div id="s" class="aero-slider" style="width:600px"><div class="aero-slider__viewport"><ul class="aero-slider__track" style="margin:0;padding:0;list-style:none"><li>A</li><li>B</li><li>C</li></ul></div></div>`
+  );
+  await create(page, "s");
+  const items = page.locator("#s li[data-aero-slider-index]");
+  await expect(items).toHaveCount(3);
+  for (const item of await items.all()) await expect(item).not.toHaveAttribute("role");
+  await expect(items.nth(1)).toHaveAttribute("aria-label", "2 of 3");
+  await expect(page.locator("#s").getByRole("listitem")).toHaveCount(3);
+});

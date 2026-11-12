@@ -125,6 +125,16 @@
   scroll-snap-align: end;
 }
 
+/* Read by screen readers, never seen: names the slide a user moves to. */
+.aero-slider__status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* Slides and the viewport clip, so focus rings draw inside the focused box. */
 :where(.aero-slider__track > :focus-visible, .aero-slider__track > * :focus-visible) {
   outline-offset: -2px;

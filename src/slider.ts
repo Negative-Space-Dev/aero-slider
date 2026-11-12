@@ -839,9 +839,14 @@ export function createSlider(
       if (!slide.classList.contains(SLIDE_CLASS)) classed.add(slide);
       slide.classList.add(SLIDE_CLASS);
       slide.setAttribute(SLIDE_INDEX_ATTR, String(i));
-      // A slide that is a link or button (a card) keeps its own role.
+      // A slide that is a link or button (a card) keeps its own role, and so does a list item:
+      // a group there would cost the list its item count.
       const { picker } = core;
-      if (!slide.matches("a[href], button") && attr(slide, "role", picker ? "button" : "group")) {
+      const item = !picker && slide.matches("li");
+      if (
+        !slide.matches("a[href], button") &&
+        (item || attr(slide, "role", picker ? "button" : "group"))
+      ) {
         attr(slide, "aria-roledescription", picker ? null : label("slide"));
         attr(slide, "tabindex", picker ? "0" : null);
         if (!slide.hasAttribute("aria-labelledby"))
@@ -1096,12 +1101,21 @@ export function createSlider(
   }
   // Keyboard focus in a slide that isn't fully shown brings the slide into view. It waits a frame
   // for any scroll the browser makes to show the focused element, so the two never compete.
+  // :focus-visible also matches a text field focused by a click, so track the input itself.
+  let pointerFocus = false;
+  for (const [type, value] of [
+    ["pointerdown", true],
+    ["keydown", false],
+  ] as const) {
+    addEventListener(type, () => (pointerFocus = value), { capture: true, passive: true, signal });
+  }
   track.addEventListener(
     "focusin",
     ({ target }) =>
       requestAnimationFrame(() => {
         const index = slides.findIndex((slide) => slide.contains(target as Node));
-        if (index < 0 || !(target as Element).matches(":focus-visible")) return;
+        // Focus may have moved on during the frame; only the element that still has it counts.
+        if (index < 0 || pointerFocus || target !== document.activeElement) return;
         const box = slides[index]!.getBoundingClientRect();
         const view = track.getBoundingClientRect();
         // A slide spans the track across its axis, so all four sides can be checked at once.

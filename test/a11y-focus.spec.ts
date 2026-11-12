@@ -135,3 +135,45 @@ test("a click into a partly shown slide doesn't move the slider", async ({ page 
   await settled(page, "s");
   expect(await state(page, "s")).toEqual({ index: 0, position: 0 });
 });
+
+test("Previous hands focus to Next when it disables on the way back to the start", async ({
+  page,
+}) => {
+  await mount(page, slider("s", 2));
+  await create(page, "s");
+  const next = page.locator("#s .aero-slider__nav--next");
+  const prev = page.locator("#s .aero-slider__nav--prev");
+  await next.focus();
+  await page.keyboard.press("Enter");
+  await expect(prev).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(next).toBeFocused();
+});
+
+test("handing focus on doesn't scroll the page back to the slider", async ({ page }) => {
+  await mount(page, `${slider("s", 3)}<div style="height:3000px"></div>`);
+  await create(page, "s");
+  await page.locator("#s .aero-slider__nav--next").click();
+  await settled(page, "s");
+  await page.evaluate(() => window.scrollTo(0, 1500));
+  await page.evaluate(() => window.sliders.s!.next());
+  await settled(page, "s");
+  await expect(page.locator("#s .aero-slider__nav--next")).toBeDisabled();
+  expect(await page.evaluate(() => window.scrollY)).toBe(1500);
+});
+
+test("a click into a text field in a partly shown slide doesn't move the slider", async ({
+  page,
+}) => {
+  await mount(
+    page,
+    slider("s", 4, {
+      style: "--slides-per-view:1.5",
+      inner: (i) => `<input id="field${i}" style="width:80%">`,
+    })
+  );
+  await create(page, "s", { alignment: "left" });
+  await page.locator("#field1").click({ position: { x: 5, y: 5 } });
+  await settled(page, "s");
+  expect(await page.evaluate(() => window.sliders.s!.currentIndex)).toBe(0);
+});
