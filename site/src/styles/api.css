@@ -71,17 +71,17 @@
   padding: 0.75rem;
 }
 .api-console__slider {
-  --slides-per-view: 1.25;
-  --slide-gap: 10px;
-  --slide-aspect: 16 / 10;
+  --aero-slides-per-view: 1.25;
+  --aero-slide-gap: 10px;
+  --aero-slide-aspect: 16 / 10;
 }
 @media (min-width: 640px) {
   .api-console__stage {
     padding: 1.25rem;
   }
   .api-console__slider {
-    --slides-per-view: 2.4;
-    --slide-gap: 14px;
+    --aero-slides-per-view: 2.4;
+    --aero-slide-gap: 14px;
   }
 }
 .api-console:not([data-live]) .api-console__slider {

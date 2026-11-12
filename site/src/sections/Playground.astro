@@ -19,7 +19,7 @@ const ranges = [
 ];
 
 const choices = [
-  { name: "alignment", label: "Alignment", selected: "center", options: [["left", "Left"], ["center", "Center"], ["right", "Right"]] },
+  { name: "alignment", label: "Alignment", selected: "center", options: [["start", "Start"], ["center", "Center"], ["end", "End"]] },
   { name: "direction", label: "Direction", selected: "ltr", options: [["ltr", "LTR"], ["rtl", "RTL"], ["ttb", "Vertical"]] },
 ];
 
@@ -95,7 +95,7 @@ const heroThumbs: SlideContent[] = heroSlides.map(({ num, tone }) => ({ num, ton
           <div
             id="hero-thumbs"
             class="aero-slider aero-slider--thumbnails"
-            style="--slide-aspect: 16/9; --slides-per-view: 5; --slide-gap: 8px;"
+            style="--aero-slide-aspect: 16/9; --aero-slides-per-view: 5; --aero-slide-gap: 8px;"
             role="group"
             aria-label="Playground thumbnails"
           >
@@ -207,7 +207,8 @@ const heroThumbs: SlideContent[] = heroSlides.map(({ num, tone }) => ({ num, ton
           sR('autoplayInterval','interval',1000,8000);
           sR('maxDots','dots',3,21);
           sR('perMove','pm',1,4);
-          sS('alignment','align',['left','center','right']);
+          var al={left:'start',right:'end'}[p.get('align')];if(al)p.set('align',al);
+          sS('alignment','align',['start','center','end']);
           sS('direction','dir',['ltr','rtl','ttb']);
           sC('loop','loop');sC('pagination','pag');sC('navigation','nav');
           sC('draggable','drag');sC('autoplay','auto');sC('thumbnails','thumbs');

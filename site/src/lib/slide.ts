@@ -69,7 +69,11 @@ export function nameSlides(track: HTMLElement): void {
 }
 
 /** A slide to append at runtime. Call `nameSlides` on its track once it is in place. */
-export function createSlideElement(content: SlideContent, position: number, thumb = false): HTMLElement {
+export function createSlideElement(
+  content: SlideContent,
+  position: number,
+  thumb = false
+): HTMLElement {
   const el = document.createElement(thumb ? "button" : "div");
   el.className = "slide";
   el.dataset.tone = String(content.tone ?? toneFor(position));

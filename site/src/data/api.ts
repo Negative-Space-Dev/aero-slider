@@ -53,17 +53,18 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
   },
   alignment: {
     group: "Layout",
-    type: '"left" | "center" | "right"',
+    type: '"start" | "center" | "end"',
     default: '"center"',
     description:
-      "Where the active slide rests in the viewport. At the ends of a non-looping track the scroll clamps, but <code>currentIndex</code> still names the focused slide.",
+      "Where the active slide rests in the viewport. The values are logical: <code>start</code> is the left edge, the right edge in a right-to-left slider and the top in a vertical one. At the ends of a non-looping track the scroll clamps, but <code>currentIndex</code> still names the focused slide.",
     example: "ex-alignment",
   },
   direction: {
     group: "Layout",
-    type: '"ltr" | "rtl" | "ttb"',
-    default: '"ltr"',
-    description: "Left to right, right to left, or top to bottom (vertical).",
+    type: '"auto" | "ltr" | "rtl" | "ttb"',
+    default: '"auto"',
+    description:
+      '<code>"auto"</code> follows the direction of the page. <code>"ltr"</code> and <code>"rtl"</code> force one and set <code>dir</code> on the container. <code>"ttb"</code> scrolls top to bottom.',
     example: "ex-direction",
   },
   perMove: {
@@ -71,7 +72,7 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     type: "number",
     default: "1",
     description:
-      "Slides advanced by each <code>next()</code> and <code>prev()</code>, and so by the arrows and autoplay.",
+      "Stops advanced by each <code>next()</code> and <code>prev()</code>, and so by the arrows, the arrow keys and autoplay. Without <code>loop</code>, slides that rest at the same place near an end share one stop.",
     example: "ex-per-move",
   },
   autoplay: {
@@ -150,13 +151,13 @@ export const instanceMembers: Record<keyof SliderInstance, Doc<InstanceGroup>> =
     group: "Navigate",
     name: ".next()",
     description:
-      "Moves forward by <code>perMove</code> slides. Stops at the last slide unless <code>loop</code> is on.",
+      "Moves forward by <code>perMove</code> stops. Stops at the last slide unless <code>loop</code> is on.",
   },
   prev: {
     group: "Navigate",
     name: ".prev()",
     description:
-      "Moves back by <code>perMove</code> slides. Stops at the first slide unless <code>loop</code> is on.",
+      "Moves back by <code>perMove</code> stops. Stops at the first slide unless <code>loop</code> is on.",
   },
   goTo: {
     group: "Navigate",
@@ -291,9 +292,9 @@ export const controlActions: ControlAction[] = [
   },
   {
     group: "Change",
-    label: 'slider.update({ alignment: "left" })',
+    label: 'slider.update({ alignment: "start" })',
     needs: "live",
-    run: ({ slider }) => slider.update({ alignment: "left" }),
+    run: ({ slider }) => slider.update({ alignment: "start" }),
   },
   {
     group: "Change",
@@ -447,7 +448,7 @@ createSlider(el, { autoplay: true, loop: true });`),
     group: "Layout",
     type: "{}",
     description:
-      "The track or a slide changed size, from a window resize or a CSS variable such as <code>--slides-per-view</code>. Fires before the slider re-measures and moves the slides back into place.",
+      "The track or a slide changed size, from a window resize or a CSS variable such as <code>--aero-slides-per-view</code>. Fires before the slider re-measures and moves the slides back into place.",
     useFor: "Hiding anything pinned to where a slide was, before the slider moves it.",
     snippet: recipe(`// A tooltip pinned to a slide would point at the wrong spot once slides move.
 const tip = document.querySelector(".slide-tip");
@@ -518,15 +519,15 @@ export const eventEntryGroups: { title: EventGroup; entries: EventEntry[] }[] = 
 
 export const cssVariables: RefEntry[] = [
   {
-    name: "--slides-per-view",
+    name: "--aero-slides-per-view",
     default: "1",
     description:
       "How many slides fit the viewport. Fractions such as <code>1.5</code> show a peek of the next slide.",
     example: "ex-responsive",
   },
-  { name: "--slide-gap", default: "0px", description: "Space between slides." },
+  { name: "--aero-slide-gap", default: "0px", description: "Space between slides." },
   {
-    name: "--slide-aspect",
+    name: "--aero-slide-aspect",
     default: "5 / 3",
     description: "Aspect ratio of each slide, so the slider has its height before JavaScript runs.",
   },
@@ -548,12 +549,20 @@ export const attributes: RefEntry[] = [
   },
   {
     name: "data-aero-alignment",
-    type: '"left" | "center" | "right"',
+    type: '"start" | "center" | "end"',
     description:
       "The slider sets this from <code>alignment</code>. Write it in your HTML too when you use a non-center alignment, so snapping and the reserved space match before JavaScript runs.",
     example: "ex-no-shift",
   },
 ];
+
+attributes.push({
+  name: "data-aero-status",
+  type: "string",
+  default: '"{index} of {count}"',
+  description:
+    "Wording of the position the slider announces to screen readers when a user changes slide, for example <code>Bild {index} von {count}</code>.",
+});
 
 export const stateClasses: RefEntry[] = [
   { name: "aero-slider--ready", description: "The slider has initialized" },

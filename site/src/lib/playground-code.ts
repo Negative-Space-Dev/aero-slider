@@ -91,15 +91,15 @@ function html(s: PlaygroundSettings): string {
 function css(s: PlaygroundSettings): string {
   const rules = [
     `#slider {
-  --slides-per-view: ${s.slidesPerView};
-  --slide-gap: ${s.gap}px;
+  --aero-slides-per-view: ${s.slidesPerView};
+  --aero-slide-gap: ${s.gap}px;
 }`,
   ];
   if (s.thumbnails) {
     rules.push(`#thumbs {
-  --slides-per-view: ${THUMBS_PER_VIEW};
-  --slide-gap: 8px;
-  --slide-aspect: 16 / 9;
+  --aero-slides-per-view: ${THUMBS_PER_VIEW};
+  --aero-slide-gap: 8px;
+  --aero-slide-aspect: 16 / 9;
 }`);
   }
   return rules.join("\n\n");

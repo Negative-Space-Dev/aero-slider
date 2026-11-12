@@ -82,19 +82,19 @@ const numbered = (count: number): DemoSlide[] =>
 
 const responsiveCss = `/* One slide on phones, two on tablets, three on desktops. */
 #responsive {
-  --slides-per-view: 1;
-  --slide-gap: 8px;
+  --aero-slides-per-view: 1;
+  --aero-slide-gap: 8px;
 }
 @media (min-width: 640px) {
   #responsive {
-    --slides-per-view: 2;
-    --slide-gap: 12px;
+    --aero-slides-per-view: 2;
+    --aero-slide-gap: 12px;
   }
 }
 @media (min-width: 1024px) {
   #responsive {
-    --slides-per-view: 3;
-    --slide-gap: 16px;
+    --aero-slides-per-view: 3;
+    --aero-slide-gap: 16px;
   }
 }`;
 
@@ -122,14 +122,14 @@ body {
 
 /* Slides size against the column, not the window. */
 #edge-to-edge {
-  --slides-per-view: 1.12;
-  --slide-gap: 12px;
+  --aero-slides-per-view: 1.12;
+  --aero-slide-gap: 12px;
   --aero-layout-width: var(--content-column);
 }
 @media (min-width: 640px) {
   #edge-to-edge {
-    --slides-per-view: 1.35;
-    --slide-gap: 18px;
+    --aero-slides-per-view: 1.35;
+    --aero-slide-gap: 18px;
   }
 }`;
 
@@ -195,7 +195,11 @@ export const examples: Record<ExampleId, Example> = {
       {
         id: "card-row",
         label: "Product features",
-        vars: { "--slides-per-view": "2.25", "--slide-gap": "16px", "--slide-aspect": "4 / 3" },
+        vars: {
+          "--aero-slides-per-view": "2.25",
+          "--aero-slide-gap": "16px",
+          "--aero-slide-aspect": "4 / 3",
+        },
         nav: true,
         dots: true,
         slides: [
@@ -214,9 +218,9 @@ export const examples: Record<ExampleId, Example> = {
       },
     ],
     notes: [
-      "<code>--slides-per-view</code> takes fractions. The part after the point is how much of the next card shows.",
+      "<code>--aero-slides-per-view</code> takes fractions. The part after the point is how much of the next card shows.",
       "Slide width is worked out in CSS from the track width, the gap and the slides per view, so cards have their size before JavaScript runs.",
-      "<code>--slide-aspect</code> sets each card's height from its width.",
+      "<code>--aero-slide-aspect</code> sets each card's height from its width.",
     ],
   },
 
@@ -224,11 +228,13 @@ export const examples: Record<ExampleId, Example> = {
     group: "layout",
     title: "Responsive breakpoints",
     lead: "Use it when the number of slides in view should change with the screen width.",
-    sliders: [{ id: "responsive", label: "Responsive slides", nav: true, dots: true, slides: numbered(6) }],
+    sliders: [
+      { id: "responsive", label: "Responsive slides", nav: true, dots: true, slides: numbered(6) },
+    ],
     css: responsiveCss,
     notes: [
-      "The slider re-reads <code>--slides-per-view</code> whenever the track or a slide changes size, so a media query takes effect with no JavaScript breakpoint config.",
-      "<code>--slide-gap</code> and <code>--slide-aspect</code> are plain CSS and can change in the same media queries.",
+      "The slider re-reads <code>--aero-slides-per-view</code> whenever the track or a slide changes size, so a media query takes effect with no JavaScript breakpoint config.",
+      "<code>--aero-slide-gap</code> and <code>--aero-slide-aspect</code> are plain CSS and can change in the same media queries.",
       "Resize the window to watch it switch between one, two and three slides.",
     ],
   },
@@ -236,19 +242,20 @@ export const examples: Record<ExampleId, Example> = {
   "ex-alignment": {
     group: "layout",
     title: "Alignment",
-    lead: "Use it when the active slide should rest against the left or right edge instead of the center.",
+    lead: "Use it when the active slide should rest against the start or end edge instead of the center.",
     layout: "row",
-    sliders: (["left", "center", "right"] as const).map((alignment) => ({
+    sliders: (["start", "center", "end"] as const).map((alignment) => ({
       id: `align-${alignment}`,
       label: `Aligned ${alignment}`,
       name: alignment,
       caption: alignment,
-      vars: { "--slides-per-view": "1.5", "--slide-gap": "12px" },
+      vars: { "--aero-slides-per-view": "1.5", "--aero-slide-gap": "12px" },
       config: { alignment, loop: true },
       slides: plates(["A", "B", "C", "D"]),
     })),
     notes: [
       "<code>center</code> is the default.",
+      "The values are logical. <code>start</code> is the left edge here, the right edge in a right-to-left slider and the top edge in a vertical one.",
       "Without <code>loop</code>, the first and last slides cannot reach the alignment point. The track stops at its end, and <code>currentIndex</code> still reports the slide in focus.",
     ],
   },
@@ -264,7 +271,7 @@ export const examples: Record<ExampleId, Example> = {
         label: "Featured",
         className: "aero-slider--breakout",
         wrapperClass: "breakout-clip",
-        config: { alignment: "left" },
+        config: { alignment: "start" },
         nav: true,
         dots: true,
         slides: [
@@ -315,7 +322,7 @@ export const examples: Record<ExampleId, Example> = {
     notes: [
       "Arrow keys, the drag axis and the scroll axis all follow the direction. A vertical slider moves with the up and down keys.",
       '<code>"rtl"</code> sets <code>dir="rtl"</code> on the container.',
-      "A vertical slider takes its height from <code>--slide-aspect</code>. <code>--slides-per-view</code> and <code>--slide-gap</code> work along the vertical axis.",
+      "A vertical slider takes its height from <code>--aero-slide-aspect</code>. <code>--aero-slides-per-view</code> and <code>--aero-slide-gap</code> work along the vertical axis.",
     ],
   },
 
@@ -331,7 +338,7 @@ export const examples: Record<ExampleId, Example> = {
         label: "Without the attribute",
         caption: "Without the attribute",
         sample: false,
-        vars: { "--slides-per-view": "1.5", "--slide-gap": "12px" },
+        vars: { "--aero-slides-per-view": "1.5", "--aero-slide-gap": "12px" },
         config: { loop: true },
         slides: numbered(5),
       },
@@ -340,7 +347,7 @@ export const examples: Record<ExampleId, Example> = {
         label: "With the attribute",
         caption: "With data-aero-defer-visibility",
         attrs: { "data-aero-defer-visibility": "" },
-        vars: { "--slides-per-view": "1.5", "--slide-gap": "12px" },
+        vars: { "--aero-slides-per-view": "1.5", "--aero-slide-gap": "12px" },
         config: { loop: true },
         slides: numbered(5),
       },
@@ -348,8 +355,8 @@ export const examples: Record<ExampleId, Example> = {
     notes: [
       "A loop puts copies of the last slides in front of the first, so you can scroll back from slide 1. Until JavaScript adds them, slide 1 sits at the start of the track, then moves.",
       "<code>data-aero-defer-visibility</code> reserves that space in CSS from the first paint. The slider removes the attribute when it starts.",
-      'The space is worked out for center alignment. With another <code>alignment</code>, repeat it in the HTML as <code>data-aero-alignment="left"</code> or <code>"right"</code>.',
-      "Set <code>--slides-per-view</code> and <code>--slide-gap</code> in CSS. The reserved space is computed from them.",
+      'The space is worked out for center alignment. With another <code>alignment</code>, repeat it in the HTML as <code>data-aero-alignment="start"</code> or <code>"end"</code>.',
+      "Set <code>--aero-slides-per-view</code> and <code>--aero-slide-gap</code> in CSS. The reserved space is computed from them.",
       "Use it only with <code>loop</code>. Without loop nothing is added in front, so there is nothing to reserve.",
       "Replay start-up removes both sliders and starts them again after a pause, which is what a page load looks like.",
     ],
@@ -363,7 +370,7 @@ export const examples: Record<ExampleId, Example> = {
       {
         id: "hero-banner",
         label: "Flight phases",
-        vars: { "--slide-aspect": "21 / 9" },
+        vars: { "--aero-slide-aspect": "21 / 9" },
         config: { autoplay: true, autoplayInterval: 4000, loop: true },
         nav: true,
         dots: true,
@@ -393,7 +400,11 @@ export const examples: Record<ExampleId, Example> = {
       {
         id: "ticker",
         label: "Customers",
-        vars: { "--slides-per-view": "4", "--slide-gap": "12px", "--slide-aspect": "5 / 2" },
+        vars: {
+          "--aero-slides-per-view": "4",
+          "--aero-slide-gap": "12px",
+          "--aero-slide-aspect": "5 / 2",
+        },
         config: { autoplay: "continuous", autoplaySpeed: 36, draggable: false },
         slides: [
           "Aurelo",
@@ -428,7 +439,7 @@ export const examples: Record<ExampleId, Example> = {
         label: "Settle snap",
         name: "settle",
         caption: 'snap: "settle"',
-        vars: { "--slides-per-view": "3", "--slide-gap": "12px" },
+        vars: { "--aero-slides-per-view": "3", "--aero-slide-gap": "12px" },
         config: { loop: true, snap: "settle", scrollDuration: 550 },
         slides: numbered(8),
       },
@@ -437,7 +448,7 @@ export const examples: Record<ExampleId, Example> = {
         label: "Free scroll",
         name: "free",
         caption: 'snap: "none"',
-        vars: { "--slides-per-view": "3", "--slide-gap": "12px" },
+        vars: { "--aero-slides-per-view": "3", "--aero-slide-gap": "12px" },
         config: { snap: "none" },
         slides: numbered(8),
       },
@@ -458,8 +469,8 @@ export const examples: Record<ExampleId, Example> = {
       {
         id: "per-move",
         label: "Paged slides",
-        vars: { "--slides-per-view": "3", "--slide-gap": "12px" },
-        config: { alignment: "left", perMove: 3 },
+        vars: { "--aero-slides-per-view": "3", "--aero-slide-gap": "12px" },
+        config: { alignment: "start", perMove: 3 },
         nav: true,
         slides: numbered(12),
       },
@@ -467,7 +478,7 @@ export const examples: Record<ExampleId, Example> = {
     notes: [
       "<code>perMove</code> sets how far <code>next()</code> and <code>prev()</code> go. The arrows, the arrow keys and autoplay all use them.",
       "Dragging and <code>goTo()</code> still land on any slide.",
-      'With <code>alignment: "left"</code> and a whole number of slides in view, the last stop is the last full page.',
+      'With <code>alignment: "start"</code> and a whole number of slides in view, the last stop is the last full page.',
     ],
   },
 
@@ -513,7 +524,7 @@ export const examples: Record<ExampleId, Example> = {
       {
         id: "max-dots",
         label: "Many slides",
-        vars: { "--slides-per-view": "2.5", "--slide-gap": "12px" },
+        vars: { "--aero-slides-per-view": "2.5", "--aero-slide-gap": "12px" },
         config: { maxDots: 5 },
         nav: true,
         dots: true,
@@ -539,7 +550,7 @@ export const examples: Record<ExampleId, Example> = {
         label: "Product images",
         name: "main",
         caption: "Main slider",
-        vars: { "--slide-aspect": "16 / 9" },
+        vars: { "--aero-slide-aspect": "16 / 9" },
         nav: true,
         slides: plates([1, 2, 3, 4, 5], { label: "View" }),
       },
@@ -550,7 +561,11 @@ export const examples: Record<ExampleId, Example> = {
         name: "thumbs",
         caption: "Thumbnail strip",
         chrome: "aero-slider--thumbnails",
-        vars: { "--slides-per-view": "4", "--slide-gap": "8px", "--slide-aspect": "16 / 9" },
+        vars: {
+          "--aero-slides-per-view": "4",
+          "--aero-slide-gap": "8px",
+          "--aero-slide-aspect": "16 / 9",
+        },
         config: { alignment: "center" },
         slides: numbered(5),
       },
@@ -584,7 +599,11 @@ export const examples: Record<ExampleId, Example> = {
       {
         id: "no-drag",
         label: "Radio settings",
-        vars: { "--slides-per-view": "1.5", "--slide-gap": "12px", "--slide-aspect": "2 / 1" },
+        vars: {
+          "--aero-slides-per-view": "1.5",
+          "--aero-slide-gap": "12px",
+          "--aero-slide-aspect": "2 / 1",
+        },
         config: { noDrag: "a, button, input" },
         dots: true,
         slides: [
@@ -613,7 +632,11 @@ export const examples: Record<ExampleId, Example> = {
         id: "styled",
         label: "Styled controls",
         chrome: "ex-bare",
-        vars: { "--slides-per-view": "1.5", "--slide-gap": "12px", "--slide-aspect": "2 / 1" },
+        vars: {
+          "--aero-slides-per-view": "1.5",
+          "--aero-slide-gap": "12px",
+          "--aero-slide-aspect": "2 / 1",
+        },
         nav: true,
         glyphNav: true,
         dots: true,

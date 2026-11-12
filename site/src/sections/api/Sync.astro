@@ -38,10 +38,10 @@ const groups: RefGroup[] = [
 const behaviours = [
   "Turns dragging off on the strip and sets its <code>loop</code>, through <code>thumbnails.update()</code>, so clicks alone drive it.",
   "A click on a thumbnail, loop clones included, calls <code>primary.goTo()</code> with its index.",
-  "On each <code>aero:slideChange</code> from <code>primary</code>, the matching thumbnails get <code>aero-slider__thumb--active</code> and the strip scrolls to them with <code>thumbnails.goTo()</code>.",
+  "On each <code>aero:slideChange</code> from <code>primary</code>, the matching thumbnails get <code>aero-slider__thumb--active</code> and <code>aria-current=\"true\"</code>, and the strip scrolls to them with <code>thumbnails.goTo()</code>.",
   "Starts with the primary's current slide marked.",
   'Leaves the strip\'s alignment alone. Set <code>alignment: "center"</code> on it to keep the active thumbnail centred.',
-  "The teardown removes its listeners, the pointer cursor and the active class. It doesn't destroy either slider or undo the <code>update()</code>.",
+  "The teardown removes its listeners, the pointer cursor, the active class and <code>aria-current</code>. It doesn't destroy either slider or undo the <code>update()</code>.",
 ];
 ---
 

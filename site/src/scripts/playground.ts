@@ -113,7 +113,12 @@ function applyParamsFromUrl(): void {
   setRange("autoplayInterval", 1000, 8000);
   setRange("maxDots", 3, 21);
   setRange("perMove", 1, 4);
-  setSelect("alignment", ["left", "center", "right"]);
+  // Links saved before 1.0 carry the old names.
+  const oldAlign = ({ left: "start", right: "end" } as Record<string, string>)[
+    params.get(PARAM_KEYS.alignment) ?? ""
+  ];
+  if (oldAlign) params.set(PARAM_KEYS.alignment, oldAlign);
+  setSelect("alignment", ["start", "center", "end"]);
   setSelect("direction", ["ltr", "rtl", "ttb"]);
   setCheckbox("loop");
   setCheckbox("pagination");
@@ -305,8 +310,8 @@ function applyLayoutFromFormToContainer(container: HTMLElement): void {
   const gap = Number(fd.get("gap")) || 0;
   const spvIndex = Number(fd.get("slidesPerView")) || 0;
   const spvValue = spvIndexToValue(spvIndex);
-  container.style.setProperty("--slides-per-view", String(spvValue));
-  container.style.setProperty("--slide-gap", `${gap}px`);
+  container.style.setProperty("--aero-slides-per-view", String(spvValue));
+  container.style.setProperty("--aero-slide-gap", `${gap}px`);
   container.toggleAttribute("data-flush", gap === 0);
 }
 

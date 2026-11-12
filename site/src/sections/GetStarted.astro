@@ -56,7 +56,7 @@ const create: CodeTab[] = [
 const steps = [
   {
     title: "Markup",
-    text: "A container, a viewport and a track. Every direct child of the track is a slide. Arrows and pagination are optional elements you add when you want them.",
+    text: "A container, a viewport and a track. Every direct child of the track is a slide. Arrows and pagination are optional elements you add when you want them. Roles and names are yours to write: the slider adds only what changes at runtime, such as <code>aria-current</code> on the current dot.",
     tabs: [{ label: "HTML", lang: "html", code: markup }] satisfies CodeTab[],
   },
   {
@@ -80,7 +80,7 @@ const layers = [
   {
     tag: "CSS",
     title: "CSS variables decide how it looks",
-    body: "<code>--slides-per-view</code>, <code>--slide-gap</code> and <code>--slide-aspect</code>, set on the container and changed in media queries.",
+    body: "<code>--aero-slides-per-view</code>, <code>--aero-slide-gap</code> and <code>--aero-slide-aspect</code>, set on the container and changed in media queries.",
   },
   {
     tag: "JS",
