@@ -100,6 +100,7 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-sans);
+  font-weight: 500;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -137,6 +138,14 @@ body {
   h2,
   h3 {
     font-family: var(--font-display);
+  }
+
+  /* The medium body weight is for Manrope only; mono text stays regular
+     unless a utility or component sets its own weight. */
+  code,
+  pre,
+  .font-mono {
+    font-weight: 400;
   }
 }
 
@@ -435,6 +444,7 @@ body {
   }
   .doc-table td[data-mono] {
     font-family: var(--font-mono);
+    font-weight: 400;
     font-size: 0.8125rem;
     color: var(--ink);
   }
