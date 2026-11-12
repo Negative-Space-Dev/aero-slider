@@ -6,6 +6,7 @@ import {
   failOnPageErrors,
   mount,
   nextFrame,
+  onSteadyFrames,
   recordScroll,
   settled,
   slider,
@@ -97,44 +98,50 @@ test.describe("snap: settle", () => {
   });
 
   test("a scroll stays where it stops, then eases onto the nearest slide", async ({ page }) => {
-    const samples = await scrollAndRecord(page, 820, 700);
-    const steps = samples
-      .slice(1)
-      .map(({ time, offset }, k) => ({
-        d: offset - samples[k]!.offset,
-        dt: time - samples[k]!.time,
-      }))
-      .filter(({ d }) => d !== 0);
-    expectNear(samples[0]!.offset, 820);
-    expect(steps.length).toBeGreaterThanOrEqual(6);
-    expect(steps.every(({ d }) => d < 0)).toBe(true);
-    // The largest step scaled to one 60Hz frame, so a frame the browser dropped isn't a jump. A
-    // sample can show the previous frame's step, so scale by the longer of the two intervals.
-    const biggest = Math.max(
-      ...steps.map(
-        ({ d, dt }, k) =>
-          Math.abs(d) / Math.max(1, dt / (1000 / 60), (steps[k - 1]?.dt ?? 0) / (1000 / 60))
-      )
-    );
-    expect(biggest).toBeLessThan(210 * 0.4);
-    await settled(page, "s");
-    expect(await state(page, "s")).toEqual({ index: 1, position: STRIDE });
+    await onSteadyFrames(page, async () => {
+      await fiveSlides(page, "settle", 600);
+      const samples = await scrollAndRecord(page, 820, 700);
+      const steps = samples
+        .slice(1)
+        .map(({ time, offset }, k) => ({
+          d: offset - samples[k]!.offset,
+          dt: time - samples[k]!.time,
+        }))
+        .filter(({ d }) => d !== 0);
+      expectNear(samples[0]!.offset, 820);
+      expect(steps.length).toBeGreaterThanOrEqual(6);
+      expect(steps.every(({ d }) => d < 0)).toBe(true);
+      // The largest step scaled to one 60Hz frame, so a frame the browser dropped isn't a jump. A
+      // sample can show the previous frame's step, so scale by the longer of the two intervals.
+      const biggest = Math.max(
+        ...steps.map(
+          ({ d, dt }, k) =>
+            Math.abs(d) / Math.max(1, dt / (1000 / 60), (steps[k - 1]?.dt ?? 0) / (1000 / 60))
+        )
+      );
+      expect(biggest).toBeLessThan(210 * 0.4);
+      await settled(page, "s");
+      expect(await state(page, "s")).toEqual({ index: 1, position: STRIDE });
+    });
   });
 
   test("a mouse drag follows the pointer, and a still release eases onto a slide", async ({
     page,
   }) => {
-    await drag(page, 500, range(500, 100, 20));
-    expect((await state(page, "s")).position).toBe(400);
-    // Long enough for the drag's velocity to decay to a dead stop.
-    await page.waitForTimeout(250);
-    const path = await recordScroll(page, "s", 600);
-    await page.mouse.up();
-    const steps = stepsOf(await path());
-    expect(steps.length).toBeGreaterThanOrEqual(6);
-    expect(steps.every((d) => d > 0)).toBe(true);
-    await settled(page, "s");
-    expect(await state(page, "s")).toEqual({ index: 1, position: STRIDE });
+    await onSteadyFrames(page, async () => {
+      await fiveSlides(page, "settle", 600);
+      await drag(page, 500, range(500, 100, 20));
+      expect((await state(page, "s")).position).toBe(400);
+      // Long enough for the drag's velocity to decay to a dead stop.
+      await page.waitForTimeout(250);
+      const path = await recordScroll(page, "s", 600);
+      await page.mouse.up();
+      const steps = stepsOf(await path());
+      expect(steps.length).toBeGreaterThanOrEqual(6);
+      expect(steps.every((d) => d > 0)).toBe(true);
+      await settled(page, "s");
+      expect(await state(page, "s")).toEqual({ index: 1, position: STRIDE });
+    });
   });
 
   // Firefox can skip scrollend after wheel scrolling; the wheel's own settle timer covers it.
@@ -184,33 +191,37 @@ test.describe("snap: settle on a loop", () => {
   // Past the last real slide it eases onto the nearest slide on screen, a clone, then teleports to
   // the real copy. It never flies back across the track to get there.
   test("eases onto a clone past the end, then teleports to the real slide", async ({ page }) => {
-    await mount(page, slider("s", 4, { style: "--slide-gap:10px" }));
-    await create(page, "s", { loop: true, snap: "settle", scrollDuration: 300 });
-    await page.evaluate(() => window.sliders.s!.goTo(3, { instant: true }));
-    await settled(page, "s");
-    const { from, clone, home } = await page.evaluate(() => {
-      const kids = [...document.querySelector("#s .aero-slider__track")!.children] as HTMLElement[];
-      const pos = (i: number) => kids[i]!.offsetLeft - kids[0]!.offsetLeft;
-      const lastReal = kids.findLastIndex((k) => !k.hasAttribute("data-aero-slider-clone"));
-      return { from: pos(lastReal) + 488, clone: pos(lastReal + 1), home: pos(lastReal - 3) };
+    await onSteadyFrames(page, async () => {
+      await mount(page, slider("s", 4, { style: "--slide-gap:10px" }));
+      await create(page, "s", { loop: true, snap: "settle", scrollDuration: 300 });
+      await page.evaluate(() => window.sliders.s!.goTo(3, { instant: true }));
+      await settled(page, "s");
+      const { from, clone, home } = await page.evaluate(() => {
+        const kids = [
+          ...document.querySelector("#s .aero-slider__track")!.children,
+        ] as HTMLElement[];
+        const pos = (i: number) => kids[i]!.offsetLeft - kids[0]!.offsetLeft;
+        const lastReal = kids.findLastIndex((k) => !k.hasAttribute("data-aero-slider-clone"));
+        return { from: pos(lastReal) + 488, clone: pos(lastReal + 1), home: pos(lastReal - 3) };
+      });
+
+      const path = (await scrollAndRecord(page, from, 700)).map((s) => s.offset);
+      const jump = path.findIndex((p, k) => k > 0 && Math.abs(p - path[k - 1]!) > 300);
+      const before = jump < 0 ? path : path.slice(0, jump);
+      const after = jump < 0 ? [] : path.slice(jump);
+      expect(before.length).toBeGreaterThanOrEqual(6);
+      expect(
+        before.every((p, k) => p >= from - 1 && p <= clone + 1 && (k === 0 || p >= before[k - 1]!))
+      ).toBe(true);
+      expectNear(before.at(-1)!, clone, 4);
+      expect(after.length).toBeGreaterThan(0);
+      for (const p of after) expectNear(p, home);
+
+      await settled(page, "s");
+      const now = await state(page, "s");
+      expect(now.index).toBe(0);
+      expectNear(now.position, home);
     });
-
-    const path = (await scrollAndRecord(page, from, 700)).map((s) => s.offset);
-    const jump = path.findIndex((p, k) => k > 0 && Math.abs(p - path[k - 1]!) > 300);
-    const before = jump < 0 ? path : path.slice(0, jump);
-    const after = jump < 0 ? [] : path.slice(jump);
-    expect(before.length).toBeGreaterThanOrEqual(6);
-    expect(
-      before.every((p, k) => p >= from - 1 && p <= clone + 1 && (k === 0 || p >= before[k - 1]!))
-    ).toBe(true);
-    expectNear(before.at(-1)!, clone, 4);
-    expect(after.length).toBeGreaterThan(0);
-    for (const p of after) expectNear(p, home);
-
-    await settled(page, "s");
-    const now = await state(page, "s");
-    expect(now.index).toBe(0);
-    expectNear(now.position, home);
   });
 
   // With fractional slides per view the end clones' snap points lie off the runway, so it settles
@@ -268,17 +279,20 @@ test.describe("snap: none", () => {
   });
 
   test("a flick coasts on its momentum and rests between slides", async ({ page }) => {
-    await drag(page, 400, range(400, 280, 20));
-    const path = await recordScroll(page, "s", 500);
-    await page.mouse.up();
-    const steps = stepsOf(await path());
-    await settled(page, "s");
-    const rest = (await state(page, "s")).position;
-    expect(steps.length).toBeGreaterThanOrEqual(4);
-    expect(steps.every((d) => d > 0)).toBe(true);
-    expect(rest).toBeGreaterThan(170);
-    expect(rest).toBeLessThan(560);
-    expect(Math.abs(rest % STRIDE)).toBeGreaterThan(5);
+    await onSteadyFrames(page, async () => {
+      await fiveSlides(page, "none");
+      await drag(page, 400, range(400, 280, 20));
+      const path = await recordScroll(page, "s", 500);
+      await page.mouse.up();
+      const steps = stepsOf(await path());
+      await settled(page, "s");
+      const rest = (await state(page, "s")).position;
+      expect(steps.length).toBeGreaterThanOrEqual(4);
+      expect(steps.every((d) => d > 0)).toBe(true);
+      expect(rest).toBeGreaterThan(170);
+      expect(rest).toBeLessThan(560);
+      expect(Math.abs(rest % STRIDE)).toBeGreaterThan(5);
+    });
   });
 
   test("a wheel scroll rests where it stops", async ({ page }) => {

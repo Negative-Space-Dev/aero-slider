@@ -20,6 +20,10 @@ declare global {
     scrollRecording?: Promise<number[]>;
     /** Logs from `recordEvents`, keyed by element id. */
     eventLog: Record<string, string[]>;
+    /** Longest gap between two animation frames since `mount`, in ms. Set under `onSteadyFrames`. */
+    longestFrame?: number;
+    /** Starts `longestFrame` over. */
+    resetFrames?: () => void;
   }
 }
 
@@ -76,6 +80,7 @@ export async function mount(page: Page, html: string, options: MountOptions = {}
   const document = `<!doctype html><html${attributes}><head><meta charset="utf-8"><link rel="stylesheet" href="/dist/aero-slider.min.css">${options.head ?? ""}</head><body style="margin:0">${html}<script type="module">
 import { createSlider, syncThumbnails } from "/dist/aero-slider.min.js";
 Object.assign(window, { createSlider, syncThumbnails, sliders: {} });
+window.resetFrames?.();
 </script></body></html>`;
   await page.route(MOUNT_PATH, (route) =>
     route.fulfill({ contentType: "text/html", body: document })
@@ -122,6 +127,46 @@ export async function settled(page: Page, id: string): Promise<void> {
       } else stillFrames++;
     }
   }, id);
+}
+
+const framesWatched = new WeakSet<Page>();
+
+/** A frame gap this long, six frames at 60Hz, means the browser was starved while a test ran. */
+const STARVED_MS = 100;
+
+/**
+ * Runs `body`, a whole scenario from `mount` to its assertions, and runs it again, up to three
+ * times, if it failed while the browser was dropping frames. A test that counts the frames of an
+ * animation measures the machine and not the library when the frames come 100ms apart. A failure
+ * on steady frames fails at once.
+ */
+export async function onSteadyFrames(page: Page, body: () => Promise<void>): Promise<void> {
+  if (!framesWatched.has(page)) {
+    framesWatched.add(page);
+    await page.addInitScript(() => {
+      let last = performance.now();
+      window.longestFrame = 0;
+      window.resetFrames = () => {
+        last = performance.now();
+        window.longestFrame = 0;
+      };
+      const tick = (): void => {
+        const now = performance.now();
+        window.longestFrame = Math.max(window.longestFrame!, now - last);
+        last = now;
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+  }
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await body();
+    } catch (error) {
+      const longest = await page.evaluate(() => window.longestFrame ?? 0).catch(() => 0);
+      if (attempt === 3 || longest < STARVED_MS) throw error;
+    }
+  }
 }
 
 /** Fails each test in the calling spec file that throws an uncaught error in the page. */
