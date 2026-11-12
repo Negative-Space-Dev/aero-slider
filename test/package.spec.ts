@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { type Page, expect, test } from "./fixtures.ts";
 
@@ -21,6 +22,24 @@ test("the CDN file sets window.AeroSlider with both functions", async ({ page })
       syncThumbnails: typeof window.AeroSlider?.syncThumbnails,
     }))
   ).toEqual({ createSlider: "function", syncThumbnails: "function" });
+});
+
+// A CDN URL with no file path, unpkg.com/aero-slider, is resolved from package.json. It has to
+// reach the file that sets the global, as it did when that file was the package's main entry.
+test("a CDN URL with no file path resolves to the file that sets the global", () => {
+  const manifest = JSON.parse(readFileSync("package.json", "utf8"));
+  const conditions = Object.keys(manifest.exports["."]);
+  expect({
+    unpkg: manifest.unpkg,
+    jsdelivr: manifest.jsdelivr,
+    condition: manifest.exports["."].unpkg,
+  }).toEqual({
+    unpkg: "./dist/aero-slider.min.js",
+    jsdelivr: "./dist/aero-slider.min.js",
+    condition: "./dist/aero-slider.min.js",
+  });
+  // The first matching condition wins, and every resolver matches `import` and `default`.
+  expect(conditions.indexOf("unpkg")).toBeLessThan(conditions.indexOf("import"));
 });
 
 test("the bundler entry exports both functions and sets no global", async ({ page }) => {
