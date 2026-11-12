@@ -1,7 +1,5 @@
 # aero-slider agent guide
 
-For coding agents that add, edit or extend an aero-slider. Docs: https://aeroslider.com
-
 **Model.** The track is a native CSS scroll container. CSS variables set the layout. JavaScript adds only behaviour: navigation, loop clones, dots, autoplay, drag, events. You write the markup, the look and the accessibility names. The library ships no styles for arrows or dots.
 
 ## Install
