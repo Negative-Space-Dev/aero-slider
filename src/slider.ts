@@ -454,9 +454,12 @@ export function createSlider(
     clone.setAttribute(CLONE_ATTR, "");
     clone.setAttribute("aria-hidden", "true");
     // A clone looks, plays and clicks like its slide but stays out of the tab order, forms and
-    // labels; an image map in it is only a picture. The slide itself can be a link (a card).
+    // labels; an image map in it is only a picture. The slide itself can be a link (a card). A
+    // required control without its name is a group of its own, never filled in: it would block
+    // the form it sits in, so a clone is not required either.
     for (const el of [clone, ...clone.querySelectorAll<HTMLElement>("*")]) {
-      for (const name of ["id", "name", "for", "form", "usemap"]) el.removeAttribute(name);
+      for (const name of ["id", "name", "for", "form", "usemap", "required"])
+        el.removeAttribute(name);
       if (el.matches(FOCUSABLE)) el.tabIndex = -1;
     }
     return clone;

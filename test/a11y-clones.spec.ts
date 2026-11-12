@@ -70,3 +70,22 @@ test("loop clones don't join forms or labels, and still autoplay like their slid
     page.locator("#s [data-aero-slider-clone] [name], #s [data-aero-slider-clone] [for]")
   ).toHaveCount(0);
 });
+
+// Without its name a cloned radio is a group of its own that nothing ever checks, and a cloned
+// text field is never filled in. Left required, either would stop the form from submitting.
+test("required controls in loop clones don't block the form", async ({ page }) => {
+  const fields = (i: number) =>
+    `<label><input type="radio" name="size" value="${i}" required>${i}</label><input type="text" name="note${i}" required>`;
+  await mount(page, `<form id="f">${slider("s", 3, { inner: fields })}</form>`);
+  await create(page, "s", { loop: true });
+  expect(await page.locator("#s [data-aero-slider-clone] input").count()).toBeGreaterThan(0);
+  const valid = await page.evaluate(() => {
+    const real = (selector: string) => [
+      ...document.querySelectorAll<HTMLInputElement>(`#s [data-aero-slider-index] ${selector}`),
+    ];
+    real("[type=radio]")[0]!.checked = true;
+    for (const field of real("[type=text]")) field.value = "x";
+    return (document.getElementById("f") as HTMLFormElement).checkValidity();
+  });
+  expect(valid).toBe(true);
+});
