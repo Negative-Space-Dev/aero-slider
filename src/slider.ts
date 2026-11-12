@@ -142,6 +142,8 @@ export function createSlider(
   let stopPositions: number[] = [];
 
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  // Clones are made here, where nothing loads: cloning a live lazy image can start its fetch.
+  const inertDocument = document.implementation.createHTMLDocument("");
 
   // Scroll state
   let programmaticScroll = false; // a goTo() animation is in flight
@@ -352,7 +354,7 @@ export function createSlider(
   }
 
   function cloneOf(slide: HTMLElement): HTMLElement {
-    const clone = slide.cloneNode(true) as HTMLElement;
+    const clone = inertDocument.importNode(slide, true);
     clone.removeAttribute(SLIDE_INDEX_ATTR);
     clone.setAttribute(CLONE_ATTR, "");
     clone.setAttribute("aria-hidden", "true");
