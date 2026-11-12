@@ -922,8 +922,8 @@ body {
   border: 1px solid var(--line-strong);
   background-color: var(--paper);
   background-image:
-    linear-gradient(color-mix(in srgb, var(--line) 70%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--line) 70%, transparent) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--line) 28%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--line) 28%, transparent) 1px, transparent 1px);
   background-size: 24px 24px;
   background-position: -1px -1px;
 }
@@ -1014,11 +1014,25 @@ body {
   color: var(--accent);
 }
 .draft-cell > h3 {
-  margin-top: auto;
-  font-size: 1.125rem;
+  font-size: 1.5rem;
+  line-height: 1.2;
   font-weight: 500;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.02em;
   color: var(--ink);
+}
+@media (min-width: 1024px) {
+  .draft-cell > h3 {
+    font-size: 1.75rem;
+  }
+}
+/* Benefits read claim first, drawing second. Drawings sit on the cell floor so
+   they line up across a row whatever the text length above them. */
+.draft-sheet--benefits > .draft-cell > :is(.draft-fig, .draft-fig-row) {
+  margin-top: auto;
+  padding-top: 2rem;
+}
+.draft-sheet--benefits .draft-fig {
+  margin-block: 0 1.25rem;
 }
 .draft-cell > h4 {
   margin-top: 0.875rem;

@@ -37,10 +37,8 @@ const inFrame = (x: number) => x >= 86 && x + 56 <= 218;
 
   <div class="draft-sheet draft-sheet--benefits grid lg:grid-cols-12">
     <article class="draft-cell lg:col-span-7">
-      <div class="draft-cell__meta">
-        <span>Fig. 01</span>
-        <span>Breakpoints</span>
-      </div>
+      <h3>CSS-first</h3>
+      <p>Responsive in CSS with media queries instead of JavaScript breakpoint objects.</p>
       <div class="draft-fig-row">
       <svg class="draft-fig" viewBox="0 0 320 146" aria-hidden="true">
         <text x="4" y="12" class="dr-accent-text">--slides-per-view</text>
@@ -70,15 +68,18 @@ const inFrame = (x: number) => x >= 86 && x + 56 <= 218;
   }
 }`}</pre>
       </div>
-      <h3>CSS-first</h3>
-      <p>Responsive in CSS with media queries instead of JavaScript breakpoint objects.</p>
+      <div class="draft-cell__meta">
+        <span>Fig. 01</span>
+        <span>Breakpoints</span>
+      </div>
     </article>
 
     <article class="draft-cell lg:col-span-5">
-      <div class="draft-cell__meta">
-        <span>Fig. 02</span>
-        <span>Scroll</span>
-      </div>
+      <h3>Native scroll</h3>
+      <p>
+        The browser does the scrolling. Touch, trackpad and momentum feel native because they are,
+        with CSS scroll snapping holding each slide.
+      </p>
       <svg class="draft-fig" viewBox="0 0 320 146" aria-hidden="true">
         <text x="86" y="34">viewport</text>
         <path class="dr-accent" d="M168 30.5H220M215 26.5L220 30.5L215 34.5" />
@@ -101,18 +102,18 @@ const inFrame = (x: number) => x >= 86 && x + 56 <= 218;
         <text x="4" y="138">snap points</text>
         <text x="316" y="138" text-anchor="end">track</text>
       </svg>
-      <h3>Native scroll</h3>
-      <p>
-        The browser does the scrolling. Touch, trackpad and momentum feel native because they are,
-        with CSS scroll snapping holding each slide.
-      </p>
+      <div class="draft-cell__meta">
+        <span>Fig. 02</span>
+        <span>Scroll</span>
+      </div>
     </article>
 
     <article class="draft-cell lg:col-span-5">
-      <div class="draft-cell__meta">
-        <span>Fig. 03</span>
-        <span>Layout</span>
-      </div>
+      <h3>Zero layout shift</h3>
+      <p>
+        Slides get their size from CSS before any JavaScript runs, so nothing jumps when the slider
+        starts.
+      </p>
       <svg class="draft-fig" viewBox="0 0 320 146" aria-hidden="true">
         <defs>
           <pattern id="fig3-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
@@ -134,18 +135,18 @@ const inFrame = (x: number) => x >= 86 && x + 56 <= 218;
         <text x="256" y="82" class="dr-value">css</text>
         <text x="256" y="122">js</text>
       </svg>
-      <h3>Zero layout shift</h3>
-      <p>
-        Slides get their size from CSS before any JavaScript runs, so nothing jumps when the slider
-        starts.
-      </p>
+      <div class="draft-cell__meta">
+        <span>Fig. 03</span>
+        <span>Layout</span>
+      </div>
     </article>
 
     <article class="draft-cell lg:col-span-7">
-      <div class="draft-cell__meta">
-        <span>Fig. 04</span>
-        <span>To scale</span>
-      </div>
+      <h3>~{Math.round(bundleSize.total)} KB, zero dependencies</h3>
+      <p>
+        {kb(bundleSize.js)} KB of JavaScript and {kb(bundleSize.css)} KB of CSS, gzipped. Nothing else
+        to install.
+      </p>
       <svg class="draft-fig" viewBox="0 0 320 146" aria-hidden="true">
         <defs>
           <pattern id="fig4-hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
@@ -170,11 +171,10 @@ const inFrame = (x: number) => x >= 86 && x + 56 <= 218;
         <text x={barX + unit + 8} y="128">1 KB</text>
         <text x={barEnd} y="128" text-anchor="end" class="dr-value">0 dependencies</text>
       </svg>
-      <h3>~{Math.round(bundleSize.total)} KB, zero dependencies</h3>
-      <p>
-        {kb(bundleSize.js)} KB of JavaScript and {kb(bundleSize.css)} KB of CSS, gzipped. Nothing else
-        to install.
-      </p>
+      <div class="draft-cell__meta">
+        <span>Fig. 04</span>
+        <span>To scale</span>
+      </div>
     </article>
   </div>
 </div>
