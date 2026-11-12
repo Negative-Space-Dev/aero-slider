@@ -203,16 +203,17 @@ test.describe("with two slides", () => {
 
 // With several slides in view the last clones sit past the scrollable range, so a queued step
 // that lands on one can't be reached.
-test("eight quick next() calls with three slides in view land back on the first", async ({
+// Seven steps end three slides from the start, so calls that did nothing can't pass.
+test("seven quick next() calls with three slides in view land on the last slide", async ({
   page,
 }) => {
   await mount(page, slider("s", 4, { style: "--slides-per-view:3" }));
   await create(page, "s", { loop: true, scrollDuration: 1200 });
   await page.evaluate(() => {
-    for (let k = 0; k < 8; k++) window.sliders.s!.next();
+    for (let k = 0; k < 7; k++) window.sliders.s!.next();
   });
   await settled(page, "s");
-  expect((await state(page, "s")).index).toBe(0);
+  expect((await state(page, "s")).index).toBe(3);
   const centred = await page.evaluate(() => {
     const track = document.querySelector<HTMLElement>("#s .aero-slider__track")!;
     const width = track.clientWidth / 3;
@@ -221,7 +222,7 @@ test("eight quick next() calls with three slides in view land back on the first"
       (c) => Math.abs((c as HTMLElement).offsetLeft + width / 2 - mid) <= 2
     )?.textContent;
   });
-  expect(centred).toBe("0");
+  expect(centred).toBe("3");
 });
 
 test("clones of link slides leave the tab order and drop their ids", async ({ page }) => {

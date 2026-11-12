@@ -5,6 +5,7 @@ import {
   expectNear,
   failOnPageErrors,
   mount,
+  onSteadyFrames,
   settled,
   slider,
   state,
@@ -87,42 +88,46 @@ const snapStyle = (page: Page) =>
 test("scrollDuration eases goTo() out over its own timeline, with snapping off until it lands", async ({
   page,
 }) => {
-  await eased(page, 600);
-  const { snap, samples } = await glideTo(page, 2, 800);
-  expect(snap).toBe("none");
-  const g = glide(samples, 0, 2 * STRIDE);
-  expect(g.steps).toBeGreaterThanOrEqual(8);
-  expect(g.oneWay).toBe(true);
-  expect(g.biggest).toBeLessThan(0.3);
-  expect(g.firstHalf).toBeGreaterThan(g.secondHalf);
+  await onSteadyFrames(page, async () => {
+    await eased(page, 600);
+    const { snap, samples } = await glideTo(page, 2, 800);
+    expect(snap).toBe("none");
+    const g = glide(samples, 0, 2 * STRIDE);
+    expect(g.steps).toBeGreaterThanOrEqual(8);
+    expect(g.oneWay).toBe(true);
+    expect(g.biggest).toBeLessThan(0.3);
+    expect(g.firstHalf).toBeGreaterThan(g.secondHalf);
 
-  await settled(page, "s");
-  expect(await state(page, "s")).toEqual({ index: 2, position: 2 * STRIDE });
-  expect(await snapStyle(page)).toBe("");
+    await settled(page, "s");
+    expect(await state(page, "s")).toEqual({ index: 2, position: 2 * STRIDE });
+    expect(await snapStyle(page)).toBe("");
+  });
 });
 
 test("scrollEasing shapes the curve: linear moves in even steps, both ways", async ({ page }) => {
-  await mount(page, slider("s", 5, { style: "--slide-gap:10px" }));
-  await page.evaluate(() => {
-    window.sliders.s = window.createSlider(document.getElementById("s")!, {
-      scrollDuration: 800,
-      scrollEasing: (t) => t,
+  await onSteadyFrames(page, async () => {
+    await mount(page, slider("s", 5, { style: "--slide-gap:10px" }));
+    await page.evaluate(() => {
+      window.sliders.s = window.createSlider(document.getElementById("s")!, {
+        scrollDuration: 800,
+        scrollEasing: (t) => t,
+      });
     });
+
+    const forward = glide((await glideTo(page, 2, 1000)).samples, 0, 2 * STRIDE);
+    expect(forward.steps).toBeGreaterThanOrEqual(12);
+    expect(forward.oneWay).toBe(true);
+    expect(forward.biggest).toBeLessThan(0.15);
+    expectEvenPace(forward);
+    await settled(page, "s");
+    expect((await state(page, "s")).position).toBe(2 * STRIDE);
+
+    const back = glide((await glideTo(page, 0, 1000)).samples, 2 * STRIDE, 0);
+    expect(back.steps).toBeGreaterThanOrEqual(12);
+    expect(back.oneWay).toBe(true);
+    expect(back.biggest).toBeLessThan(0.15);
+    expectEvenPace(back);
   });
-
-  const forward = glide((await glideTo(page, 2, 1000)).samples, 0, 2 * STRIDE);
-  expect(forward.steps).toBeGreaterThanOrEqual(12);
-  expect(forward.oneWay).toBe(true);
-  expect(forward.biggest).toBeLessThan(0.15);
-  expectEvenPace(forward);
-  await settled(page, "s");
-  expect((await state(page, "s")).position).toBe(2 * STRIDE);
-
-  const back = glide((await glideTo(page, 0, 1000)).samples, 2 * STRIDE, 0);
-  expect(back.steps).toBeGreaterThanOrEqual(12);
-  expect(back.oneWay).toBe(true);
-  expect(back.biggest).toBeLessThan(0.15);
-  expectEvenPace(back);
 });
 
 // A longer ease than 300ms leaves room to interrupt it under a loaded test machine.
