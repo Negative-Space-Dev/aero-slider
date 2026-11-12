@@ -13,6 +13,7 @@ export interface SliderConfig {
    * `autoplaySpeed` like a ticker; it implies `loop` and `snap: "none"`.
    */
   autoplay?: boolean | "continuous";
+  /** Milliseconds between automatic moves, at least 100. */
   autoplayInterval?: number;
   /** Continuous autoplay speed, in pixels per second. 0 or less keeps the track still. */
   autoplaySpeed?: number;
@@ -23,7 +24,10 @@ export interface SliderConfig {
   maxDots?: number;
   /** Selector for elements inside slides that should not start a mouse drag. */
   noDrag?: string;
-  /** Slides advanced per next()/prev() call. */
+  /**
+   * Stops advanced per next()/prev() call, a whole number of at least 1. A stop is a distinct
+   * resting place: without loop, the slides that clamp to the same spot near an end share one.
+   */
   perMove?: number;
   /**
    * `"auto"` (the default) follows the container's computed direction and leaves its `dir`
@@ -58,7 +62,9 @@ export interface SliderInstance {
   resume(): void;
   update(config?: SliderConfig): void;
   refresh(): void;
+  /** Inserts slides before slide `index`, or at the end. The slide in view stays in view. */
   add(slides: HTMLElement | HTMLElement[], index?: number): void;
+  /** Removes slides by index. The slide in view stays in view, or the next one takes its place. */
   remove(index: number | number[]): void;
   destroy(): void;
 }

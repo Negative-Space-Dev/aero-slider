@@ -282,6 +282,7 @@ export function createSlider(
     stopPositions = [];
     for (let i = 0; i < slideCount && (loop() || i <= maxIndex()); i++) {
       const position = loop() ? 0 : restPositionOf(i);
+      // Unmeasured (display: none), every slide reads 0; keep them all until relayout() measures.
       if (i && slideStride && !loop() && position - stopPositions.at(-1)! < 0.5) continue;
       stops.push(i);
       stopPositions.push(position);
@@ -645,7 +646,7 @@ export function createSlider(
         return;
       }
 
-      // Like native paging: a flick always moves at least one slide its way.
+      // Like native paging: a flick always moves at least one slide (one stop, off a loop) its way.
       const position = scrollPosition();
       const projected = position + velocity * FLICK_PROJECTION_MS;
       const flick = Math.abs(velocity) > FLICK_VELOCITY ? Math.sign(velocity) : 0;
