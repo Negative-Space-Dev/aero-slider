@@ -1,0 +1,355 @@
+/* ── Jump row ──────────────────────────────────────────────────────────── */
+.ex-jump {
+  display: grid;
+  gap: 1.5rem;
+  margin-bottom: 3.5rem;
+}
+@media (min-width: 1024px) {
+  .ex-jump {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2rem;
+    margin-bottom: 5rem;
+  }
+}
+.ex-jump__title {
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid var(--line-strong);
+}
+.ex-jump__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.75rem;
+}
+.ex-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.3125rem 0.625rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  font-size: 0.8125rem;
+  color: var(--muted);
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+.ex-chip:hover {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+.ex-chip__index {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.ex-chip:hover .ex-chip__index {
+  color: var(--accent);
+}
+
+/* ── Groups and entries ────────────────────────────────────────────────── */
+.ex-group + .ex-group {
+  margin-top: 4.5rem;
+}
+@media (min-width: 640px) {
+  .ex-group + .ex-group {
+    margin-top: 6rem;
+  }
+}
+.ex-group__title {
+  margin-bottom: 0.5rem;
+}
+
+.ex {
+  padding-top: 2rem;
+  border-top: 1px solid var(--line);
+}
+.ex + .ex {
+  margin-top: 3.5rem;
+}
+@media (min-width: 640px) {
+  .ex {
+    padding-top: 2.5rem;
+  }
+  .ex + .ex {
+    margin-top: 5rem;
+  }
+}
+.ex-group__title + .ex {
+  border-top-color: var(--line-strong);
+}
+
+.ex__head {
+  display: grid;
+  gap: 0.5rem 2.5rem;
+}
+@media (min-width: 1024px) {
+  .ex__head {
+    grid-template-columns: 18rem minmax(0, 1fr);
+    align-items: baseline;
+  }
+  .ex__meta {
+    grid-column: 1;
+  }
+  .ex__title {
+    grid-column: 1;
+  }
+  .ex__lead {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: end;
+  }
+}
+.ex__meta {
+  display: flex;
+  gap: 0.75rem;
+}
+.ex__title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  font-variant-ligatures: no-common-ligatures;
+  color: var(--ink);
+}
+.ex__lead {
+  max-width: 36rem;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+.ex__lead code,
+.ex__notes code {
+  white-space: nowrap;
+}
+
+.ex__demo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+  margin-top: 1.75rem;
+}
+.ex__sliders {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.75rem 1.5rem;
+}
+.ex__sliders--row {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+}
+.ex-slider {
+  min-width: 0;
+}
+.ex-slider__caption {
+  margin-bottom: 0.625rem;
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.ex__more {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+.ex__more > .disclosure {
+  width: 100%;
+}
+.ex__more > .disclosure > .disclosure__body {
+  margin-bottom: 0.75rem;
+}
+.ex__notes {
+  display: grid;
+  gap: 0.5rem;
+  max-width: 40rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.ex__notes > li {
+  position: relative;
+  padding-left: 1.125rem;
+  text-wrap: pretty;
+}
+.ex__notes > li::before {
+  content: "";
+  position: absolute;
+  top: 0.8em;
+  left: 0;
+  width: 0.5rem;
+  border-top: 1px solid var(--line-strong);
+}
+.ex__notes a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+}
+.ex__notes a:hover {
+  text-decoration-color: var(--accent);
+}
+
+.ex-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ex-states {
+  margin-top: 2.5rem;
+}
+
+/* ── Slide content ─────────────────────────────────────────────────────── */
+.aero-slider__track > :is(.ex-card, .ex-wordmark, .ex-form) {
+  align-items: stretch;
+  container-type: inline-size;
+  border-radius: var(--slide-radius);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+.aero-slider__track > .ex-card,
+.aero-slider__track > .ex-form {
+  background: var(--tone-1);
+}
+.ex-card__body,
+.ex-form__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: clamp(0.75rem, 7cqi, 1.75rem);
+}
+.ex-card__meta {
+  margin-bottom: auto;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.ex-card__title {
+  font-family: var(--font-display);
+  font-size: clamp(0.9375rem, 7cqi, 1.75rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  font-variant-ligatures: no-common-ligatures;
+  line-height: 1.15;
+  color: var(--ink);
+}
+.ex-card__text {
+  max-width: 22rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+@container (max-width: 12rem) {
+  .ex-card__text {
+    display: none;
+  }
+}
+
+.aero-slider__track > .ex-wordmark {
+  background: var(--surface);
+}
+.ex-wordmark {
+  user-select: none;
+}
+.ex-wordmark > span {
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: clamp(0.6875rem, 11cqi, 1.5rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  font-variant-ligatures: no-common-ligatures;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.ex-wordmark:nth-child(3n + 2) > span {
+  font-family: var(--font-mono);
+  font-size: clamp(0.5625rem, 8cqi, 1rem);
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ex-form__row {
+  display: flex;
+  gap: 0.5rem;
+}
+.ex-form__input {
+  min-width: 0;
+  flex: 1;
+  height: 2.25rem;
+  padding-inline: 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.5rem;
+  background: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+.ex-form__input::placeholder {
+  color: var(--faint);
+}
+.ex-form__input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.ex-form__button {
+  flex: none;
+  cursor: pointer;
+}
+
+/* ── Edge-to-edge column guide ─────────────────────────────────────────── */
+/* Spans the window and centres a column on the same variable the slider sizes
+   against, so the dashed lines fall where the active card aligns. */
+.ex-guide {
+  display: flex;
+  justify-content: center;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+}
+.ex-guide__column {
+  position: relative;
+  width: var(--content-column);
+  padding: 0.5rem 0.75rem;
+}
+.ex-guide__column::before,
+.ex-guide__column::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed var(--accent);
+}
+.ex-guide__column::before {
+  left: 0;
+}
+.ex-guide__column::after {
+  right: 0;
+}
+
+/* ── Bare controls for the styling example ─────────────────────────────── */
+/* That demo shows what its own CSS produces, so the site's arrow and dot
+   chrome is taken off first. Its sample rules use ids and win over these. */
+.ex-bare.aero-slider .aero-slider__nav--prev,
+.ex-bare.aero-slider .aero-slider__nav--next {
+  all: revert;
+}
+.ex-bare.aero-slider .aero-slider__dot {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  transform: none;
+}

@@ -1,85 +1,68 @@
 import { createSlider, syncThumbnails } from "aero-slider";
-import type { SliderConfig } from "aero-slider";
+import type { SliderConfig, SliderInstance } from "aero-slider";
+import { examples, type DemoSlider } from "../data/examples";
 import { getRequiredElementById } from "../lib/dom";
-import { createSlideElement } from "../lib/slide";
+
+const sliders = Object.values(examples).flatMap((example) => example.sliders);
+const instances = new Map<string, SliderInstance>();
+
+function start(slider: DemoSlider): SliderInstance {
+  const instance = createSlider(getRequiredElementById(slider.id), slider.config);
+  instances.set(slider.id, instance);
+  return instance;
+}
+
+const instance = (id: string) => instances.get(id)!;
+
+function wireEdgeToEdge(): void {
+  const group = getRequiredElementById("edge-align");
+  group.addEventListener("click", (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-align]");
+    const alignment = button?.dataset.align as SliderConfig["alignment"] | undefined;
+    if (!alignment) return;
+    instance("edge-to-edge").update({ alignment });
+    for (const each of group.querySelectorAll<HTMLButtonElement>("button[data-align]")) {
+      each.toggleAttribute("data-active", each === button);
+    }
+  });
+}
+
+const REPLAY_PAUSE_MS = 900;
+
+/** Puts both sliders back to their server-rendered state, holds it, then starts them again. */
+function wireNoShiftReplay(): void {
+  const button = getRequiredElementById<HTMLButtonElement>("no-shift-replay");
+  const pair = examples["ex-no-shift"].sliders;
+  button.addEventListener("click", () => {
+    button.disabled = true;
+    for (const slider of pair) {
+      instance(slider.id).destroy();
+      const el = getRequiredElementById(slider.id);
+      for (const [name, value] of Object.entries(slider.attrs ?? {})) el.setAttribute(name, value);
+      el.querySelector<HTMLElement>(".aero-slider__track")!.scrollLeft = 0;
+    }
+    setTimeout(() => {
+      for (const slider of pair) start(slider);
+      button.disabled = false;
+    }, REPLAY_PAUSE_MS);
+  });
+}
+
+function wireNoDragButtons(): void {
+  const el = getRequiredElementById("no-drag");
+  el.addEventListener("click", (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-label]");
+    if (!button) return;
+    button.textContent = "Done";
+    setTimeout(() => (button.textContent = button.dataset.label!), 1200);
+  });
+}
 
 // Deferred so the playground paints first.
 requestAnimationFrame(() => {
-  createSlider(getRequiredElementById<HTMLElement>("multi"));
-  const breakoutSlider = createSlider(getRequiredElementById<HTMLElement>("breakout-bleed"), {
-    alignment: "left",
-  });
-
-  const breakoutAlign = document.getElementById("breakout-align");
-  if (breakoutAlign) {
-    const alignButtons = breakoutAlign.querySelectorAll<HTMLButtonElement>("button[data-align]");
-    const setActiveAlign = (value: string) => {
-      for (const btn of alignButtons) {
-        btn.toggleAttribute("data-active", btn.dataset.align === value);
-      }
-    };
-    setActiveAlign("left");
-    breakoutAlign.addEventListener("click", (e) => {
-      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("button[data-align]");
-      const value = btn?.dataset.align as SliderConfig["alignment"] | undefined;
-      if (!value) return;
-      breakoutSlider.update({ alignment: value });
-      setActiveAlign(value);
-    });
-  }
-  createSlider(getRequiredElementById<HTMLElement>("alignment-left"), {
-    alignment: "left",
-    loop: true,
-  });
-  createSlider(getRequiredElementById<HTMLElement>("alignment-center"), {
-    alignment: "center",
-    loop: true,
-  });
-  createSlider(getRequiredElementById<HTMLElement>("alignment-right"), {
-    alignment: "right",
-    loop: true,
-  });
-  createSlider(getRequiredElementById<HTMLElement>("autoplay"), {
-    autoplay: true,
-    autoplayInterval: 3000,
-    loop: true,
-  });
-  createSlider(getRequiredElementById<HTMLElement>("responsive"));
-
-  const thumbMain = createSlider(getRequiredElementById<HTMLElement>("thumbnail-main"));
-  const thumbThumbs = createSlider(getRequiredElementById<HTMLElement>("thumbnail-thumbs"), {
-    alignment: "center",
-  });
-  syncThumbnails(thumbMain, thumbThumbs);
-
-  createSlider(getRequiredElementById<HTMLElement>("direction-rtl"), { direction: "rtl" });
-  createSlider(getRequiredElementById<HTMLElement>("direction-vertical"), { direction: "ttb" });
-
-  const dynamicSlider = createSlider(getRequiredElementById<HTMLElement>("dynamic-slides"));
-  let dynamicCount = 3;
-  getRequiredElementById("dynamic-add").addEventListener("click", () => {
-    dynamicCount++;
-    dynamicSlider.add(createSlideElement({ num: dynamicCount }, dynamicCount));
-  });
-  getRequiredElementById("dynamic-remove").addEventListener("click", () => {
-    if (dynamicSlider.slideCount > 1) {
-      dynamicSlider.remove(dynamicSlider.slideCount - 1);
-      dynamicCount = dynamicSlider.slideCount;
-    }
-  });
-
-  createSlider(getRequiredElementById<HTMLElement>("per-move"), { perMove: 2, loop: true });
-  createSlider(getRequiredElementById<HTMLElement>("snap-settle"), {
-    loop: true,
-    snap: "settle",
-    scrollDuration: 550,
-  });
-  createSlider(getRequiredElementById<HTMLElement>("snap-none"), { snap: "none" });
-  createSlider(getRequiredElementById<HTMLElement>("continuous"), {
-    autoplay: "continuous",
-    autoplaySpeed: 36,
-    draggable: false,
-  });
-  createSlider(getRequiredElementById<HTMLElement>("pagination-minimal"));
-  createSlider(getRequiredElementById<HTMLElement>("nav-minimal"));
+  for (const slider of sliders) start(slider);
+  syncThumbnails(instance("gallery"), instance("gallery-thumbs"));
+  wireEdgeToEdge();
+  wireNoShiftReplay();
+  wireNoDragButtons();
 });

@@ -1,0 +1,74 @@
+---
+import Pagination from "./Pagination.astro";
+import Slide from "./Slide.astro";
+import SliderNav from "./SliderNav.astro";
+import { styleOf, type DemoSlider } from "../data/examples";
+
+interface Props {
+  slider: DemoSlider;
+}
+
+const { slider } = Astro.props;
+// Examples keep to the two dark tones, so the controls and content read first.
+const quietTone = (i: number) => (i % 2 === 0 ? 1 : 4);
+---
+
+<figure class="ex-slider">
+  {slider.caption && <figcaption class="caption ex-slider__caption">{slider.caption}</figcaption>}
+  <div class={slider.wrapperClass}>
+    <div
+      id={slider.id}
+      class:list={["aero-slider", slider.className, slider.chrome]}
+      style={styleOf(slider.vars)}
+      {...slider.attrs}
+    >
+      <div class="aero-slider__viewport">
+        {
+          slider.nav &&
+            (slider.glyphNav ? (
+              <>
+                <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">‹</button>
+                <button type="button" class="aero-slider__nav--next" aria-label="Next slide">›</button>
+              </>
+            ) : (
+              <SliderNav />
+            ))
+        }
+        <div class="aero-slider__track">
+          {
+            slider.slides.map((slide, i) =>
+              slide.kind === "card" ? (
+                <div class="ex-card">
+                  <div class="ex-card__body">
+                    <span class="ex-card__meta">{slide.meta}</span>
+                    <h4 class="ex-card__title">{slide.title}</h4>
+                    <p class="ex-card__text">{slide.text}</p>
+                  </div>
+                </div>
+              ) : slide.kind === "wordmark" ? (
+                <div class="ex-wordmark">
+                  <span>{slide.name}</span>
+                </div>
+              ) : slide.kind === "form" ? (
+                <div class="ex-form">
+                  <div class="ex-form__body">
+                    <span class="ex-card__meta">{slide.title}</span>
+                    <div class="ex-form__row">
+                      <input type="text" class="ex-form__input" aria-label={slide.field} placeholder={slide.field} />
+                      <button type="button" class="btn ex-form__button" data-label={slide.action}>
+                        {slide.action}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <Slide position={i + 1} {...slide} tone={slide.tone ?? quietTone(i)} />
+              )
+            )
+          }
+        </div>
+      </div>
+      {slider.dots && <Pagination />}
+    </div>
+  </div>
+</figure>
