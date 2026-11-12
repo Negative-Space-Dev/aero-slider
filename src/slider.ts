@@ -256,7 +256,7 @@ export function createSlider(
 
   /** Takes back every attribute written on `el`, and stops holding on to it. */
   function forget(el: Element): void {
-    for (const [name, value] of Object.entries(written.get(el)!)) {
+    for (const [name, value] of Object.entries(written.get(el) ?? {})) {
       if (el.getAttribute(name) === value) el.removeAttribute(name);
     }
     written.delete(el);
@@ -889,9 +889,8 @@ export function createSlider(
       const { picker } = core;
       const item = !picker && slide.matches("li");
       if (item) attr(slide, "role", null);
-      if (!picker && slide.matches("img")) {
-        if (written.has(slide)) forget(slide);
-      } else if (
+      if (!picker && slide.matches("img")) forget(slide);
+      else if (
         !slide.matches("a[href], button") &&
         (item || attr(slide, "role", picker ? "button" : "group"))
       ) {
