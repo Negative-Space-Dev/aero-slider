@@ -31,45 +31,23 @@ The documentation site lives in `site/` (Astro + Tailwind):
 
 ## Publishing
 
-### Publishing to npm
+Publishing a GitHub release publishes to npm. Nothing is published from a laptop.
 
-1. **Log in to npm** (if not already):
+1. **Bump the version** in `package.json` on a branch and merge it to `main`:
+   - Patch: `npm version patch --no-git-tag-version` (e.g. 1.0.0 → 1.0.1)
+   - Minor: `npm version minor --no-git-tag-version` (e.g. 1.0.0 → 1.1.0)
+   - Prerelease: `npm version prerelease --preid=beta --no-git-tag-version` (e.g. 1.0.0 → 1.0.1-beta.0)
 
-   ```bash
-   npm login
-   ```
+2. **[Create a release](https://github.com/Negative-Space-Dev/aero-slider/releases/new)** on GitHub from `main`. The tag must be `v` plus the version in `package.json`, such as `v1.0.0`. Tick "Set as a pre-release" for a beta.
 
-2. **Bump the version** in `package.json`:
-   - Patch: `npm version patch` (e.g. 1.0.0 → 1.0.1)
-   - Minor: `npm version minor` (e.g. 1.0.0 → 1.1.0)
-   - Prerelease: `npm version prerelease --preid=beta` (e.g. 1.0.0 → 1.0.1-beta.0)
+3. **Publish the release.** The **Release** workflow runs two jobs:
+   - `publish` checks that the tag matches `package.json`, runs the typecheck, size and package checks, and runs `npm publish`. A pre-release goes to the `beta` tag, so it never becomes the default for `npm install aero-slider`. Anything else goes to `latest`.
+   - `build-and-zip` attaches `aero-slider-<tag>.zip` (the minified JavaScript and CSS and `aeroslider.md`) and `aeroslider.md` to the release, for people who download instead of installing.
 
-3. **Run checks**:
+Draft releases do not trigger the workflow.
 
-   ```bash
-   bun run typecheck
-   bun run test
-   bun run pack
-   ```
+### One-time npm setup
 
-   `pack` creates a `.tgz` so you can verify what gets published.
+The workflow signs in to npm with [trusted publishing](https://docs.npmjs.com/trusted-publishers), so the repository holds no npm token. On npmjs.com, open the `aero-slider` package settings, add a trusted publisher of type GitHub Actions, and enter the organization `Negative-Space-Dev`, the repository `aero-slider` and the workflow file `release.yml`.
 
-4. **Publish**:
-   - **Stable** (e.g. 1.0.0): `npm publish`
-   - **Prerelease** (e.g. 1.0.0-beta.0): `npm publish --tag beta`
-
-   Prereleases require `--tag` so they don't become the default for `npm install aero-slider`. Users install betas with `npm install aero-slider@beta`.
-
-5. **Mark Latest**
-   - `npm dist-tag add aero-slider@{version} latest`
-
-### GitHub Release workflow
-
-When you [create a release](https://github.com/Negative-Space-Dev/aero-slider/releases/new) on GitHub and publish it, the **Release** workflow runs automatically:
-
-1. **Triggers on** `release: types: [published]` — runs when you publish a release (draft releases do not trigger it).
-2. **Builds** the slider with `bun run build`.
-3. **Creates a zip** containing `aero-slider.min.js` and `aero-slider.min.css`.
-4. **Uploads** the zip as an asset on the release (e.g. `aero-slider-v1.0.0.zip` for tag `v1.0.0`).
-
-The zip is a standalone distribution for users who prefer downloading over `npm install`.
+To check a tarball by hand before a release, run `bun run pack`.
