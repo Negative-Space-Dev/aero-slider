@@ -26,6 +26,15 @@ test("data-aero-status on the container words the status line", async ({ page })
   await expect(status(page)).toHaveText("Bild 2 von 3");
 });
 
+test("the status line counts the slider's own slides, not a nested slider's", async ({ page }) => {
+  const inner = slider("inner", 4, { nav: false, dots: false });
+  await mount(page, slider("s", 3, { inner: (i) => (i === 0 ? inner : `<div>${i}</div>`) }));
+  await create(page, "inner");
+  await create(page, "s");
+  await page.evaluate(() => window.sliders.s!.next());
+  await expect(page.locator("#s > .aero-slider__status")).toHaveText("2 of 3");
+});
+
 test("a rebuild drops status text that names the old slide count", async ({ page }) => {
   await mount(page, slider("s", 3));
   await create(page, "s");
