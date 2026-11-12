@@ -101,3 +101,17 @@ test("thumbnails that are links keep their own semantics", async ({ page }) => {
   await expect(first).not.toHaveAttribute("tabindex");
   await expect(first).toHaveAttribute("aria-current", "true");
 });
+
+test("list item thumbnails are list items again after teardown", async ({ page }) => {
+  const list = (id: string) =>
+    `<div id="${id}" class="aero-slider" style="width:600px;--slides-per-view:5"><div class="aero-slider__viewport"><ul class="aero-slider__track" style="margin:0;padding:0;list-style:none"><li>0</li><li>1</li><li>2</li><li>3</li></ul></div></div>`;
+  await mount(page, slider("main", 4) + list("thumbs"));
+  await create(page, "main");
+  await create(page, "thumbs");
+  await sync(page);
+  const items = page.locator("#thumbs li[data-aero-slider-index]");
+  await expect(items.first()).toHaveAttribute("role", "button");
+  await page.evaluate(() => (window as unknown as { unsync: () => void }).unsync());
+  for (const item of await items.all()) await expect(item).not.toHaveAttribute("role");
+  await expect(page.locator("#thumbs").getByRole("listitem")).toHaveCount(4);
+});

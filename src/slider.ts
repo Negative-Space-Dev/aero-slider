@@ -236,6 +236,14 @@ export function createSlider(
     return true;
   }
 
+  /** Takes back every attribute written on `el`, and stops holding on to it. */
+  function forget(el: Element): void {
+    for (const [name, value] of Object.entries(written.get(el)!)) {
+      if (el.getAttribute(name) === value) el.removeAttribute(name);
+    }
+    written.delete(el);
+  }
+
   const label = (key: keyof SliderLabels, index = 0) =>
     config.labels[key]
       .replaceAll("{index}", String(index + 1))
@@ -833,18 +841,22 @@ export function createSlider(
   function rebuild(index = current): void {
     play.reset();
     for (const clone of track.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
+    // A slide removed since the last build would otherwise be kept alive, with our attributes.
+    for (const el of written.keys()) if (!container.contains(el)) forget(el);
     slides = Array.from(track.children) as HTMLElement[];
     slideCount = slides.length;
     slides.forEach((slide, i) => {
       if (!slide.classList.contains(SLIDE_CLASS)) classed.add(slide);
       slide.classList.add(SLIDE_CLASS);
       slide.setAttribute(SLIDE_INDEX_ATTR, String(i));
-      // A slide that is a link or button (a card) keeps its own role, and so does a list item:
-      // a group there would cost the list its item count.
+      // A slide that is a link, a button or an image keeps its own role and name. So does a list
+      // item, once any button role a thumbnail picker gave it is taken back: a group there would
+      // cost the list its item count.
       const { picker } = core;
       const item = !picker && slide.matches("li");
+      if (item) attr(slide, "role", null);
       if (
-        !slide.matches("a[href], button") &&
+        !slide.matches("a[href], button, img") &&
         (item || attr(slide, "role", picker ? "button" : "group"))
       ) {
         attr(slide, "aria-roledescription", picker ? null : label("slide"));
@@ -948,11 +960,7 @@ export function createSlider(
       "aero-slider--paused"
     );
     container.removeAttribute("data-aero-alignment");
-    for (const [el, mine] of written) {
-      for (const [name, value] of Object.entries(mine)) {
-        if (el.getAttribute(name) === value) el.removeAttribute(name);
-      }
-    }
+    for (const el of written.keys()) forget(el);
     restoreDir();
     if (container.aeroSlider === api) delete container.aeroSlider;
   }

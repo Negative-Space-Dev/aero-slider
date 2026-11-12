@@ -89,3 +89,12 @@ test("destroy() restores the pagination markup", async ({ page }) => {
   });
   expect(await markup()).toEqual(before);
 });
+
+test("End from the first windowed dot moves focus to the last dot", async ({ page }) => {
+  await mount(page, slider("s", 12));
+  await create(page, "s", { maxDots: 5 });
+  await page.getByRole("button", { name: "Go to slide 1", exact: true }).focus();
+  await page.keyboard.press("End");
+  await settled(page, "s");
+  await expect(page.getByRole("button", { name: "Go to slide 12" })).toBeFocused();
+});

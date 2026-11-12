@@ -171,3 +171,18 @@ test("the button keeps its own name, hides without autoplay, and destroy() resto
   });
   expect(await markup()).toEqual(before);
 });
+
+test("a button named by aria-labelledby carries the state in aria-pressed", async ({ page }) => {
+  await mount(
+    page,
+    `<span id="name">Pause the product carousel</span>` +
+      withToggle("s", 5, `<button class="aero-slider__autoplay" aria-labelledby="name"></button>`)
+  );
+  await create(page, "s", { autoplay: true });
+  const toggle = page.locator("#s .aero-slider__autoplay");
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  await expect(toggle).not.toHaveAttribute("aria-label");
+  await toggle.evaluate((el: HTMLElement) => el.click());
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(toggle).toHaveAccessibleName("Pause the product carousel");
+});

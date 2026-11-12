@@ -135,6 +135,7 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
     const atEnd = firstShown >= count - maxDots;
     dotTrack?.style.setProperty("--track-offset", `${-firstShown * dotPitch}px`);
 
+    const hidden: HTMLElement[] = [];
     dots.forEach((dot, i) => {
       const active = i === current;
       dot.classList.toggle("aero-slider__dot--active", active);
@@ -157,12 +158,15 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
         "aero-slider__dot--near-edge"
       );
       if (size) dot.classList.add(`aero-slider__dot--${size}`);
-      // A dot about to leave the tab order hands focus to the current one.
-      if (size === "hidden" && dot === document.activeElement) {
-        dots[current]!.focus({ preventScroll: true });
-      }
-      dot.inert = size === "hidden";
+      if (size === "hidden") hidden.push(dot);
+      else dot.inert = false;
     });
+    // A dot leaving the tab order hands focus to the current one, which must be focusable first:
+    // End from the first dot lands on one that was outside the window a moment ago.
+    if (hidden.includes(document.activeElement as HTMLElement)) {
+      dots[current]!.focus({ preventScroll: true });
+    }
+    for (const dot of hidden) dot.inert = true;
   }
 
   template.remove();
@@ -343,6 +347,7 @@ export function autoplay(core: SliderCore) {
     // carries the state in aria-pressed.
     const named =
       !button.textContent!.trim() &&
+      !button.hasAttribute("aria-labelledby") &&
       core.attr(button, "aria-label", core.label(paused ? "play" : "pause"));
     if (!named) button.setAttribute("aria-pressed", String(paused));
   }

@@ -100,3 +100,26 @@ test("list item slides keep their list semantics", async ({ page }) => {
   await expect(items.nth(1)).toHaveAttribute("aria-label", "2 of 3");
   await expect(page.locator("#s").getByRole("listitem")).toHaveCount(3);
 });
+
+test("image slides keep their own role and description", async ({ page }) => {
+  await mount(
+    page,
+    `<div id="s" class="aero-slider" style="width:600px"><div class="aero-slider__viewport"><div class="aero-slider__track"><img alt="A red bicycle" width="600" height="360"><img alt="A blue kettle" width="600" height="360"></div></div></div>`
+  );
+  await create(page, "s");
+  const first = page.locator("#s img").first();
+  await expect(first).not.toHaveAttribute("role");
+  await expect(first).not.toHaveAttribute("aria-label");
+  await expect(page.locator("#s").getByRole("img", { name: "A red bicycle" })).toHaveCount(1);
+});
+
+test("a removed slide gives back the attributes the slider wrote", async ({ page }) => {
+  await mount(page, slider("s", 3));
+  await create(page, "s");
+  const attributes = await page.evaluate(() => {
+    const slide = document.querySelector("#s [data-aero-slider-index='1']")!;
+    window.sliders.s!.remove(1);
+    return ["role", "aria-label", "aria-roledescription"].map((name) => slide.getAttribute(name));
+  });
+  expect(attributes).toEqual([null, null, null]);
+});
