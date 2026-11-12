@@ -24,3 +24,21 @@ test("continuous autoplay with few slides still clones them", async ({ page }) =
   await create(page, "s", { autoplay: "continuous" });
   await expect(page.locator("#s [data-aero-slider-clone]")).not.toHaveCount(0);
 });
+
+test("thumbnails ignore a slider nested inside the primary", async ({ page }) => {
+  const nested = slider("nested", 4, { nav: false, dots: false });
+  await mount(
+    page,
+    slider("main", 3, { inner: (i) => (i === 0 ? nested : String(i)) }) +
+      slider("thumbs", 3, { style: "--slides-per-view:3", dots: false })
+  );
+  await create(page, "nested");
+  await create(page, "main");
+  await create(page, "thumbs");
+  await page.evaluate(() => {
+    window.syncThumbnails(window.sliders.main!, window.sliders.thumbs!);
+    window.sliders.nested!.goTo(2, { instant: true });
+  });
+  await expect(page.locator("#thumbs .aero-slider__thumb--active")).toHaveText("0");
+  expect(await page.evaluate(() => window.sliders.thumbs!.currentIndex)).toBe(0);
+});

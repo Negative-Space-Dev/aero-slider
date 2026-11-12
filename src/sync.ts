@@ -53,7 +53,12 @@ export function syncThumbnails(
   );
   primary.element.addEventListener(
     "aero:slideChange",
-    (event) => activate((event as CustomEvent<{ index: number }>).detail.index),
+    (event) => {
+      // A slider nested inside a primary slide bubbles its own changes through here.
+      if (event.target === primary.element) {
+        activate((event as CustomEvent<{ index: number }>).detail.index);
+      }
+    },
     { signal }
   );
 
