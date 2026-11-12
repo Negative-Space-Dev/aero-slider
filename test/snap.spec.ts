@@ -65,9 +65,9 @@ async function drag(page: Page, from: number, xs: number[], framesPerMove = 1) {
 const range = (from: number, to: number, step: number) =>
   Array.from({ length: Math.floor((from - to) / step) }, (_, i) => from - (i + 1) * step);
 
-async function fiveSlides(page: Page, snap: "settle" | "none"): Promise<void> {
+async function fiveSlides(page: Page, snap: "settle" | "none", scrollDuration = 300) {
   await mount(page, slider("s", 5, { style: "--slide-gap:10px" }));
-  await create(page, "s", { snap, scrollDuration: 300 });
+  await create(page, "s", { snap, scrollDuration });
 }
 
 test("native snapping is the default", async ({ page }) => {
@@ -91,8 +91,9 @@ for (const [name, config, style] of [
 }
 
 test.describe("snap: settle", () => {
+  // Long enough that a busy headless browser still draws several frames of each ease.
   test.beforeEach(async ({ page }) => {
-    await fiveSlides(page, "settle");
+    await fiveSlides(page, "settle", 600);
   });
 
   test("a scroll stays where it stops, then eases onto the nearest slide", async ({ page }) => {
@@ -156,14 +157,6 @@ test.describe("snap: settle", () => {
     expect(await state(page, "s")).toEqual({ index: 0, position: 0 });
   });
 
-  // Enough moves for the release velocity, a running average, to reach the hand's speed.
-  test("a flick carries past the midpoint to the next slide", async ({ page }) => {
-    await drag(page, 560, range(560, 380, 20));
-    await page.mouse.up();
-    await settled(page, "s");
-    expect(await state(page, "s")).toEqual({ index: 1, position: STRIDE });
-  });
-
   test("a wheel scroll moves freely, then eases back onto its slide", async ({ page }) => {
     const box = (await page.locator("#s .aero-slider__track").boundingBox())!;
     await page.mouse.move(box.x + box.width / 2, box.y + 60);
@@ -173,6 +166,18 @@ test.describe("snap: settle", () => {
     await settled(page, "s");
     expect(await state(page, "s")).toEqual({ index: 0, position: 0 });
   });
+});
+
+// Each move reaches the page about 35ms after the last, and a loaded machine stretches that, so
+// the flick's speed varies. With two slides any flick can only carry to the next one; it releases
+// short of the midpoint, so only its speed can carry it there.
+test("snap: settle: a flick carries past the midpoint to the next slide", async ({ page }) => {
+  await mount(page, slider("s", 2, { style: "--slide-gap:10px" }));
+  await create(page, "s", { snap: "settle", scrollDuration: 600 });
+  await drag(page, 590, range(590, 350, 60));
+  await page.mouse.up();
+  await settled(page, "s");
+  expect(await state(page, "s")).toEqual({ index: 1, position: STRIDE });
 });
 
 test.describe("snap: settle on a loop", () => {

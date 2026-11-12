@@ -169,8 +169,12 @@ test("the drift moves steadily at autoplaySpeed, across the lap's seam", async (
   expect(Math.abs(run.speed - SPEED)).toBeLessThan(SPEED * 0.1);
 });
 
+// Slow, so that WebKit drawing the slides up to a frame away from the animation clock stays
+// under a pixel. A seam or hand-back bug is a jump of a slide or more.
+const PRECISE_SPEED = 30;
+
 test("the content steps evenly across the lap's seam", async ({ page }) => {
-  const cycle = await ticker(page);
+  const cycle = await ticker(page, { autoplaySpeed: PRECISE_SPEED });
   const { before, after } = await page.evaluate(() => {
     const duration = window.ticker.lapDuration("s");
     window.ticker.seek("s", duration - 5);
@@ -178,7 +182,7 @@ test("the content steps evenly across the lap's seam", async ({ page }) => {
     window.ticker.seek("s", duration + 5);
     return { before, after: window.ticker.content("s") };
   });
-  expectNear((((after - before) % cycle) + cycle) % cycle, (SPEED * 10) / 1000);
+  expectNear((((after - before) % cycle) + cycle) % cycle, (PRECISE_SPEED * 10) / 1000);
 });
 
 test("rtl drifts the other way on screen", async ({ page }) => {
@@ -257,23 +261,18 @@ test("a big scroll late in a lap is folded back, so no empty track shows", async
 });
 
 test("goTo() takes the lap back without a jump, then the drift resumes", async ({ page }) => {
-  const cycle = await ticker(page);
+  const cycle = await ticker(page, { autoplaySpeed: PRECISE_SPEED });
   const handOff = await page.evaluate(() => {
     const before = window.ticker.content("s");
     window.sliders.s!.goTo(1);
     return {
       before,
       after: window.ticker.content("s"),
-      sinceFrame: performance.now() - Number(document.timeline.currentTime),
       animations: window.ticker.animations("s").length,
     };
   });
   expect(handOff.animations).toBe(0);
-  // WebKit lays the slides out at the last frame's time but hands back the lap at the current
-  // time, so the content may land ahead by the drift since that frame, where it would draw next.
-  const moved = shift(handOff.before, handOff.after, cycle);
-  expect(moved).toBeGreaterThanOrEqual(-1.5);
-  expect(moved).toBeLessThanOrEqual((SPEED * handOff.sinceFrame) / 1000 + 1.5);
+  expectNear(shift(handOff.before, handOff.after, cycle), 0);
   await expect.poll(() => animationCount(page), { timeout: 5000 }).toBeGreaterThan(0);
 });
 
