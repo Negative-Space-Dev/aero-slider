@@ -175,7 +175,7 @@ export function createSlider(
    */
   function directionChanged(): boolean {
     if (rtl === computedRtl()) return false;
-    rtl = !rtl; // before relayout(), which asks again on its way
+    rtl = !rtl;
     relayout();
     return true;
   }
@@ -717,10 +717,7 @@ export function createSlider(
   // 100 slides moves the last one 40px.
   const observedSize = () =>
     [track, track.firstElementChild]
-      .map((el) => {
-        const style = el && getComputedStyle(el);
-        return `${style?.width},${style?.height}`;
-      })
+      .map((el) => el && [getComputedStyle(el).width, getComputedStyle(el).height])
       .join();
   const resizeObserver = new ResizeObserver(() => {
     if (destroyed || observedSize() === measuredSize) return;
@@ -785,7 +782,6 @@ export function createSlider(
       index = indexOfDom(children.indexOf(showing));
     }
     play.reset(); // continuous autoplay's transforms would skew every measurement
-    rtl = computedRtl();
     readSlidesPerView();
     if (cloneCount() !== clonesBefore) return rebuild(index);
     measure();
@@ -832,10 +828,10 @@ export function createSlider(
     for (let i = 1; i <= clonesBefore; i++) track.prepend(cloneOf(slides[wrap(-i)]!));
     for (let i = 0; i < clonesBefore; i++) track.append(cloneOf(slides[i % slideCount]!));
     // WebKit never starts loading media that arrived from another document with <source> children.
-    for (const media of track.querySelectorAll<HTMLMediaElement>(
-      `:is(video, audio)[${CLONE_ATTR}], [${CLONE_ATTR}] :is(video, audio)`
-    )) {
-      if (media.networkState === media.NETWORK_EMPTY) media.load();
+    // The clone can be the media element itself.
+    for (const media of track.querySelectorAll<HTMLMediaElement>("video, audio")) {
+      if (media.closest(`[${CLONE_ATTR}]`) && media.networkState === media.NETWORK_EMPTY)
+        media.load();
     }
 
     measure();
