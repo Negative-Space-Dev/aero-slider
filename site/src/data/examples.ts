@@ -479,7 +479,7 @@ export const examples: Record<ExampleId, Example> = {
       "The dot is one template. The slider clones it for each position it can scroll to and marks the current one with <code>aero-slider__dot--active</code>.",
       "Without <code>loop</code>, the slider disables the arrow at an end it cannot pass.",
       'Give each button an <code>aria-label</code>. The slider labels the dots itself ("Go to slide 2").',
-      'The library positions the arrows but does not draw them. See <a href="#ex-styling">Style the arrows, dots and states</a>.',
+      'The library has no styles for the arrows or the dots. See <a href="#ex-styling">Style the arrows, dots and states</a>.',
     ],
   },
 
