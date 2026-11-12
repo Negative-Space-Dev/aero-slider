@@ -64,13 +64,13 @@ You provide:
 
 - A name for the slider: `aria-label` or `aria-labelledby` on the container.
 - A label on each nav button, such as `aria-label="Previous slide"`.
-- A pause button whenever autoplay runs for more than five seconds. Add a `<button class="aero-slider__autoplay">` inside the container. The slider names it by what a press will do, or keeps `aria-pressed` in step if it has its own name. It hides it while autoplay is off or the visitor prefers reduced motion, and adds `aero-slider--paused` to the container while it is paused.
+- A pause button whenever autoplay runs for more than five seconds. Add a `<button type="button" class="aero-slider__autoplay">` inside the container. The slider names it by what a press will do, or keeps `aria-pressed` in step if it has its own name. It hides it while autoplay is off or the visitor prefers reduced motion, and adds `aero-slider--paused` to the container while it is paused.
 
-Use a `<button>` as the dot template. A `<span>` still works, and the slider makes it a keyboard button:
+Use a `<button type="button">` as the dot template, so a slider inside a form never submits it. A `<span>` still works, and the slider makes it a keyboard button:
 
 ```html
 <div class="aero-slider__pagination">
-  <button class="aero-slider__dot"></button>
+  <button type="button" class="aero-slider__dot"></button>
 </div>
 ```
 
