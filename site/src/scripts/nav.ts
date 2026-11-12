@@ -103,17 +103,3 @@ if (menu && trigger) {
     if (!menu.contains(event.target as Node)) setOpen(false);
   });
 }
-
-// ── Drawer ─────────────────────────────────────────────────────────────
-const drawer = document.querySelector<HTMLDialogElement>("#site-drawer");
-if (drawer) {
-  document.querySelector("[data-drawer-open]")?.addEventListener("click", () => drawer.showModal());
-  // The dialog itself is the target only for a press on the backdrop.
-  drawer.addEventListener("click", (event) => {
-    const target = event.target as Element;
-    if (target === drawer || target.closest("a, [data-drawer-close]")) drawer.close();
-  });
-  window.matchMedia("(min-width: 640px)").addEventListener("change", (event) => {
-    if (event.matches) drawer.close();
-  });
-}

@@ -148,53 +148,85 @@
     display: none;
   }
 }
-.drawer-button > svg,
-.drawer__close > svg {
+.drawer-button > svg {
   width: 1rem;
   height: 1rem;
 }
+.drawer__close > svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+/* The dialog is a clear full-screen layer; the scrim and the sheet inside it
+   are positioned by the drawer script. */
 .drawer {
   position: fixed;
-  inset: auto 0 0;
+  inset: 0;
   width: 100%;
   max-width: none;
-  max-height: min(86dvh, 46rem);
+  height: 100%;
+  max-height: none;
   margin: 0;
   padding: 0;
   border: 0;
-  border-top: 1px solid var(--line-strong);
-  border-radius: 1.25rem 1.25rem 0 0;
-  background: var(--paper);
+  background: transparent;
   color: var(--ink);
+  /* clip, so focusing a link in the off-screen sheet cannot scroll the layer. */
   overflow: hidden;
-}
-.drawer[open] {
-  display: flex;
-  flex-direction: column;
-  animation: drawer-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+  overflow: clip;
 }
 .drawer::backdrop {
-  background: rgb(0 0 0 / 0.6);
-  animation: drawer-fade 0.2s ease-out;
+  background: transparent;
 }
-html:has(.drawer[open]) {
-  overflow: hidden;
+.drawer__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.6);
+  opacity: var(--drawer-dim, 0);
+  touch-action: none;
+}
+.drawer__sheet {
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
+  flex-direction: column;
+  height: 90vh;
+  height: calc(100dvh - 2.75rem);
+  border-top: 1px solid var(--line-strong);
+  border-radius: 0.875rem 0.875rem 0 0;
+  background: var(--paper);
+  /* Stays solid below the screen edge while the sheet is pulled upwards. */
+  box-shadow: 0 50vh 0 var(--paper);
+  transform: translate3d(0, 100%, 0);
+  will-change: transform;
 }
 .drawer__head {
+  position: relative;
   display: flex;
   flex: none;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem var(--docs-page-gutter) 0.75rem calc(var(--docs-page-gutter) + 0.25rem);
+  padding: 1.125rem var(--docs-page-gutter) 0.625rem calc(var(--docs-page-gutter) + 0.25rem);
   border-bottom: 1px solid var(--line);
+  touch-action: none;
+  user-select: none;
+}
+.drawer__grabber {
+  position: absolute;
+  top: 0.3125rem;
+  left: 50%;
+  width: 2.25rem;
+  height: 0.3125rem;
+  border-radius: 9999px;
+  background: var(--line-strong);
+  translate: -50% 0;
 }
 .drawer__close {
   display: grid;
   place-items: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border: 1px solid var(--line-strong);
-  border-radius: 0.5rem;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: 9999px;
+  background: var(--line);
   color: var(--muted);
 }
 .drawer__body {
@@ -227,20 +259,4 @@ html:has(.drawer[open]) {
 .drawer__sub a {
   display: block;
   color: var(--muted);
-}
-@keyframes drawer-in {
-  from {
-    translate: 0 100%;
-  }
-}
-@keyframes drawer-fade {
-  from {
-    opacity: 0;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .drawer[open],
-  .drawer::backdrop {
-    animation: none;
-  }
 }
