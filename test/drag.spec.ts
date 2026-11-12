@@ -79,7 +79,8 @@ test("a mouse drag waits for the threshold, follows the pointer, and a flick mov
   expect((await state(page, "s")).position).toBe(120);
   expect(await snapStyle(page)).toBe("none");
 
-  await moveThrough(page, [x0 - 140, x0 - 160], y);
+  // The checks above stall the gesture, which slows its measured speed; quick moves restore it.
+  await moveThrough(page, [x0 - 160, x0 - 200, x0 - 240], y);
   await page.mouse.up();
   await settled(page, "s");
   expect(await state(page, "s")).toEqual({ index: 1, position: STRIDE });
