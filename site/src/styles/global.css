@@ -1010,11 +1010,8 @@ body {
   text-transform: uppercase;
   color: var(--faint);
 }
-.draft-cell__meta > :first-child:not(:only-child) {
+.draft-cell__meta > :first-child {
   color: var(--accent);
-}
-.draft-cell__meta > :only-child {
-  margin-left: auto;
 }
 .draft-cell > h3 {
   font-size: 1.5rem;
@@ -1035,7 +1032,7 @@ body {
   padding-top: 2rem;
 }
 .draft-sheet--benefits .draft-fig {
-  margin-block: 0 1.25rem;
+  margin-block: 0;
 }
 .draft-cell > h4 {
   margin-top: 0.875rem;
