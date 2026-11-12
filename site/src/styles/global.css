@@ -527,6 +527,21 @@ body {
     padding-inline: 1.25rem;
   }
 
+  .nav-link {
+    transition: color 0.15s;
+  }
+  .nav-link:hover,
+  .nav-link[aria-current] {
+    color: var(--ink);
+  }
+  .nav-link--sub {
+    font-size: 0.8125rem;
+    color: var(--faint);
+  }
+  .nav-link--sub[aria-current] {
+    color: var(--accent);
+  }
+
   /* Collapsed content behind a real <details>, so it works from the keyboard. */
   .disclosure > summary {
     display: inline-flex;
@@ -565,6 +580,19 @@ body {
   }
   .disclosure__body {
     margin-top: 0.75rem;
+  }
+  .disclosure--row > summary {
+    display: flex;
+    width: 100%;
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .disclosure--row > .disclosure__body {
+    margin-top: 1rem;
+    padding-bottom: 0.5rem;
   }
 
   /* Reference rows: identifier and chips on one line, the description beneath.

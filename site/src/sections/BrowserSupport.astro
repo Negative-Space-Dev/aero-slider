@@ -1,36 +1,50 @@
 ---
 import DocTable from "../components/DocTable.astro";
+import Disclosure from "../components/Disclosure.astro";
 
-const browserRows = [
-  ["CSS Variables", "49+", "9.1+", "31+", "Configuring layout and gap size."],
-  ["Scroll Snapping", "69+", "11+", "68+", "Locking slides into place after scrolling."],
-  ["aspect-ratio", "88+", "15+", "89+", "Maintaining proper height for the slider track."],
-  ["contain: paint", "52+", "15.4+", "69+", "Performance optimization for painting slides."],
-  ["overscroll-behavior-x", "63+", "16+", "59+", "Preventing rubber-banding when hitting the edge."],
+const browsers = ["Chrome", "Safari", "Firefox"] as const;
+
+const features: { feature: string; since: Record<(typeof browsers)[number], string>; usedFor: string }[] = [
+  { feature: "CSS Variables", since: { Chrome: "49", Safari: "9.1", Firefox: "31" }, usedFor: "Configuring layout and gap size." },
+  { feature: "Scroll Snapping", since: { Chrome: "69", Safari: "11", Firefox: "68" }, usedFor: "Locking slides into place after scrolling." },
+  { feature: "aspect-ratio", since: { Chrome: "88", Safari: "15", Firefox: "89" }, usedFor: "Maintaining proper height for the slider track." },
+  { feature: "contain: paint", since: { Chrome: "52", Safari: "15.4", Firefox: "69" }, usedFor: "Performance optimization for painting slides." },
+  { feature: "overscroll-behavior-x", since: { Chrome: "63", Safari: "16", Firefox: "59" }, usedFor: "Preventing rubber-banding when hitting the edge." },
 ];
+
+// The baseline is the newest version any one feature needs, per browser.
+const baseline = Object.fromEntries(
+  browsers.map((browser) => [
+    browser,
+    features.map((row) => row.since[browser]).sort((a, b) => parseFloat(b) - parseFloat(a))[0],
+  ])
+) as Record<(typeof browsers)[number], string>;
+
+const rows = features.map((row) => [
+  row.feature,
+  ...browsers.map((browser) => `${row.since[browser]}+`),
+  row.usedFor,
+]);
 ---
 
 <section id="browser-support" class="container-page py-12 sm:py-16">
-  <h2 class="mb-6 text-3xl font-medium tracking-[-0.025em] sm:text-4xl">Browser Support</h2>
-  <div class="space-y-8">
-    <div class="copy">
-      <p>
-        Aero Slider relies on modern CSS features to achieve a lightweight, JS-free layout. It
-        degrades gracefully on older browsers, but for the optimal experience, the following
-        minimum versions are recommended:
-      </p>
-    </div>
-    <div class="border-t border-line pt-8">
+  <h2 class="mb-6 text-3xl font-medium tracking-[-0.025em] sm:text-4xl">Browser support</h2>
+  <div class="copy">
+    <p>
+      Chrome {baseline.Chrome}+, Firefox {baseline.Firefox}+ and Safari {baseline.Safari}+. Older
+      browsers degrade gracefully.
+    </p>
+  </div>
+  <Disclosure label="CSS features by browser" class="mt-6">
+    <div class="border-t border-line pt-6">
       <DocTable
         columns={[
           { label: "CSS Feature", mono: true, nowrap: true },
-          { label: "Chrome", mono: "soft" },
-          { label: "Safari", mono: "soft" },
-          { label: "Firefox", mono: "soft" },
+          ...browsers.map((label) => ({ label, mono: "soft" as const })),
           { label: "Used For" },
         ]}
-        rows={browserRows}
+        rows={rows}
       />
     </div>
-  </div>
+  </Disclosure>
 </section>

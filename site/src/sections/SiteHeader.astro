@@ -2,21 +2,66 @@
 import pkg from "../../../package.json";
 import Logo from "../components/Logo.astro";
 import { REPO } from "../lib/site";
+
+interface NavLink {
+  id: string;
+  label: string;
+  children?: { id: string; label: string }[];
+}
+
+// Sub-sections show only at lg and up, where the row has room for them.
+const links: NavLink[] = [
+  { id: "start", label: "Get started" },
+  {
+    id: "examples",
+    label: "Examples",
+    children: [
+      { id: "examples-layout", label: "Layout" },
+      { id: "examples-motion", label: "Motion" },
+      { id: "examples-controls", label: "Controls" },
+    ],
+  },
+  {
+    id: "api",
+    label: "API",
+    children: [
+      { id: "api-options", label: "Options" },
+      { id: "api-methods", label: "Methods" },
+      { id: "api-events", label: "Events" },
+    ],
+  },
+];
 ---
 
 <header class="sticky top-0 z-50 border-b border-line bg-paper/80 backdrop-blur-md">
-  <div class="container-page flex h-14 items-center justify-between gap-4">
-    <a href="/" class="flex items-center gap-2.5 text-[0.9375rem] font-medium tracking-tight text-ink">
-      <Logo class="size-5" />
-      Aero Slider
+  <div class="container-page flex h-14 items-center justify-between gap-3">
+    <a href="/" class="flex min-w-0 items-center gap-2 text-[0.9375rem] font-medium tracking-tight text-ink">
+      <Logo class="size-5 shrink-0" />
+      <span class="whitespace-nowrap max-[359px]:sr-only">Aero Slider</span>
       <span class="hidden rounded-full border border-line px-2 py-0.5 font-mono text-[0.6875rem] font-normal tracking-normal text-faint sm:inline">
         v{pkg.version}
       </span>
     </a>
-    <nav class="flex items-center gap-5 text-sm text-muted sm:gap-7" aria-label="Primary">
-      <a href="#examples" class="transition-colors hover:text-ink">Examples</a>
-      <a href="#api" class="transition-colors hover:text-ink">API</a>
-      <a href={REPO} target="_blank" rel="noopener" class="transition-colors hover:text-ink" aria-label="GitHub">
+    <nav class="flex items-center gap-3 text-sm text-muted min-[360px]:gap-4 sm:gap-7" aria-label="Primary">
+      {
+        links.map((link) => (
+          <div class="flex items-center gap-3.5">
+            <a href={`#${link.id}`} class="nav-link whitespace-nowrap" data-spy={link.id}>
+              {link.label}
+            </a>
+            {link.children && (
+              <span class="hidden items-center gap-3.5 border-l border-line pl-3.5 lg:flex">
+                {link.children.map((child) => (
+                  <a href={`#${child.id}`} class="nav-link nav-link--sub" data-spy={child.id} data-parent={link.id}>
+                    {child.label}
+                  </a>
+                ))}
+              </span>
+            )}
+          </div>
+        ))
+      }
+      <a href={REPO} target="_blank" rel="noopener" class="shrink-0 transition-colors hover:text-ink" aria-label="GitHub">
         <svg class="size-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path
             fill-rule="evenodd"
@@ -27,3 +72,7 @@ import { REPO } from "../lib/site";
     </nav>
   </div>
 </header>
+
+<script>
+  import "../scripts/nav.ts";
+</script>

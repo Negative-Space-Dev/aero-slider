@@ -37,7 +37,7 @@ const alignments = ["left", "center", "right"];
 
   <div class="space-y-14 sm:space-y-20">
     <!-- Multi-slide -->
-    <Entry tag="01" title="Multi-Slide View">
+    <Entry tag="01" title="Multi-Slide View" id="examples-layout">
       <div class="copy">
         <p>Show multiple slides at once with gap spacing.</p>
       </div>
@@ -209,7 +209,7 @@ createSlider(rightEl, { alignment: "right", loop: true });`}
     </Entry>
 
     <!-- Autoplay -->
-    <Entry tag="05" title="Autoplay + Loop">
+    <Entry tag="05" title="Autoplay + Loop" id="examples-motion">
       <div class="copy">
         <p>
           Auto-advances every 3 seconds with infinite looping. The countdown restarts after any
@@ -506,7 +506,7 @@ createSlider(el, { snap: "none" });
     </Entry>
 
     <!-- Pagination & Navigation (minimal requirements) -->
-    <Entry tag="12" title="Pagination & Navigation" id="example-pagination-nav">
+    <Entry tag="12" title="Pagination & Navigation" id="examples-controls">
       <p class="note">
         <strong>Pagination and navigation are not configured through JavaScript.</strong> You
         create the DOM elements yourself. If they exist inside the container, the slider
