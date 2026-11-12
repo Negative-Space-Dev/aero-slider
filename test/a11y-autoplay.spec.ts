@@ -103,6 +103,20 @@ test("the autoplay button pauses until pressed again, in step with pause() and r
   await expect(toggle).toHaveAccessibleName("Pause autoplay");
 });
 
+test("the autoplay button works on a container that gets the slider class at init", async ({
+  page,
+}) => {
+  await mount(page, withToggle("s", 5).replace('class="aero-slider "', ""));
+  await recordEvents(page, "s");
+  await create(page, "s", { autoplay: true });
+  await takeEvents(page, "s");
+  const toggle = page.locator("#s .aero-slider__autoplay");
+  await expect(page.locator("#s")).toHaveClass(/(^| )aero-slider( |$)/);
+  await expect(toggle).toHaveAccessibleName("Pause autoplay");
+  await toggle.evaluate((el: HTMLElement) => el.click());
+  expect(await autoplayEvents(page)).toEqual(["autoplayStop"]);
+});
+
 test("a button with its own name carries the state in aria-pressed", async ({ page }) => {
   await mount(
     page,

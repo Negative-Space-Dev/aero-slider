@@ -1049,14 +1049,15 @@ export function createSlider(
       return width > 0 ? { start: home - slideStride / 2, width } : null;
     },
   };
+  // Before the features: they tell their own controls from a nested slider's by this class.
+  container.classList.add("aero-slider");
+  track.classList.add("aero-slider__track");
   const nav = navigation(core);
   const dots = pagination(core);
   const play = autoplay(core);
   keyboard(core);
 
   container.removeAttribute("data-aero-defer-visibility");
-  container.classList.add("aero-slider");
-  track.classList.add("aero-slider__track");
 
   track.addEventListener("scroll", onScroll, { passive: true, signal });
   // Reduced motion turned on mid-move: land it now rather than finish the animation.
