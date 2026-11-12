@@ -1,6 +1,6 @@
 # Aero Slider
 
-A lightweight (~8 KB gzipped), CSS-first slider library for the modern web.
+A lightweight (about 7 KB of JavaScript and 1 KB of CSS, gzipped), CSS-first slider library for the modern web.
 
 - **CSS-First Architecture** — Layout via custom properties, responsive via media queries
 - **Native Scroll Snapping** — Hardware-accelerated, smooth scrolling
@@ -36,7 +36,7 @@ import "aero-slider/slider.css";
 
 ### Global script (no bundler)
 
-Add the JavaScript and CSS files. Use `type="module"` so the script assigns `AeroSlider` to `window`:
+Add the JavaScript and CSS files. `dist/aero-slider.min.js` sets `window.AeroSlider`; load it with `type="module"`:
 
 ```html
 <link rel="stylesheet" href="https://unpkg.com/aero-slider/dist/aero-slider.min.css" />
@@ -52,6 +52,21 @@ const slider = AeroSlider.createSlider(document.getElementById("my-slider"), { l
 const main = AeroSlider.createSlider(mainEl);
 const thumbs = AeroSlider.createSlider(thumbsEl);
 const teardown = AeroSlider.syncThumbnails(main, thumbs);
+```
+
+The bundler entry (`import ... from "aero-slider"`) sets no global, so bundlers can drop what you don't import.
+
+## TypeScript
+
+Types ship with the package. Slider events are typed on every `HTMLElement`, so listeners need no cast:
+
+```ts
+import { createSlider, type SliderEventMap } from "aero-slider";
+
+createSlider(el);
+el.addEventListener("aero:slideChange", (e) => console.log(e.detail.index));
+
+type SlideChange = SliderEventMap["slideChange"]; // { index: number }
 ```
 
 ## Contributing
