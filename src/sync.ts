@@ -36,9 +36,18 @@ export function syncThumbnails(
     return (((children.indexOf(child) - firstReal) % count) + count) % count;
   };
 
+  /** Marks thumbnail `index` as the current one, or none of them. Clones stay unmarked. */
+  const mark = (index: number): void => {
+    for (const child of track.children) {
+      const active = indexOf(child) === index;
+      child.classList.toggle(ACTIVE_CLASS, active);
+      if (active && child.hasAttribute(SLIDE_INDEX_ATTR))
+        child.setAttribute("aria-current", "true");
+      else child.removeAttribute("aria-current");
+    }
+  };
   const activate = (index: number): void => {
-    for (const child of track.children)
-      child.classList.toggle(ACTIVE_CLASS, indexOf(child) === index);
+    mark(index);
     thumbnails.goTo(index);
   };
 
@@ -53,14 +62,22 @@ export function syncThumbnails(
   );
   primary.element.addEventListener(
     "aero:slideChange",
-    (event) => activate((event as CustomEvent<{ index: number }>).detail.index),
+    (event) => {
+      // A slider nested inside a primary slide bubbles its own changes through here.
+      if (event.target === primary.element) activate(event.detail.index);
+    },
     { signal }
   );
 
-  activate(primary.currentIndex);
-  return () => {
+  const teardown = (): void => {
     controller.abort();
     track.style.cursor = "";
-    for (const child of track.children) child.classList.remove(ACTIVE_CLASS);
+    if (!track.getAttribute("style")) track.removeAttribute("style");
+    mark(-1);
   };
+  // Destroying the strip without calling the teardown still takes the marks back.
+  thumbnails.element.addEventListener("aero:destroy", teardown, { signal });
+
+  activate(primary.currentIndex);
+  return teardown;
 }

@@ -9,80 +9,104 @@ export function navigation(core: SliderCore) {
   prevButton?.addEventListener("click", core.prev, { signal });
   nextButton?.addEventListener("click", core.next, { signal });
 
+  const buttons = [prevButton, nextButton];
+  const initial = buttons.map((button) => button?.disabled);
+  signal.addEventListener("abort", () =>
+    buttons.forEach((button, i) => button && (button.disabled = initial[i]!))
+  );
+
   return {
     refresh(): void {
-      const singlePage = core.maxIndex() === 0;
+      const last = core.stopCount() - 1;
+      const stop = core.stop();
       const hasEdges = !core.loop();
-      if (prevButton) prevButton.disabled = singlePage || (hasEdges && core.current() === 0);
-      if (nextButton) {
-        nextButton.disabled = singlePage || (hasEdges && core.current() >= core.maxIndex());
-      }
+      const off = [last < 1 || (hasEdges && stop <= 0), last < 1 || (hasEdges && stop >= last)];
+      // Enable first: a button about to take focus must already be able to hold it.
+      buttons.forEach((button, i) => button && !off[i] && (button.disabled = false));
+      buttons.forEach((button, i) => {
+        if (!button || !off[i]) return;
+        // A focused button that disables would drop focus to the page. The page may have been
+        // scrolled away since the click, so the hand-over must not scroll it back.
+        if (button === document.activeElement) {
+          ((!off[1 - i] && buttons[1 - i]) || container).focus({ preventScroll: true });
+        }
+        button.disabled = true;
+      });
     },
   };
 }
 
 // ── Pagination dots ────────────────────────────────────────────────────
-// The markup supplies one .aero-slider__dot as a template; we clone it per
-// page. With maxDots set, the dots sit in a sliding track and only a window
-// of them shows, iOS style.
+// The markup supplies one .aero-slider__dot as a template. It leaves the page while the slider runs,
+// and a copy of it stands in per stop. With maxDots set, the dots sit in a sliding track and only a
+// window of them shows, iOS style.
 
 export function pagination(core: SliderCore) {
   const box = core.container.querySelector<HTMLElement>(".aero-slider__pagination");
   const template = box?.querySelector<HTMLElement>(".aero-slider__dot");
-  if (!box || !template) return { build() {}, refresh() {} };
+  if (!box || !template) return { build() {}, measure() {}, refresh() {} };
   return createPagination(core, box, template);
 }
 
 function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElement) {
   const { config, signal } = core;
+  const parent = template.parentNode!;
+  const anchor = template.nextSibling;
   let dots: HTMLElement[] = [];
   let windowed = false;
   let dotTrack: HTMLElement | null = null;
   let dotPitch = 0; // distance between neighbouring dots; negative in RTL
+  const name = template.getAttribute("aria-label");
 
   function clear(): void {
-    for (const dot of dots) if (dot !== template) dot.remove();
+    for (const dot of dots) dot.remove();
     dotTrack?.remove();
     dotTrack = null;
     dots = [];
-    template.style.display = "";
     box.classList.remove("aero-slider__pagination--windowed");
     box.style.removeProperty("--pagination-width");
   }
 
   function build(): void {
+    // Rebuilding removes the dot that has focus, which would drop a keyboard user on the page.
+    const focused = dots.indexOf(document.activeElement as HTMLElement);
     clear();
-    const count = core.pageCount();
+    const count = core.stopCount();
     const { maxDots } = config;
     windowed = maxDots > 0 && count > maxDots;
-    if (windowed) {
-      dotTrack = document.createElement("div");
-      dotTrack.className = "aero-slider__pagination-track";
-    }
-    const parent = dotTrack ?? box;
-
+    const holder = windowed ? document.createElement("div") : new DocumentFragment();
     for (let i = 0; i < count; i++) {
-      const dot = !windowed && i === 0 ? template : (template.cloneNode(true) as HTMLElement);
-      dot.setAttribute("role", "tab");
-      dot.setAttribute("aria-label", `Go to slide ${i + 1}`);
-      dot.dataset.slideIndex = String(i);
-      if (dot !== template) parent.append(dot);
+      const dot = template.cloneNode(true) as HTMLElement;
+      const slide = core.slideOfStop(i);
+      // The template names its dots: aria-label="Go to slide {index}".
+      if (name) dot.setAttribute("aria-label", name.replace("{index}", String(slide + 1)));
+      dot.dataset.slideIndex = String(slide);
+      holder.append(dot);
       dots.push(dot);
     }
-
-    if (dotTrack) {
-      template.style.display = "none";
+    if (windowed) {
+      dotTrack = holder as HTMLElement;
+      dotTrack.className = "aero-slider__pagination-track";
       box.classList.add("aero-slider__pagination--windowed");
-      box.append(dotTrack);
+    }
+    parent.insertBefore(holder, anchor);
+    measure();
+    // With no dot focused this looks up dots[-1], which is nothing.
+    dots[Math.min(focused, count - 1)]?.focus({ preventScroll: true });
+  }
+
+  /** Sizes the dot window. Everything measures 0 while hidden, so it reruns on every relayout. */
+  function measure(): void {
+    if (dotTrack) {
       dotPitch = dots[1]!.offsetLeft - dots[0]!.offsetLeft;
-      const width = (maxDots - 1) * Math.abs(dotPitch) + dots[0]!.offsetWidth;
+      const width = (config.maxDots - 1) * Math.abs(dotPitch) + dots[0]!.offsetWidth;
       box.style.setProperty("--pagination-width", `${width}px`);
     }
     refresh();
   }
 
   function refresh(): void {
-    const current = core.current();
+    const current = core.stop();
     const count = dots.length;
     const { maxDots } = config;
     const firstShown = windowed
@@ -92,10 +116,12 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
     const atEnd = firstShown >= count - maxDots;
     dotTrack?.style.setProperty("--track-offset", `${-firstShown * dotPitch}px`);
 
+    const hidden: HTMLElement[] = [];
     dots.forEach((dot, i) => {
       const active = i === current;
       dot.classList.toggle("aero-slider__dot--active", active);
-      dot.setAttribute("aria-selected", String(active));
+      if (active) dot.setAttribute("aria-current", "true");
+      else dot.removeAttribute("aria-current");
       if (!windowed) return;
 
       const slot = i - firstShown;
@@ -113,10 +139,18 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
         "aero-slider__dot--near-edge"
       );
       if (size) dot.classList.add(`aero-slider__dot--${size}`);
+      if (size === "hidden") hidden.push(dot);
+      else dot.inert = false;
     });
+    // A dot leaving the tab order hands focus to the current one, which must be focusable first:
+    // End from the first dot lands on one that was outside the window a moment ago.
+    if (hidden.includes(document.activeElement as HTMLElement)) {
+      dots[current]!.focus({ preventScroll: true });
+    }
+    for (const dot of hidden) dot.inert = true;
   }
 
-  box.setAttribute("role", "tablist");
+  template.remove();
   box.addEventListener(
     "click",
     (event) => {
@@ -125,33 +159,53 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
     },
     { signal }
   );
-  signal.addEventListener("abort", clear);
+  signal.addEventListener("abort", () => {
+    clear();
+    if (!box.getAttribute("style")) box.removeAttribute("style");
+    parent.insertBefore(template, anchor);
+  });
 
-  return { build, refresh };
+  return { build, measure, refresh };
 }
 
 // ── Keyboard ───────────────────────────────────────────────────────────
 
 export function keyboard(core: SliderCore): void {
-  const { container, signal } = core;
-  if (!container.hasAttribute("tabindex")) {
-    container.tabIndex = 0;
-    signal.addEventListener("abort", () => container.removeAttribute("tabindex"));
+  const { container, track, signal } = core;
+  // The container is the one tab stop. A scroller would otherwise be a second, unnamed one.
+  for (const [el, index] of [
+    [container, 0],
+    [track, -1],
+  ] as const) {
+    if (el.hasAttribute("tabindex")) continue;
+    el.tabIndex = index;
+    signal.addEventListener("abort", () => el.removeAttribute("tabindex"));
   }
   container.addEventListener(
     "keydown",
     (event) => {
-      if ((event.target as Element).closest("input, textarea, select, [contenteditable]")) return;
-      const { direction } = core.config;
-      const [back, forward] =
-        direction === "ttb"
-          ? ["ArrowUp", "ArrowDown"]
-          : direction === "rtl"
-            ? ["ArrowRight", "ArrowLeft"]
-            : ["ArrowLeft", "ArrowRight"];
+      // Keys belong to whatever has focus inside a slide, and to a nested slider's own controls.
+      const target = event.target as Element;
+      const own =
+        target === container ||
+        target === track ||
+        (target.matches(".aero-slider__nav--prev, .aero-slider__nav--next, .aero-slider__dot") &&
+          target.closest(".aero-slider") === container);
+      if (!own || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+      if (event.shiftKey) return;
+      const [back, forward] = core.isVertical()
+        ? ["ArrowUp", "ArrowDown"]
+        : core.isRtl()
+          ? ["ArrowRight", "ArrowLeft"]
+          : ["ArrowLeft", "ArrowRight"];
+      const stop = core.stop();
+      const last = core.stopCount() - 1;
+      const to = { [back]: stop - 1, [forward]: stop + 1, Home: 0, End: last }[event.key];
+      // Off a loop, a key with nowhere to go keeps its default, so the page can scroll on.
+      if (to === undefined || (!core.loop() && (to < 0 || to > last || to === stop))) return;
       if (event.key === back) core.prev();
       else if (event.key === forward) core.next();
-      else return;
+      else core.goTo(core.slideOfStop(to));
       event.preventDefault();
     },
     { signal }
@@ -189,6 +243,14 @@ export function autoplay(core: SliderCore) {
   let settleFallback = 0;
   const pressed = new Set<number>(); // pointerIds currently down on the track
 
+  const announce = (on: boolean) => core.emit(on ? "autoplayStart" : "autoplayStop", {});
+  // Scrolling changes nothing a screen reader can hear, so a hidden status line names the slide
+  // the user moved to. It stays quiet while autoplay moves the slides on its own.
+  const status = document.createElement("div");
+  status.className = "aero-slider__status";
+  status.setAttribute("aria-live", "polite");
+  container.append(status);
+
   const blocked = () =>
     signal.aborted ||
     !config.autoplay ||
@@ -199,7 +261,7 @@ export function autoplay(core: SliderCore) {
 
   function advance(): void {
     if (core.easing()) return; // scrollDuration outlasts the interval: let the move land first
-    const atEnd = !core.loop() && core.current() >= core.maxIndex();
+    const atEnd = !core.loop() && core.stop() >= core.stopCount() - 1;
     if (atEnd) core.goTo(0);
     else core.next();
   }
@@ -238,7 +300,7 @@ export function autoplay(core: SliderCore) {
     lap = { ...cycle, duration, animations };
     if (!running) {
       running = true;
-      core.emit("autoplayStart", {});
+      announce(true);
     }
   }
 
@@ -248,16 +310,16 @@ export function autoplay(core: SliderCore) {
    * product link lands on the link that was pressed. Laps start inside the band and the runway
    * covers a full lap past it, so the unfolded offset is always reachable.
    */
-  function stopLap(handBack: boolean, announce = true): void {
+  function stopLap(handBack: boolean, loud = true): void {
     if (!lap) return;
     const current = lap;
     lap = null;
     const position = handBack ? core.position() + travelled(current) : null;
     for (const animation of current.animations) animation.cancel();
     if (position !== null) core.jumpTo(position);
-    if (announce && running) {
+    if (loud && running) {
       running = false;
-      core.emit("autoplayStop", {});
+      announce(false);
     }
   }
 
@@ -266,23 +328,29 @@ export function autoplay(core: SliderCore) {
       // A lap reset quietly for a resize that can't restart now still owes its autoplayStop.
       if (running && !lap) {
         running = false;
-        core.emit("autoplayStop", {});
+        announce(false);
       }
       return;
     }
     if (continuous()) {
       if (!lap) startLap();
     } else if (!timer) {
-      timer = window.setInterval(advance, config.autoplayInterval);
-      core.emit("autoplayStart", {});
+      countdown();
+      announce(true);
     }
+  }
+
+  /** A fresh interval before the next automatic move. */
+  function countdown(): void {
+    clearInterval(timer);
+    timer = window.setInterval(advance, config.autoplayInterval);
   }
 
   function stopInterval(): void {
     if (!timer) return;
     clearInterval(timer);
     timer = 0;
-    core.emit("autoplayStop", {});
+    announce(false);
   }
 
   function stop(): void {
@@ -340,13 +408,27 @@ export function autoplay(core: SliderCore) {
   });
   // A manual change earns a full interval before the next automatic one.
   listen(container, "aero:slideChange", (event) => {
-    if (event.target !== container || !timer) return; // not a nested slider's change
-    clearInterval(timer);
-    timer = window.setInterval(advance, config.autoplayInterval);
+    if (event.target !== container) return; // a nested slider's change
+    if (timer) countdown();
+    const { index } = (event as CustomEvent<{ index: number }>).detail;
+    // data-aero-status on the container words it for other languages.
+    status.textContent =
+      timer || lap
+        ? ""
+        : (container.dataset.aeroStatus ?? "{index} of {count}")
+            .replace("{index}", String(index + 1))
+            .replace(
+              "{count}",
+              String(track.querySelectorAll(":scope > [data-aero-slider-index]").length)
+            );
   });
   listen(document, "visibilitychange", () => (document.hidden ? stop() : start()));
-  listen(reducedMotion, "change", () => (reducedMotion.matches ? stop() : start()));
+  listen(reducedMotion, "change", () => {
+    if (reducedMotion.matches) stop();
+    else start();
+  });
   signal.addEventListener("abort", () => {
+    status.remove();
     clearTimeout(settleFallback);
     stopInterval();
     stopLap(false);
@@ -355,13 +437,24 @@ export function autoplay(core: SliderCore) {
   return {
     start,
     stop,
+    /** After a rebuild: a running interval gets a fresh countdown without announcing a restart. */
+    restart(): void {
+      if (timer && !blocked() && !continuous()) return countdown();
+      stopInterval();
+      start();
+    },
     hold,
     release,
     /** A continuous lap is moving the slides right now. */
     drifting: () => lap !== null,
-    /** Ends a lap without handing it back, for when the layout is about to change under it. */
-    reset(): void {
+    /**
+     * Ends a lap without handing it back, for when the layout is about to change under it. A
+     * rebuild can change the slide count, so it also drops the status text, which
+     * would otherwise go on naming the old one until the next slide change.
+     */
+    reset(rebuilding?: boolean): void {
       stopLap(false, false);
+      if (rebuilding) status.textContent = "";
     },
     /** goTo() is about to measure from the scroll offset. True if a lap was handed back. */
     interrupt(): boolean {
@@ -377,7 +470,7 @@ export function autoplay(core: SliderCore) {
       // sooner cuts the browser's smooth wheel animation short for nothing.
       if (lap) {
         const position = core.position();
-        const margin = lap.width / core.pageCount();
+        const margin = lap.width / core.stopCount();
         if (position + travelled(lap) > core.maxScroll() - margin)
           core.jumpTo(position - lap.width);
       }

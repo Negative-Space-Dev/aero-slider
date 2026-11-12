@@ -1,4 +1,11 @@
-export type SliderAlignment = "left" | "center" | "right";
+export type SliderAlignment =
+  | "start"
+  | "center"
+  | "end"
+  /** @deprecated Use `"start"`. */
+  | "left"
+  /** @deprecated Use `"end"`. */
+  | "right";
 
 /**
  * How the track comes to rest. `native` uses CSS scroll snapping; `settle` scrolls freely, then
@@ -13,19 +20,32 @@ export interface SliderConfig {
    * `autoplaySpeed` like a ticker; it implies `loop` and `snap: "none"`.
    */
   autoplay?: boolean | "continuous";
+  /** Milliseconds between automatic moves, at least 100. */
   autoplayInterval?: number;
   /** Continuous autoplay speed, in pixels per second. 0 or less keeps the track still. */
   autoplaySpeed?: number;
   draggable?: boolean;
-  /** Where the active slide rests in the viewport. */
+  /**
+   * Where the active slide rests in the viewport. The values are logical: `"start"` is the left
+   * edge in a left-to-right slider, the right edge in a right-to-left one and the top edge in a
+   * vertical one, and `"end"` is the opposite edge. Defaults to `"center"`. `"left"` and `"right"`
+   * are deprecated aliases for `"start"` and `"end"`.
+   */
   alignment?: SliderAlignment;
   /** Show at most this many pagination dots, scrolling them iOS-style. 0 = unlimited. */
   maxDots?: number;
   /** Selector for elements inside slides that should not start a mouse drag. */
   noDrag?: string;
-  /** Slides advanced per next()/prev() call. */
+  /**
+   * Stops advanced per next()/prev() call, a whole number of at least 1. A stop is a distinct
+   * resting place: without loop, the slides that clamp to the same spot near an end share one.
+   */
   perMove?: number;
-  direction?: "ltr" | "rtl" | "ttb";
+  /**
+   * `"auto"` (the default) follows the container's computed direction and leaves its `dir`
+   * attribute alone. `"ltr"` and `"rtl"` set `dir` on the container. `"ttb"` scrolls vertically.
+   */
+  direction?: "auto" | "ltr" | "rtl" | "ttb";
   /** How the track comes to rest after scrolling. Defaults to `"native"`. */
   snap?: SliderSnap;
   /**
@@ -54,7 +74,9 @@ export interface SliderInstance {
   resume(): void;
   update(config?: SliderConfig): void;
   refresh(): void;
+  /** Inserts slides before slide `index`, or at the end. The slide in view stays in view. */
   add(slides: HTMLElement | HTMLElement[], index?: number): void;
+  /** Removes slides by index. The slide in view stays in view, or the next one takes its place. */
   remove(index: number | number[]): void;
   destroy(): void;
 }
@@ -76,8 +98,13 @@ export interface SliderEventMap {
 export type SliderEvent = keyof SliderEventMap;
 export type SliderEventData<E extends SliderEvent = SliderEvent> = SliderEventMap[E];
 
+export type SliderDomEventMap = {
+  [E in SliderEvent as `aero:${E}`]: CustomEvent<SliderEventMap[E]>;
+};
+
 declare global {
   interface HTMLElement {
     aeroSlider?: SliderInstance;
   }
+  interface HTMLElementEventMap extends SliderDomEventMap {}
 }

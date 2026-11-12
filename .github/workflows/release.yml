@@ -12,7 +12,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version-file: .tool-versions
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -23,7 +23,7 @@ jobs:
       - name: Prepare release assets
         run: |
           mkdir -p release-artifacts
-          cp dist/aero-slider.min.js dist/aero-slider.min.css release-artifacts/
+          cp dist/aero-slider.min.js dist/aero-slider.min.css aeroslider.md release-artifacts/
 
       - name: Create zip
         run: |
@@ -34,6 +34,8 @@ jobs:
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
-          files: aero-slider-${{ github.event.release.tag_name }}.zip
+          files: |
+            aero-slider-${{ github.event.release.tag_name }}.zip
+            aeroslider.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
