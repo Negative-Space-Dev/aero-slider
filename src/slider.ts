@@ -127,6 +127,7 @@ export function createSlider(
   let slideCount = 0;
   let current = 0;
   let destroyed = false;
+  let ready = false; // autoplay waits for the ready event before it starts
   let rtl = false; // resolved from the computed direction on every rebuild
   const authorDir = container.getAttribute("dir");
 
@@ -789,8 +790,7 @@ export function createSlider(
     nav.refresh();
     rest(index);
     observe();
-    play.stop(); // restarts interval autoplay's countdown; the lap was already reset above
-    play.start();
+    if (ready) play.restart(); // the lap was already reset above
   }
 
   function restoreDir(): void {
@@ -995,5 +995,7 @@ export function createSlider(
   container.aeroSlider = api;
   container.classList.add("aero-slider--ready");
   emit("ready", {});
+  ready = true;
+  play.start();
   return api;
 }

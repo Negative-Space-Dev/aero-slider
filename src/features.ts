@@ -278,9 +278,15 @@ export function autoplay(core: SliderCore) {
     if (continuous()) {
       if (!lap) startLap();
     } else if (!timer) {
-      timer = window.setInterval(advance, config.autoplayInterval);
+      countdown();
       core.emit("autoplayStart", {});
     }
+  }
+
+  /** A fresh interval before the next automatic move. */
+  function countdown(): void {
+    clearInterval(timer);
+    timer = window.setInterval(advance, config.autoplayInterval);
   }
 
   function stopInterval(): void {
@@ -345,9 +351,7 @@ export function autoplay(core: SliderCore) {
   });
   // A manual change earns a full interval before the next automatic one.
   listen(container, "aero:slideChange", (event) => {
-    if (event.target !== container || !timer) return; // not a nested slider's change
-    clearInterval(timer);
-    timer = window.setInterval(advance, config.autoplayInterval);
+    if (event.target === container && timer) countdown(); // not a nested slider's change
   });
   listen(document, "visibilitychange", () => (document.hidden ? stop() : start()));
   listen(reducedMotion, "change", () => (reducedMotion.matches ? stop() : start()));
@@ -360,6 +364,12 @@ export function autoplay(core: SliderCore) {
   return {
     start,
     stop,
+    /** After a rebuild: a running interval gets a fresh countdown without announcing a restart. */
+    restart(): void {
+      if (timer && !blocked() && !continuous()) return countdown();
+      stopInterval();
+      start();
+    },
     hold,
     release,
     /** A continuous lap is moving the slides right now. */
