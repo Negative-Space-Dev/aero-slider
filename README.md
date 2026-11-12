@@ -114,7 +114,7 @@ Alignment is logical: `"start"` is the right edge in an RTL slider and the top i
 Two things to check when you upgrade:
 
 - **Your own selectors on `data-aero-alignment`.** The library writes `data-aero-alignment="start"` or `"end"` once it initialises, whichever spelling you used. The stylesheet accepts `"left"` and `"right"` in server-rendered markup, but a rule of yours such as `[data-aero-alignment="left"]` stops matching after init. Select both spellings: `:is([data-aero-alignment="start"], [data-aero-alignment="left"])`.
-- **Nested sliders.** The `--aero-*` variables are inherited, so you can set them on any ancestor of a slider. They stop at the content of a slide: a slider nested inside a slide does not take the outer slider's settings, so set its variables on the nested slider itself.
+- **Nested sliders.** The `--aero-*` variables are inherited, so you can set them on any ancestor of a slider. They stop at the content of a slide: a slider nested inside a slide, or used as a slide itself, does not take the outer slider's settings, so set its variables on the nested slider itself.
 
 ## Contributing
 

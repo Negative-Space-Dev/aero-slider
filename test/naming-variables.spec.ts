@@ -146,6 +146,23 @@ test("a slide that is itself a slider keeps the settings made on it", async ({ p
   expect((await box(page, "inner")).width).toBe(150);
 });
 
+for (const prefix of ["--", "--aero-"]) {
+  test(`a slide that is itself a slider ignores the outer slider's ${prefix}names`, async ({
+    page,
+  }) => {
+    const inner = slider("inner", 3, {
+      style: "--slides-per-view:1;--slide-gap:0px;--slide-aspect:2 / 1",
+      nav: false,
+      dots: false,
+    });
+    await mount(
+      page,
+      `<div id="outer" class="aero-slider" style="width:600px;${prefix}slides-per-view:3;${prefix}slide-gap:12px;${prefix}slide-aspect:1"><div class="aero-slider__viewport"><div class="aero-slider__track">${inner}<div>1</div></div></div></div>`
+    );
+    expect(await box(page, "inner")).toEqual({ width: 600, height: 300, gap: 0 });
+  });
+}
+
 /** The resting position after each of `steps` presses of next(), then of goTo(index). */
 async function walk(page: Page, steps: number, index: number) {
   const positions = [];

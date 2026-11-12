@@ -172,9 +172,10 @@
 
 /* The --aero-* names stop at a slide's content. A slider nested in a slide then starts from the
    defaults, as it always has with the pre-1.0 names, and not from the outer slider's settings.
-   :where() keeps any rule that sets them on the nested slider ahead of this one. A slide that
-   is itself a slider is left alone, or its own settings would stop at its viewport. */
-:where(.aero-slider__track > :not(.aero-slider) > *) {
+   A slide that is itself a slider is cut off one level up, on the slider, so the settings made
+   on it still reach its own slides. :where() keeps any rule that sets them on the nested slider
+   ahead of this one. */
+:where(.aero-slider__track > .aero-slider, .aero-slider__track > :not(.aero-slider) > *) {
   --aero-slides-per-view: initial;
   --aero-slide-gap: initial;
   --aero-slide-aspect: initial;
