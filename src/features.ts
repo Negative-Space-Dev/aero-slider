@@ -28,7 +28,7 @@ export function navigation(core: SliderCore) {
 export function pagination(core: SliderCore) {
   const box = core.container.querySelector<HTMLElement>(".aero-slider__pagination");
   const template = box?.querySelector<HTMLElement>(".aero-slider__dot");
-  if (!box || !template) return { build() {}, refresh() {} };
+  if (!box || !template) return { build() {}, measure() {}, refresh() {} };
   return createPagination(core, box, template);
 }
 
@@ -74,8 +74,15 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
     if (dotTrack) {
       box.classList.add("aero-slider__pagination--windowed");
       box.append(dotTrack);
+    }
+    measure();
+  }
+
+  /** Sizes the dot window. Everything measures 0 while hidden, so it reruns on every relayout. */
+  function measure(): void {
+    if (dotTrack) {
       dotPitch = dots[1]!.offsetLeft - dots[0]!.offsetLeft;
-      const width = (maxDots - 1) * Math.abs(dotPitch) + dots[0]!.offsetWidth;
+      const width = (config.maxDots - 1) * Math.abs(dotPitch) + dots[0]!.offsetWidth;
       box.style.setProperty("--pagination-width", `${width}px`);
     }
     refresh();
@@ -127,7 +134,7 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
   );
   signal.addEventListener("abort", clear);
 
-  return { build, refresh };
+  return { build, measure, refresh };
 }
 
 // ── Keyboard ───────────────────────────────────────────────────────────

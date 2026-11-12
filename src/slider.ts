@@ -744,6 +744,7 @@ export function createSlider(
     if (cloneCount() !== clonesBefore) return rebuild(index);
     measure();
     if (stops.join() !== previousStops) dots.build();
+    else dots.measure();
     nav.refresh();
     rest(index);
     play.start();
