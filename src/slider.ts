@@ -28,6 +28,45 @@ const DEFAULTS: Required<SliderConfig> = {
   scrollEasing: easeOutCubic,
 };
 
+const CHOICES = {
+  alignment: ["left", "center", "right"],
+  direction: ["ltr", "rtl", "ttb"],
+  snap: ["native", "settle", "none"],
+} as const;
+
+/** Lowest accepted value for each numeric option, and whether it must be a whole number. */
+const NUMBERS = {
+  perMove: [1, true],
+  autoplayInterval: [100, false],
+  autoplaySpeed: [-Infinity, false],
+  maxDots: [0, true],
+  scrollDuration: [0, false],
+} as const;
+
+/**
+ * Merges `changes` into `config`, skipping undefined keys. A value of the wrong kind, a
+ * non-finite number or an unknown string falls back to the default; numbers are raised to their
+ * minimum. Never throws: a bad option shouldn't take the page down.
+ */
+function configure(config: Required<SliderConfig>, changes: SliderConfig = {}): void {
+  const target = config as Record<string, unknown>;
+  for (const [key, value] of Object.entries(changes ?? {})) {
+    if (value !== undefined) target[key] = value;
+  }
+  for (const [key, [min, whole]] of Object.entries(NUMBERS)) {
+    const value = target[key] as number;
+    target[key] = Number.isFinite(value)
+      ? Math.max(min, whole ? Math.trunc(value) : value)
+      : DEFAULTS[key as keyof typeof NUMBERS];
+  }
+  for (const [key, values] of Object.entries(CHOICES)) {
+    if (!(values as readonly unknown[]).includes(target[key])) {
+      target[key] = DEFAULTS[key as keyof typeof CHOICES];
+    }
+  }
+  if (typeof config.scrollEasing !== "function") config.scrollEasing = DEFAULTS.scrollEasing;
+}
+
 const DRAG_THRESHOLD_PX = 5;
 const FLICK_VELOCITY = 0.3; // px per ms
 const FLICK_PROJECTION_MS = 250;
@@ -74,7 +113,8 @@ export function createSlider(
 ): SliderInstance {
   const track = requireTrack(container);
 
-  const config: Required<SliderConfig> = { ...DEFAULTS, ...userConfig };
+  const config = { ...DEFAULTS };
+  configure(config, userConfig);
   const controller = new AbortController();
   const { signal } = controller;
 
@@ -341,7 +381,7 @@ export function createSlider(
 
   /** `towards` is the sign of a next()/prev() step: it picks the way round when both are equally short. */
   function goTo(index: number, options: GoToOptions = {}, towards = 0): void {
-    if (destroyed || !slideCount) return;
+    if (destroyed || !slideCount || !Number.isFinite(index)) return;
     // Continuous autoplay hands its lap back to the scroll offset before we measure from it.
     play.interrupt();
     const logical = loop() ? wrap(Math.trunc(index)) : clamp(Math.trunc(index), 0, maxIndex());
@@ -373,14 +413,13 @@ export function createSlider(
     startMove(target, !options.instant);
   }
 
-  const step = () => Math.max(1, Math.trunc(config.perMove));
   /** Steps from the slide that's showing: a continuous lap hands back first, so sync to it. */
   function stepBy(delta: number): void {
     if (play.interrupt()) setCurrent(indexAt(scrollPosition()));
     goTo(current + delta, {}, delta);
   }
-  const next = () => stepBy(step());
-  const prev = () => stepBy(-step());
+  const next = () => stepBy(config.perMove);
+  const prev = () => stepBy(-config.perMove);
 
   // ── Scroll tracking ──────────────────────────────────────────────────
 
@@ -715,7 +754,7 @@ export function createSlider(
 
   function update(changes?: SliderConfig): void {
     if (destroyed) return;
-    Object.assign(config, changes);
+    configure(config, changes);
     rebuild();
   }
 
