@@ -1,5 +1,11 @@
 import { type Page, expect, test } from "@playwright/test";
-import type { SliderConfig, SliderInstance, createSlider, syncThumbnails } from "../src/index.ts";
+import type {
+  SliderConfig,
+  SliderEvent,
+  SliderInstance,
+  createSlider,
+  syncThumbnails,
+} from "../src/index.ts";
 
 export { expect, test };
 export type { Page };
@@ -10,6 +16,10 @@ declare global {
     syncThumbnails: typeof syncThumbnails;
     /** Instances made by `create`, keyed by element id. */
     sliders: Record<string, SliderInstance>;
+    /** Samples from the last `recordScroll`. */
+    scrollRecording?: Promise<number[]>;
+    /** Logs from `recordEvents`, keyed by element id. */
+    eventLog: Record<string, string[]>;
   }
 }
 
@@ -112,4 +122,90 @@ export async function settled(page: Page, id: string): Promise<void> {
       } else stillFrames++;
     }
   }, id);
+}
+
+/** Fails each test in the calling spec file that throws an uncaught error in the page. */
+export function failOnPageErrors(): void {
+  let errors: string[] = [];
+  test.beforeEach(({ page }) => {
+    errors = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+  });
+  test.afterEach(() => expect(errors).toEqual([]));
+}
+
+/** `#id`'s current index and its track's scroll offset (scrollLeft + scrollTop). */
+export const state = (page: Page, id: string): Promise<{ index: number; position: number }> =>
+  page.evaluate((id) => {
+    const track = document.querySelector<HTMLElement>(`#${id} .aero-slider__track`)!;
+    return {
+      index: window.sliders[id]!.currentIndex,
+      position: track.scrollLeft + track.scrollTop,
+    };
+  }, id);
+
+/** Resolves after the page's next animation frame. */
+export const nextFrame = (page: Page): Promise<void> =>
+  page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+
+/**
+ * Starts recording the scroll offset of `#id`'s track on every animation frame for `ms`, and
+ * resolves once recording runs. Await the returned function for the samples, so a move started in
+ * between is recorded from its first frame.
+ */
+export async function recordScroll(
+  page: Page,
+  id: string,
+  ms: number
+): Promise<() => Promise<number[]>> {
+  await page.evaluate(
+    ([id, ms]) => {
+      const track = document.querySelector<HTMLElement>(`#${id} .aero-slider__track`)!;
+      const end = performance.now() + ms;
+      window.scrollRecording = (async () => {
+        const samples: number[] = [];
+        while (performance.now() < end) {
+          await new Promise(requestAnimationFrame);
+          samples.push(track.scrollLeft + track.scrollTop);
+        }
+        return samples;
+      })();
+    },
+    [id, ms] as const
+  );
+  return () => page.evaluate(() => window.scrollRecording!);
+}
+
+/**
+ * Starts logging the `aero:` events in `names` that `#id` dispatches itself, ignoring ones that
+ * bubble up from a nested slider. Each entry is the event name followed by its `index`, if it has
+ * one: `"slideChange2"`, `"autoplayStart"`. Await the returned function for the log so far.
+ */
+export async function recordEvents(
+  page: Page,
+  id: string,
+  names: SliderEvent[]
+): Promise<() => Promise<string[]>> {
+  await page.evaluate(
+    ([id, names]) => {
+      const el = document.getElementById(id)!;
+      const log: string[] = [];
+      (window.eventLog ??= {})[id] = log;
+      for (const name of names) {
+        el.addEventListener(`aero:${name}`, (event) => {
+          if (event.target === el) log.push(name + ((event as CustomEvent).detail?.index ?? ""));
+        });
+      }
+    },
+    [id, names] as const
+  );
+  return () => page.evaluate((id) => window.eventLog[id]!.slice(), id);
+}
+
+/** Asserts `actual` is within `tolerance` px of `expected`, for layouts with fractional sizes. */
+export function expectNear(actual: number, expected: number, tolerance = 1.5): void {
+  expect(
+    Math.abs(actual - expected),
+    `expected ${actual} to be within ${tolerance} of ${expected}`
+  ).toBeLessThanOrEqual(tolerance);
 }
