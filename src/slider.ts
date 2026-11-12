@@ -55,7 +55,9 @@ function configure(config: Required<SliderConfig>, changes: SliderConfig = {}): 
     if (value !== undefined) target[key] = value;
   }
   for (const [key, [min, whole]] of Object.entries(NUMBERS)) {
-    const value = target[key] as number;
+    // Theme scripts often pass numbers straight from data attributes, as strings.
+    const raw = target[key];
+    const value = typeof raw === "string" ? parseFloat(raw) : (raw as number);
     target[key] = Number.isFinite(value)
       ? Math.max(min, whole ? Math.trunc(value) : value)
       : DEFAULTS[key as keyof typeof NUMBERS];
@@ -131,7 +133,7 @@ export function createSlider(
   let destroyed = false;
   let ready = false; // autoplay waits for the ready event before it starts
   let rtl = false; // resolved from the computed direction on every rebuild
-  const authorDir = container.getAttribute("dir");
+  let authorDir: string | null | undefined; // the dir we replaced; undefined while we hold none
 
   // Layout metrics, refreshed by measure()
   let slidesPerView = 1;
@@ -462,8 +464,11 @@ export function createSlider(
         scrollFrame = 0;
         // A goTo() since this frame was queued (a drag's release) has already set the index. A
         // resize can clamp the offset before the observer re-measures; relayout() places it then.
-        if (!programmaticScroll && observedSize() === measuredSize) {
-          setCurrent(indexAt(scrollPosition()));
+        if (programmaticScroll || observedSize() !== measuredSize) return;
+        const position = scrollPosition();
+        // Several slides can share a stop; a scroll that stays on it keeps the one that was asked for.
+        if (loop() || Math.abs(position - stopPositions[stopOf(current)]!) > 1) {
+          setCurrent(indexAt(position));
         }
       });
     }
@@ -495,9 +500,10 @@ export function createSlider(
     teleportToRealSlides();
     const position = scrollPosition();
     const landed = indexAt(position);
-    // A clamped edge can park several indices at one spot; keep the requested one there.
+    // A clamped edge can park several indices at one spot; keep the requested one there. A resize
+    // can settle before the observer re-measures: relayout() places the index then, not stale stops.
     const moved = loop() || Math.abs(position - restPositionOf(current)) > 1;
-    if (landed !== current && moved) setCurrent(landed);
+    if (landed !== current && moved && observedSize() === measuredSize) setCurrent(landed);
     play.settled();
   }
 
@@ -780,8 +786,10 @@ export function createSlider(
 
     container.classList.toggle("aero-slider--vertical", isVertical());
     const { direction } = config;
-    if (direction === "ltr" || direction === "rtl") container.setAttribute("dir", direction);
-    else restoreDir();
+    if (direction === "ltr" || direction === "rtl") {
+      if (authorDir === undefined) authorDir = container.getAttribute("dir");
+      container.setAttribute("dir", direction);
+    } else restoreDir();
     rtl = !isVertical() && getComputedStyle(container).direction === "rtl";
     container.setAttribute("data-aero-alignment", config.alignment);
     container.classList.toggle("aero-slider--draggable", config.draggable);
@@ -791,6 +799,12 @@ export function createSlider(
     clonesBefore = cloneCount();
     for (let i = 1; i <= clonesBefore; i++) track.prepend(cloneOf(slides[wrap(-i)]!));
     for (let i = 0; i < clonesBefore; i++) track.append(cloneOf(slides[i % slideCount]!));
+    // WebKit never starts loading media that arrived from another document with <source> children.
+    for (const media of track.querySelectorAll<HTMLMediaElement>(
+      `[${CLONE_ATTR}] video, [${CLONE_ATTR}] audio`
+    )) {
+      if (media.networkState === media.NETWORK_EMPTY) media.load();
+    }
 
     measure();
     dots.build();
@@ -800,9 +814,12 @@ export function createSlider(
     if (ready) play.restart(); // the lap was already reset above
   }
 
+  /** Puts back the dir an explicit direction replaced. A dir we never wrote is the page's to keep. */
   function restoreDir(): void {
+    if (authorDir === undefined) return;
     if (authorDir === null) container.removeAttribute("dir");
     else container.setAttribute("dir", authorDir);
+    authorDir = undefined;
   }
 
   // ── Public API ───────────────────────────────────────────────────────

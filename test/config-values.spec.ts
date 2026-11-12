@@ -137,3 +137,12 @@ test("an unknown direction follows the page", async ({ page }) => {
   await settled(page, "s");
   expect(await state(page, "s")).toEqual({ index: 1, position: -600 });
 });
+
+test("numbers passed as strings are read as numbers", async ({ page }) => {
+  await mount(page, slider("s", 12));
+  await create(page, "s", { perMove: "3", maxDots: "5" } as never);
+  await expect(page.locator("#s .aero-slider__pagination")).toHaveClass(/--windowed/);
+  await page.evaluate(() => window.sliders.s!.next());
+  await settled(page, "s");
+  expect(await state(page, "s")).toEqual({ index: 3, position: 1800 });
+});

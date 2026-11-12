@@ -145,3 +145,17 @@ test("windowed dots slide in stop positions", async ({ page }) => {
     "aero-slider__dot--active",
   ]);
 });
+
+test("a resize keeps a requested slide that shares the last stop", async ({ page }) => {
+  await mount(page, slider("s", 6, { style: "--slides-per-view:3" }));
+  await create(page, "s");
+  await page.evaluate(() => window.sliders.s!.goTo(5, { instant: true }));
+  await settled(page, "s");
+  expect((await state(page, "s")).index).toBe(5);
+  await recordEvents(page, "s");
+  await page.evaluate(() => (document.getElementById("s")!.style.width = "540px"));
+  await expect.poll(async () => (await state(page, "s")).position).toBe(540);
+  await settled(page, "s");
+  expect((await state(page, "s")).index).toBe(5);
+  expect((await takeEvents(page, "s")).filter((e) => e.startsWith("slideChange"))).toEqual([]);
+});

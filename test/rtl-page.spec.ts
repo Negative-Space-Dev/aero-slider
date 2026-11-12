@@ -83,3 +83,17 @@ test("going back to direction: auto removes the dir the slider wrote", async ({ 
   await page.evaluate(() => window.sliders.s!.update({ direction: "auto" }));
   await expect(page.locator("#s")).not.toHaveAttribute("dir");
 });
+
+test("a dir the page sets after creation survives a refresh and destroy", async ({ page }) => {
+  await mount(page, slider("s", 5, gap));
+  await create(page, "s");
+  const container = page.locator("#s");
+  await container.evaluate((el) => el.setAttribute("dir", "rtl"));
+  await page.evaluate(() => window.sliders.s!.refresh());
+  await expect(container).toHaveAttribute("dir", "rtl");
+  await page.evaluate(() => window.sliders.s!.next());
+  await settled(page, "s");
+  expect(await state(page, "s")).toEqual({ index: 1, position: -610 });
+  await page.evaluate(() => window.sliders.s!.destroy());
+  await expect(container).toHaveAttribute("dir", "rtl");
+});
