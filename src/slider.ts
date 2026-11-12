@@ -9,6 +9,7 @@ import { autoplay, keyboard, navigation, pagination } from "./features.ts";
 
 export const SLIDE_INDEX_ATTR = "data-aero-slider-index";
 export const CLONE_ATTR = "data-aero-slider-clone";
+const SLIDE_CLASS = "aero-slider__slide";
 
 const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
 
@@ -124,6 +125,7 @@ export function createSlider(
   const { signal } = controller;
 
   let slides: HTMLElement[] = [];
+  const classed = new WeakSet<Element>(); // slides that got SLIDE_CLASS from us, not their author
   let slideCount = 0;
   let current = 0;
   let destroyed = false;
@@ -767,7 +769,8 @@ export function createSlider(
     slides = Array.from(track.children) as HTMLElement[];
     slideCount = slides.length;
     slides.forEach((slide, i) => {
-      slide.classList.add("aero-slider__slide");
+      if (!slide.classList.contains(SLIDE_CLASS)) classed.add(slide);
+      slide.classList.add(SLIDE_CLASS);
       slide.setAttribute(SLIDE_INDEX_ATTR, String(i));
     });
 
@@ -837,6 +840,11 @@ export function createSlider(
     cancelAnimationFrame(scrollFrame);
     cancelEase();
     for (const clone of track.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
+    for (const slide of slides) {
+      slide.removeAttribute(SLIDE_INDEX_ATTR);
+      if (classed.has(slide)) slide.classList.remove(SLIDE_CLASS);
+      if (slide.getAttribute("class") === "") slide.removeAttribute("class");
+    }
     track.style.scrollSnapType = "";
     container.classList.remove(
       "aero-slider--dragging",

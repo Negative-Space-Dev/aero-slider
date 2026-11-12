@@ -35,3 +35,25 @@ test("rebuilding keeps interval autoplay running without announcing it again", a
   await page.evaluate(() => window.sliders.s!.update({ autoplay: true }));
   expect(await lifecycle(page)).toEqual(["autoplayStart"]);
 });
+
+for (const config of [{}, { loop: true }, { autoplay: "continuous" as const }]) {
+  test(`destroy() leaves slide markup as it found it: ${JSON.stringify(config)}`, async ({
+    page,
+  }) => {
+    await mount(page, slider("s", 5, { style: "--slides-per-view:2" }));
+    const markup = () =>
+      page.evaluate(() => document.querySelector("#s .aero-slider__track")!.innerHTML);
+    await page.evaluate(() => {
+      const [, first, second] = document.querySelectorAll<HTMLElement>(
+        "#s .aero-slider__track > *"
+      );
+      first!.className = "aero-slider__slide promo";
+      second!.className = "promo";
+    });
+    const before = await markup();
+    await create(page, "s", config);
+    await page.evaluate(() => window.sliders.s!.goTo(2, { instant: true }));
+    await page.evaluate(() => window.sliders.s!.destroy());
+    expect(await markup()).toBe(before);
+  });
+}
