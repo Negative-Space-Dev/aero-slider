@@ -315,61 +315,206 @@ export const controlActions: ControlAction[] = [
   },
 ];
 
-export const events: Record<SliderEvent, Doc<(typeof eventGroups)[number]>> = {
+type EventGroup = (typeof eventGroups)[number];
+
+/** An event's reference row: when it fires, what it is for, and a working recipe. */
+export interface EventDoc {
+  group: EventGroup;
+  /** The type of `event.detail`. */
+  type: string;
+  /** When it fires. HTML. */
+  description: string;
+  /** What it is useful for. HTML. */
+  useFor: string;
+  /** In the recipes, `el` is the slider's container. */
+  snippet: CodeTab[];
+}
+
+const recipe = (code: string): CodeTab[] => [{ label: "Recipe", lang: "javascript", code }];
+
+export const events: Record<SliderEvent, EventDoc> = {
   slideChange: {
     group: "Navigation",
     type: "{ index: number }",
-    description: "Fired when the active slide changes",
+    description:
+      "The active slide changed, by arrows, dots, keys, a drag or swipe, autoplay or a method call. It fires as soon as the new slide is known, before the scroll lands.",
+    useFor: "A “2 / 5” counter, analytics, or keeping your own UI in step with the slider.",
+    snippet: recipe(`const counter = document.querySelector(".slide-counter");
+const slider = createSlider(el, { loop: true });
+const show = (index) => {
+  counter.textContent = \`\${index + 1} / \${slider.slideCount}\`;
+};
+
+show(slider.currentIndex); // no slideChange for the starting slide
+el.addEventListener("aero:slideChange", (event) => show(event.detail.index));`),
   },
   visible: {
     group: "Visibility",
     type: "{ index: number }",
-    description: "Fired per slide when it enters the visible range",
+    description:
+      "A slide came into view, even partly. Loop clones report the index of the slide they copy. Once the slider starts, it fires for every slide already in view.",
+    useFor: "Lazy-loading an image or starting a video when its slide comes into view.",
+    snippet: recipe(`// Each slide holds <img data-src="photo.jpg" alt="">.
+el.addEventListener("aero:visible", (event) => {
+  const track = el.querySelector(".aero-slider__track");
+  // Real slides carry data-aero-slider-index; loop clones don't.
+  const slide = track.querySelector(\`[data-aero-slider-index="\${event.detail.index}"]\`);
+  const src = slide.querySelector("img[data-src]")?.dataset.src;
+  if (!src) return;
+  // Clones are copies of the slide, so load every copy of the image.
+  for (const img of track.querySelectorAll("img[data-src]")) {
+    if (img.dataset.src !== src) continue;
+    img.src = src;
+    img.removeAttribute("data-src");
+  }
+});
+createSlider(el, { loop: true });`),
   },
   hidden: {
     group: "Visibility",
     type: "{ index: number }",
-    description: "Fired per slide when it leaves the visible range",
+    description: "A slide went fully out of view.",
+    useFor: "Pausing a video, or any other work, when its slide leaves the view.",
+    snippet: recipe(`// Some slides hold <video muted playsinline loop>.
+// A loop comes to rest on real slides, so the real copy is the one in view.
+const videoIn = (index) =>
+  el.querySelector(\`[data-aero-slider-index="\${index}"] video\`);
+
+el.addEventListener("aero:visible", (event) => videoIn(event.detail.index)?.play());
+el.addEventListener("aero:hidden", (event) => videoIn(event.detail.index)?.pause());`),
   },
   dragStart: {
     group: "Drag",
     type: "{ index: number }",
     description:
-      "Fired when a mouse or pen drag starts (touch scrolls natively and doesn't fire drag events)",
+      "A mouse or pen drag moved past a few pixels and took over the track. <code>index</code> is the slide it started from.",
+    useFor: "Reacting to the first drag, such as removing a “drag to explore” hint.",
+    snippet: recipe(`const hint = el.querySelector(".drag-hint");
+el.addEventListener("aero:dragStart", () => hint.remove(), { once: true });`),
   },
   dragEnd: {
     group: "Drag",
     type: "{ index: number; fromIndex: number }",
-    description: "Fired when a mouse or pen drag is released, after the target slide is chosen",
+    description:
+      "The drag was released and the slider chose where to settle. <code>fromIndex</code> is where it started, <code>index</code> where it is going.",
+    useFor:
+      "Logging swipes. You don't need it to block clicks: the slider already swallows the click that ends a drag.",
+    snippet: recipe(`el.addEventListener("aero:dragEnd", (event) => {
+  const { fromIndex, index } = event.detail;
+  if (index !== fromIndex) console.log(\`dragged from \${fromIndex} to \${index}\`);
+});`),
   },
   autoplayStart: {
     group: "Autoplay",
     type: "{}",
-    description: "Fired when autoplay starts or resumes",
+    description:
+      "Autoplay began running: at start, when <code>update()</code> turns it on, and each time a hover, focus, press or <code>pause()</code> lets go. Never under reduced motion.",
+    useFor: "A progress bar or a playing light that matches what autoplay is really doing.",
+    snippet:
+      recipe(`// <div class="autoplay-bar"> with transform-origin: left, inside the container.
+const interval = 4000;
+const bar = el.querySelector(".autoplay-bar");
+let fill = null;
+const restart = () => {
+  fill?.cancel();
+  fill = bar.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], {
+    duration: interval,
+  });
+};
+
+el.addEventListener("aero:autoplayStart", restart);
+// Every slide change restarts the countdown, so the bar starts over too.
+el.addEventListener("aero:slideChange", () => fill && restart());
+el.addEventListener("aero:autoplayStop", () => {
+  fill?.cancel();
+  fill = null;
+});
+createSlider(el, { autoplay: true, autoplayInterval: interval, loop: true });`),
   },
-  autoplayStop: { group: "Autoplay", type: "{}", description: "Fired when autoplay pauses" },
+  autoplayStop: {
+    group: "Autoplay",
+    type: "{}",
+    description:
+      "Autoplay stopped running: on hover, keyboard focus, a press or drag, <code>pause()</code>, a hidden tab, <code>update()</code> turning it off, or <code>destroy()</code>.",
+    useFor:
+      "Taking that progress bar or light down again. Pair it with <code>aero:autoplayStart</code>.",
+    snippet: recipe(`// Style .is-playing as an indicator light that is on while autoplay runs.
+el.addEventListener("aero:autoplayStart", () => el.classList.add("is-playing"));
+el.addEventListener("aero:autoplayStop", () => el.classList.remove("is-playing"));
+createSlider(el, { autoplay: true, loop: true });`),
+  },
   resize: {
     group: "Layout",
     type: "{}",
     description:
-      "Fired when the track or slide size changes, e.g. a window resize or a CSS variable such as <code>--slides-per-view</code> changing (before re-measuring)",
+      "The track or a slide changed size, from a window resize or a CSS variable such as <code>--slides-per-view</code>. Fires before the slider re-measures and moves the slides back into place.",
+    useFor: "Hiding anything pinned to where a slide was, before the slider moves it.",
+    snippet: recipe(`// A tooltip pinned to a slide would point at the wrong spot once slides move.
+const tip = document.querySelector(".slide-tip");
+el.addEventListener("aero:resize", () => {
+  tip.hidden = true;
+});`),
   },
   resized: {
     group: "Layout",
     type: "{}",
-    description: "Fired after the slider finishes updating from a resize",
+    description:
+      "The slider has re-measured after a resize and put the active slide back in place.",
+    useFor: "Recomputing anything that depends on slide size or position.",
+    snippet: recipe(`// Hand the slide width to CSS, e.g. to size captions outside the track.
+const setSlideWidth = () => {
+  const slide = el.querySelector("[data-aero-slider-index]");
+  el.style.setProperty("--slide-width", \`\${slide.offsetWidth}px\`);
+};
+
+el.addEventListener("aero:ready", setSlideWidth);
+el.addEventListener("aero:resized", setSlideWidth);
+createSlider(el);`),
   },
   ready: {
     group: "Lifecycle",
     type: "{}",
-    description: "Fired once after initialization (listen before <code>createSlider</code>)",
+    description:
+      "<code>createSlider</code> finished setting up. It fires before <code>createSlider</code> returns, so only listeners added beforehand hear it.",
+    useFor:
+      "Setup that needs the instance when other code creates the slider, such as a framework component or a CMS block.",
+    snippet: recipe(`// Add this before the code that calls createSlider runs.
+document.addEventListener("aero:ready", (event) => {
+  const slider = event.target.aeroSlider;
+  const counter = event.target.querySelector(".slide-counter");
+  if (counter) counter.textContent = \`\${slider.currentIndex + 1} / \${slider.slideCount}\`;
+});`),
   },
   destroy: {
     group: "Lifecycle",
     type: "{}",
-    description: "Fired at the start of <code>destroy()</code>, before teardown",
+    description:
+      "<code>destroy()</code> was called. It fires first, while the instance still works, and teardown follows.",
+    useFor: "Removing your own listeners and timers that belong to this slider.",
+    snippet: recipe(`const slider = createSlider(el);
+const listeners = new AbortController();
+
+// Your own listeners for this slider share one signal…
+document.addEventListener("keydown", (event) => event.key === "n" && slider.next(), {
+  signal: listeners.signal,
+});
+// …so they all go when it does.
+el.addEventListener("aero:destroy", () => listeners.abort(), { once: true });`),
   },
 };
+
+export interface EventEntry extends EventDoc {
+  key: SliderEvent;
+}
+
+export const eventEntryGroups: { title: EventGroup; entries: EventEntry[] }[] = eventGroups.map(
+  (title) => ({
+    title,
+    entries: (Object.entries(events) as [SliderEvent, EventDoc][])
+      .filter(([, doc]) => doc.group === title)
+      .map(([key, doc]) => ({ key, ...doc })),
+  })
+);
 
 export const cssVariables: RefEntry[] = [
   {
@@ -446,4 +591,3 @@ export function toRefGroups<G extends string, K extends string>(
 
 export const optionRefGroups = toRefGroups(options, optionGroups);
 export const instanceRefGroups = toRefGroups(instanceMembers, instanceGroups);
-export const eventRefGroups = toRefGroups(events, eventGroups, (key) => `aero:${key}`);

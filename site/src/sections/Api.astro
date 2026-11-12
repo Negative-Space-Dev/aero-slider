@@ -2,18 +2,12 @@
 import CodeBlock from "../components/CodeBlock.astro";
 import Create from "./api/Create.astro";
 import Css from "./api/Css.astro";
+import Events from "./api/Events.astro";
 import Methods from "./api/Methods.astro";
 import Options from "./api/Options.astro";
 import "../styles/api.css";
 import DocTable from "../components/DocTable.astro";
 import Entry from "../components/Entry.astro";
-import {
-  eventRefGroups,
-} from "../data/api";
-
-const eventRows = eventRefGroups
-  .flatMap((group) => group.entries)
-  .map((entry) => [entry.name, entry.type ?? "", entry.description]);
 ---
 
 <section id="api" class="container-page py-12 sm:py-16">
@@ -63,38 +57,7 @@ const teardown = syncThumbnails(main, thumbs);
       />
     </Entry>
 
-    <!-- Events -->
-    <Entry tag="DOM events" title="Events" id="api-events">
-      <div class="copy">
-        <p>
-          Aero Slider dispatches native DOM events on the container element, prefixed with
-          <code>aero:</code>. Event data is available via <code>event.detail</code>.
-        </p>
-      </div>
-      <p class="note">
-        Listen with <code>addEventListener</code>
-        on the container. Access the slider instance via
-        <code>event.currentTarget.aeroSlider</code> in any handler.
-      </p>
-      <CodeBlock
-        lang="typescript"
-        code={`const el = document.getElementById("my-slider");
-const slider = createSlider(el, { loop: true });
-
-el.addEventListener("aero:slideChange", (event) => {
-  console.log("active slide:", event.detail.index);
-});`}
-      />
-      <DocTable
-        minWidth={720}
-        columns={[
-          { label: "Event", mono: true, nowrap: true },
-          { label: "Data (event.detail, TS type)", mono: "soft" },
-          { label: "Description" },
-        ]}
-        rows={eventRows}
-      />
-    </Entry>
+    <Events />
   </div>
 </section>
 
