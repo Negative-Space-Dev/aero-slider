@@ -1,7 +1,8 @@
 ---
 import "aero-slider/slider.css";
 import "../styles/global.css";
-import geistUrl from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url";
+import manropeUrl from "@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2?url";
+import soraUrl from "@fontsource-variable/sora/files/sora-latin-wght-normal.woff2?url";
 import geistMonoUrl from "@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2?url";
 
 interface Props {
@@ -42,7 +43,8 @@ const {
     <meta property="twitter:description" content={description} />
     <meta property="twitter:image" content={new URL(image, Astro.url)} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preload" href={geistUrl} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={manropeUrl} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={soraUrl} as="font" type="font/woff2" crossorigin />
     <link rel="preload" href={geistMonoUrl} as="font" type="font/woff2" crossorigin />
     <!-- Hero slider defaults match config form to prevent layout shift before JS -->
     <style is:inline id="hero-defaults">

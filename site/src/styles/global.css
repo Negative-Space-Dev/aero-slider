@@ -1,11 +1,20 @@
 @import "tailwindcss";
 
 @font-face {
-  font-family: "Geist";
+  font-family: "Manrope";
   font-style: normal;
-  font-weight: 100 900;
+  font-weight: 200 800;
   font-display: block;
-  src: url("@fontsource-variable/geist/files/geist-latin-wght-normal.woff2")
+  src: url("@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2")
+    format("woff2-variations");
+}
+
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: block;
+  src: url("@fontsource-variable/sora/files/sora-latin-wght-normal.woff2")
     format("woff2-variations");
 }
 
@@ -62,7 +71,8 @@
 
 @theme {
   --color-*: initial;
-  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Sora", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
@@ -118,6 +128,16 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--faint);
+}
+
+/* Headings are set in the display face. Layered, so a font-mono utility on a
+   code-identifier heading still wins. */
+@layer base {
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+  }
 }
 
 @layer components {
@@ -568,9 +588,9 @@ body {
   opacity: 0.6;
 }
 .slide__num {
+  font-family: var(--font-display);
   font-size: clamp(1rem, 13cqi, 5.5rem);
   font-weight: 500;
-  font-variant-numeric: tabular-nums;
   letter-spacing: -0.05em;
   line-height: 0.85;
 }

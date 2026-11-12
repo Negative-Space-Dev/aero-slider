@@ -9,8 +9,9 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@fontsource-variable/geist": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
+    "@fontsource-variable/manrope": "^5.3.0",
+    "@fontsource-variable/sora": "^5.3.0",
     "aero-slider": "file:..",
     "astro": "5.18.0"
   },
