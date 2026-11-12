@@ -159,3 +159,18 @@ test("a resize keeps a requested slide that shares the last stop", async ({ page
   expect((await state(page, "s")).index).toBe(5);
   expect((await takeEvents(page, "s")).filter((e) => e.startsWith("slideChange"))).toEqual([]);
 });
+
+// Each slide grows by 0.4px, which whole-pixel sizes don't show, and the last slide moves 40px.
+test("a resize by a fraction of a pixel re-measures the slides", async ({ page }) => {
+  await mount(page, slider("s", 100, { dots: false }));
+  await create(page, "s", { snap: "none" });
+  await settled(page, "s");
+  await page.evaluate(() => (document.getElementById("s")!.style.width = "600.4px"));
+  await settled(page, "s");
+  await page.evaluate(() => window.sliders.s!.goTo(99, { instant: true }));
+  await settled(page, "s");
+  const { index, position } = await state(page, "s");
+  expect(index).toBe(99);
+  // WebKit lays out in 64ths of a pixel and scrolls in whole ones, so allow a few pixels.
+  expect(Math.abs(position - 99 * 600.4)).toBeLessThan(3);
+});
