@@ -876,11 +876,9 @@ export function createSlider(
       // too, named by its alt text, or a keyboard could not reach it.
       const { picker } = core;
       const item = !picker && slide.matches("li");
-      const image = !picker && slide.matches("img");
-      if (item || image) attr(slide, "role", null);
-      if (image) {
-        attr(slide, "tabindex", null);
-        attr(slide, "aria-label", null);
+      if (item) attr(slide, "role", null);
+      if (!picker && slide.matches("img")) {
+        if (written.has(slide)) forget(slide);
       } else if (
         !slide.matches("a[href], button") &&
         (item || attr(slide, "role", picker ? "button" : "group"))
