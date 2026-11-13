@@ -92,13 +92,15 @@ CSS variables on the slider or any ancestor. Change them in media or container q
 | `perMove`          | `1`            | Stops advanced by `next()`, `prev()`, the arrows, the arrow keys and autoplay.                      |
 | `snap`             | `"native"`     | `"settle"` scrolls freely, then eases onto a slide. `"none"` rests anywhere.                        |
 | `draggable`        | `true`         | Mouse drag. Touch always scrolls natively.                                                          |
-| `noDrag`           | `""`           | Selector for slide content that must not start a drag, e.g. `"a, button, input, p"`.                |
+| `noDrag`           | form fields    | Selector for slide content that must not start a drag. Replaces the default, listed below.          |
 | `autoplay`         | `false`        | `true` steps every `autoplayInterval`. `"continuous"` drifts like a ticker and implies `loop`.      |
 | `autoplayInterval` | `5000`         | Milliseconds, at least 100.                                                                         |
 | `autoplaySpeed`    | `40`           | Pixels per second for `"continuous"`.                                                               |
 | `maxDots`          | `0`            | Show at most this many dots, windowed. `0` shows all.                                               |
 | `scrollDuration`   | `0`            | Milliseconds for scripted moves. `0` uses native smooth scrolling.                                  |
 | `scrollEasing`     | ease-out cubic | `(progress) => eased`, used with `scrollDuration`.                                                  |
+
+`noDrag` defaults to `"input, textarea, select, [contenteditable], audio[controls], video[controls]"`: controls that are dragged themselves. Links and buttons are left out, so a slide that is a link still drags. Add them if a slide's links must never start a drag.
 
 Autoplay pauses on hover, on keyboard focus inside, during a press or drag and while the tab is hidden. It never runs under `prefers-reduced-motion`.
 

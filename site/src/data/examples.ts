@@ -615,6 +615,7 @@ export const examples: Record<ExampleId, Example> = {
     ],
     notes: [
       "A mouse or pen press that starts on an element matching <code>noDrag</code> does not start a drag. The button clicks and the field selects text as usual.",
+      "Form fields and media controls are left out by default. This example sets its own list to add links and buttons, and a list you set replaces the default.",
       "A press anywhere else on the slide still drags.",
       "Touch is not affected. A swipe scrolls natively wherever it starts.",
       "Arrow keys typed in a text field move the caret, not the slider.",

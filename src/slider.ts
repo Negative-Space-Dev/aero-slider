@@ -26,7 +26,8 @@ const DEFAULTS: Config = {
   draggable: true,
   alignment: "center",
   maxDots: 0,
-  noDrag: "",
+  // Controls that are themselves dragged: a text selection, a range thumb, a media scrubber.
+  noDrag: "input, textarea, select, [contenteditable], audio[controls], video[controls]",
   perMove: 1,
   vertical: false,
   snap: "native",

@@ -26,7 +26,11 @@ export interface SliderConfig {
   alignment?: SliderAlignment;
   /** Show at most this many pagination dots, scrolling them iOS-style. 0 = unlimited. */
   maxDots?: number;
-  /** Selector for elements inside slides that should not start a mouse drag. */
+  /**
+   * Selector for elements inside slides that should not start a mouse drag. Defaults to form
+   * fields and media controls, which are dragged themselves: `"input, textarea, select,
+   * [contenteditable], audio[controls], video[controls]"`. Your value replaces the default.
+   */
   noDrag?: string;
   /**
    * Stops advanced per next()/prev() call, a whole number of at least 1. A stop is a distinct
