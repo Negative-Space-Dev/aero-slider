@@ -1,0 +1,521 @@
+import type { SliderConfig, SliderEvent, SliderInstance } from "aero-slider";
+import type { CodeTab } from "../lib/code";
+import type { ExampleId } from "./anchors";
+
+/** One documented identifier, as a reference row renders it. */
+export interface RefEntry {
+  /** The identifier as shown, e.g. `loop`, `.goTo(index, options?)` or `aero:slideChange`. */
+  name: string;
+  type?: string;
+  default?: string;
+  /** HTML. */
+  description: string;
+  example?: ExampleId;
+  /** Collapsed code shown under the description. */
+  snippet?: CodeTab[];
+}
+
+export interface RefGroup {
+  title: string;
+  entries: RefEntry[];
+}
+
+/** A registry entry; `name` overrides the key when the shown identifier differs from it. */
+type Doc<G extends string> = Omit<RefEntry, "name"> & { group: G; name?: string };
+
+export const optionGroups = ["Layout", "Autoplay", "Interaction", "Motion", "Pagination"] as const;
+export const instanceGroups = [
+  "Navigate",
+  "Autoplay",
+  "Change",
+  "Read state",
+  "Lifecycle",
+] as const;
+type InstanceGroup = (typeof instanceGroups)[number];
+export const eventGroups = [
+  "Navigation",
+  "Visibility",
+  "Drag",
+  "Autoplay",
+  "Layout",
+  "Lifecycle",
+] as const;
+
+// Keyed by the library's own types, so a new option, member or event fails the
+// build until it is documented here.
+export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[number]>> = {
+  loop: {
+    group: "Layout",
+    type: "boolean",
+    default: "false",
+    description:
+      "Wraps from the last slide back to the first. Clones of the slides sit on both sides of the track, so scrolling never hits an end.",
+  },
+  alignment: {
+    group: "Layout",
+    type: '"start" | "center" | "end"',
+    default: '"center"',
+    description:
+      "Where the active slide rests in the viewport. The values are logical: <code>start</code> is the left edge, the right edge in a right-to-left slider and the top in a vertical one. At the ends of a non-looping track the scroll clamps, but <code>currentIndex</code> still names the focused slide.",
+    example: "ex-edge-to-edge",
+  },
+  vertical: {
+    group: "Layout",
+    type: "boolean",
+    default: "false",
+    description:
+      'Scrolls top to bottom, whatever the text direction of the page. Without it, the slider is horizontal and follows the text direction: <code>dir="rtl"</code> on the slider or any ancestor makes it right-to-left. That direction is read when the slider starts, so call <code>refresh()</code> after changing <code>dir</code>.',
+    example: "ex-announcement",
+  },
+  perMove: {
+    group: "Layout",
+    type: "number",
+    default: "1",
+    description:
+      "Stops advanced by each <code>next()</code> and <code>prev()</code>, and so by the arrows, the arrow keys and autoplay. Without <code>loop</code>, slides that rest at the same place near an end share one stop.",
+    example: "ex-product-row",
+  },
+  autoplay: {
+    group: "Autoplay",
+    type: 'boolean | "continuous"',
+    default: "false",
+    description:
+      '<code>true</code> advances one move every <code>autoplayInterval</code>. <code>"continuous"</code> drifts the track like a ticker at <code>autoplaySpeed</code>, and implies <code>loop</code> and <code>snap: "none"</code>. Neither runs under reduced motion.',
+    example: "ex-autoplay",
+  },
+  autoplayInterval: {
+    group: "Autoplay",
+    type: "number",
+    default: "5000",
+    description:
+      "Milliseconds between advances. Any slide change restarts the countdown, and it holds while the slider is hovered, focused or pressed.",
+    example: "ex-autoplay",
+  },
+  autoplaySpeed: {
+    group: "Autoplay",
+    type: "number",
+    default: "40",
+    description:
+      'Speed of <code>"continuous"</code> autoplay in pixels per second. <code>0</code> or less keeps the track still.',
+    example: "ex-ticker",
+  },
+  draggable: {
+    group: "Interaction",
+    type: "boolean",
+    default: "true",
+    description: "Lets a mouse or pen drag the track. Touch always swipes natively.",
+  },
+  noDrag: {
+    group: "Interaction",
+    type: "string",
+    default: "form fields and media controls",
+    description:
+      'A selector for elements inside slides where a mouse drag should not start. The default is <code>"input, textarea, select, [contenteditable], audio[controls], video[controls]"</code>, so text fields, range inputs and media scrubbers work as usual. Links and buttons are left out so that a slide that is a link can still be dragged. Your value replaces the default.',
+    example: "ex-product-row",
+  },
+  snap: {
+    group: "Motion",
+    type: '"native" | "settle" | "none"',
+    default: '"native"',
+    description:
+      'How the track comes to rest. <code>"native"</code> uses CSS scroll snapping. <code>"settle"</code> scrolls freely, then eases onto the nearest slide. <code>"none"</code> stops wherever the scroll ends.',
+  },
+  scrollDuration: {
+    group: "Motion",
+    type: "number",
+    default: "0",
+    description:
+      "Length in ms of the scroll that <code>next()</code>, <code>prev()</code> and <code>goTo()</code> run, eased by <code>scrollEasing</code>, so it moves the same in every browser. <code>0</code> uses native smooth scrolling. Reduced motion makes every scroll instant.",
+  },
+  scrollEasing: {
+    group: "Motion",
+    type: "(t: number) => number",
+    default: "ease-out cubic",
+    description:
+      "Maps progress from 0 to 1 onto eased progress for <code>scrollDuration</code> scrolls. <code>(t) =&gt; t</code> is linear.",
+  },
+  maxDots: {
+    group: "Pagination",
+    type: "number",
+    default: "0",
+    description:
+      "Shows at most this many pagination dots and slides the window along, iOS style. <code>0</code> shows them all.",
+    example: "ex-max-dots",
+  },
+};
+
+export const instanceMembers: Record<keyof SliderInstance, Doc<InstanceGroup>> = {
+  next: {
+    group: "Navigate",
+    name: ".next()",
+    description:
+      "Moves forward by <code>perMove</code> stops. Stops at the last slide unless <code>loop</code> is on.",
+  },
+  prev: {
+    group: "Navigate",
+    name: ".prev()",
+    description:
+      "Moves back by <code>perMove</code> stops. Stops at the first slide unless <code>loop</code> is on.",
+  },
+  goTo: {
+    group: "Navigate",
+    name: ".goTo(index, options?)",
+    description:
+      "Scrolls to slide <code>index</code>. Out-of-range indexes wrap on a loop and clamp otherwise. <code>{ instant: true }</code> jumps there with no animation.",
+  },
+  pause: {
+    group: "Autoplay",
+    name: ".pause()",
+    description:
+      "Holds autoplay until <code>resume()</code>. Hover, focus and drag pauses still apply on top.",
+  },
+  resume: {
+    group: "Autoplay",
+    name: ".resume()",
+    description: "Releases <code>pause()</code> and starts a fresh autoplay countdown.",
+  },
+  update: {
+    group: "Change",
+    name: ".update(config?)",
+    description: "Merges new options into the config and rebuilds, keeping the current slide.",
+  },
+  refresh: {
+    group: "Change",
+    name: ".refresh()",
+    description:
+      "Re-reads the slides from the track and rebuilds, resting on the same index. Call it after you add, remove or replace slides. A slide hidden with CSS still counts, so take it out of the track.",
+  },
+  element: {
+    group: "Read state",
+    name: ".element",
+    type: "HTMLElement",
+    description: "The container the slider runs on.",
+  },
+  currentIndex: {
+    group: "Read state",
+    name: ".currentIndex",
+    type: "number",
+    description: "Index of the active slide. Loop clones are not counted.",
+  },
+  slideCount: {
+    group: "Read state",
+    name: ".slideCount",
+    type: "number",
+    description: "Number of slides, not counting loop clones.",
+  },
+  destroy: {
+    group: "Lifecycle",
+    name: ".destroy()",
+    description:
+      "Fires <code>aero:destroy</code>, then removes its listeners, clones and classes and deletes <code>element.aeroSlider</code>. Your markup stays, so <code>createSlider</code> can start it again.",
+  },
+};
+
+type EventGroup = (typeof eventGroups)[number];
+
+/** An event's reference row: when it fires, what it is for, and a working recipe. */
+export interface EventDoc {
+  group: EventGroup;
+  /** The type of `event.detail`. */
+  type: string;
+  /** When it fires. HTML. */
+  description: string;
+  /** What it is useful for. HTML. */
+  useFor: string;
+  /** In the recipes, `el` is the slider's container. */
+  snippet: CodeTab[];
+}
+
+const recipe = (code: string): CodeTab[] => [{ label: "Recipe", lang: "javascript", code }];
+
+export const events: Record<SliderEvent, EventDoc> = {
+  slideChange: {
+    group: "Navigation",
+    type: "{ index: number }",
+    description:
+      "The active slide changed, by arrows, dots, keys, a drag or swipe, autoplay or a method call. It fires as soon as the new slide is known, before the scroll lands.",
+    useFor: "A “2 / 5” counter, analytics, or keeping your own UI in step with the slider.",
+    snippet: recipe(`const counter = document.querySelector(".slide-counter");
+const slider = createSlider(el, { loop: true });
+const show = (index) => {
+  counter.textContent = \`\${index + 1} / \${slider.slideCount}\`;
+};
+
+show(slider.currentIndex); // no slideChange for the starting slide
+el.addEventListener("aero:slideChange", (event) => show(event.detail.index));`),
+  },
+  visible: {
+    group: "Visibility",
+    type: "{ index: number }",
+    description:
+      "A slide came into view, even partly. Loop clones report the index of the slide they copy. Once the slider starts, it fires for every slide already in view.",
+    useFor: "Lazy-loading an image or starting a video when its slide comes into view.",
+    snippet: recipe(`// Each slide holds <img data-src="photo.jpg" alt="">.
+el.addEventListener("aero:visible", (event) => {
+  const track = el.querySelector(".aero-slider__track");
+  // Real slides carry data-aero-slider-index; loop clones don't.
+  const slide = track.querySelector(\`[data-aero-slider-index="\${event.detail.index}"]\`);
+  const src = slide.querySelector("img[data-src]")?.dataset.src;
+  if (!src) return;
+  // Clones are copies of the slide, so load every copy of the image.
+  for (const img of track.querySelectorAll("img[data-src]")) {
+    if (img.dataset.src !== src) continue;
+    img.src = src;
+    img.removeAttribute("data-src");
+  }
+});
+createSlider(el, { loop: true });`),
+  },
+  hidden: {
+    group: "Visibility",
+    type: "{ index: number }",
+    description: "A slide went fully out of view.",
+    useFor: "Pausing a video, or any other work, when its slide leaves the view.",
+    snippet: recipe(`// Some slides hold <video muted playsinline loop>.
+// A loop comes to rest on real slides, so the real copy is the one in view.
+const videoIn = (index) =>
+  el.querySelector(\`[data-aero-slider-index="\${index}"] video\`);
+
+el.addEventListener("aero:visible", (event) => videoIn(event.detail.index)?.play());
+el.addEventListener("aero:hidden", (event) => videoIn(event.detail.index)?.pause());`),
+  },
+  dragStart: {
+    group: "Drag",
+    type: "{ index: number }",
+    description:
+      "A mouse or pen drag moved past a few pixels and took over the track. <code>index</code> is the slide it started from. Touch fires no drag events: a finger swipe scrolls the track natively. To follow every way of moving, use <code>aero:slideChange</code>.",
+    useFor: "Reacting to the first drag, such as removing a “drag to explore” hint.",
+    snippet: recipe(`const hint = el.querySelector(".drag-hint");
+el.addEventListener("aero:dragStart", () => hint.remove(), { once: true });`),
+  },
+  dragEnd: {
+    group: "Drag",
+    type: "{ index: number; fromIndex: number }",
+    description:
+      "The drag was released and the slider chose where to settle. <code>fromIndex</code> is where it started, <code>index</code> where it is going. Mouse and pen only, like <code>aero:dragStart</code>.",
+    useFor:
+      "Logging drags. You don't need it to block clicks: the slider already swallows the click that ends a drag.",
+    snippet: recipe(`el.addEventListener("aero:dragEnd", (event) => {
+  const { fromIndex, index } = event.detail;
+  if (index !== fromIndex) console.log(\`dragged from \${fromIndex} to \${index}\`);
+});`),
+  },
+  autoplayStart: {
+    group: "Autoplay",
+    type: "{}",
+    description:
+      "Autoplay began running: at start, when <code>update()</code> turns it on, and each time a hover, focus, press or <code>pause()</code> lets go. Never under reduced motion. The first one fires inside <code>createSlider</code>, before it returns, so listen before you create.",
+    useFor: "A progress bar or a playing light that matches what autoplay is really doing.",
+    snippet:
+      recipe(`// <div class="autoplay-bar"> with transform-origin: left, inside the container.
+const interval = 4000;
+const bar = el.querySelector(".autoplay-bar");
+let fill = null;
+const restart = () => {
+  fill?.cancel();
+  fill = bar.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], {
+    duration: interval,
+  });
+};
+
+el.addEventListener("aero:autoplayStart", restart);
+// Every slide change restarts the countdown, so the bar starts over too.
+el.addEventListener("aero:slideChange", () => fill && restart());
+el.addEventListener("aero:autoplayStop", () => {
+  fill?.cancel();
+  fill = null;
+});
+createSlider(el, { autoplay: true, autoplayInterval: interval, loop: true });`),
+  },
+  autoplayStop: {
+    group: "Autoplay",
+    type: "{}",
+    description:
+      "Autoplay stopped running: on hover, keyboard focus, a press or drag, <code>pause()</code>, a hidden tab, <code>update()</code> turning it off, or <code>destroy()</code>.",
+    useFor:
+      "Taking that progress bar or light down again. Pair it with <code>aero:autoplayStart</code>.",
+    snippet: recipe(`// Style .is-playing as an indicator light that is on while autoplay runs.
+el.addEventListener("aero:autoplayStart", () => el.classList.add("is-playing"));
+el.addEventListener("aero:autoplayStop", () => el.classList.remove("is-playing"));
+createSlider(el, { autoplay: true, loop: true });`),
+  },
+  resize: {
+    group: "Layout",
+    type: "{}",
+    description:
+      "The track or a slide changed size, from a window resize or a CSS variable such as <code>--aero-slides-per-view</code>. Fires before the slider re-measures and moves the slides back into place.",
+    useFor: "Hiding anything pinned to where a slide was, before the slider moves it.",
+    snippet: recipe(`// A tooltip pinned to a slide would point at the wrong spot once slides move.
+const tip = document.querySelector(".slide-tip");
+el.addEventListener("aero:resize", () => {
+  tip.hidden = true;
+});`),
+  },
+  resized: {
+    group: "Layout",
+    type: "{}",
+    description:
+      "The slider has re-measured after a resize and put the active slide back in place.",
+    useFor: "Recomputing anything that depends on slide size or position.",
+    snippet: recipe(`// Hand the slide width to CSS, e.g. to size captions outside the track.
+const setSlideWidth = () => {
+  const slide = el.querySelector("[data-aero-slider-index]");
+  el.style.setProperty("--slide-width", \`\${slide.offsetWidth}px\`);
+};
+
+el.addEventListener("aero:ready", setSlideWidth);
+el.addEventListener("aero:resized", setSlideWidth);
+createSlider(el);`),
+  },
+  ready: {
+    group: "Lifecycle",
+    type: "{}",
+    description:
+      "<code>createSlider</code> finished setting up. It fires before <code>createSlider</code> returns, so a listener added afterwards never hears it. To check later, read <code>el.aeroSlider</code>: the instance is there from the moment <code>aero:ready</code> fires until <code>destroy()</code>. The container also gets the <code>aero-slider--ready</code> class, for CSS.",
+    useFor:
+      "Setup that needs the instance when other code creates the slider, such as a framework component or a CMS block.",
+    snippet: recipe(`// Works whether this runs before or after createSlider.
+function setUp(slider) {
+  const counter = slider.element.querySelector(".slide-counter");
+  if (counter) counter.textContent = \`\${slider.currentIndex + 1} / \${slider.slideCount}\`;
+}
+
+if (el.aeroSlider) setUp(el.aeroSlider);
+else el.addEventListener("aero:ready", () => setUp(el.aeroSlider), { once: true });`),
+  },
+  destroy: {
+    group: "Lifecycle",
+    type: "{}",
+    description:
+      "<code>destroy()</code> was called. It fires first, while the instance still works, and teardown follows.",
+    useFor: "Removing your own listeners and timers that belong to this slider.",
+    snippet: recipe(`const slider = createSlider(el);
+const listeners = new AbortController();
+
+// Your own listeners for this slider share one signal…
+document.addEventListener("keydown", (event) => event.key === "n" && slider.next(), {
+  signal: listeners.signal,
+});
+// …so they all go when it does.
+el.addEventListener("aero:destroy", () => listeners.abort(), { once: true });`),
+  },
+};
+
+export interface EventEntry extends EventDoc {
+  key: SliderEvent;
+}
+
+export const eventEntryGroups: { title: EventGroup; entries: EventEntry[] }[] = eventGroups.map(
+  (title) => ({
+    title,
+    entries: (Object.entries(events) as [SliderEvent, EventDoc][])
+      .filter(([, doc]) => doc.group === title)
+      .map(([key, doc]) => ({ key, ...doc })),
+  })
+);
+
+export const cssVariables: RefEntry[] = [
+  {
+    name: "--aero-slides-per-view",
+    default: "1",
+    description:
+      "How many slides fit the viewport, <code>1</code> or more. Fractions such as <code>1.5</code> show a peek of the next slide.",
+    example: "ex-product-row",
+  },
+  { name: "--aero-slide-gap", default: "0px", description: "Space between slides." },
+  {
+    name: "--aero-slide-aspect",
+    default: "5 / 3",
+    description: "Aspect ratio of each slide, so the slider has its height before JavaScript runs.",
+  },
+  {
+    name: "--aero-layout-width",
+    default: "100%",
+    description:
+      "The content column for an <code>aero-slider--breakout</code> slider. Slides size to this column while the track runs to the edges of the screen.",
+    example: "ex-edge-to-edge",
+  },
+];
+
+export const attributes: RefEntry[] = [
+  {
+    name: "data-aero-defer-visibility",
+    description:
+      "Reserves the space that loop clones will take before the slider starts, so a looping slider doesn't shift when JavaScript runs. Removed once it starts.",
+    example: "ex-autoplay",
+  },
+  {
+    name: "data-aero-alignment",
+    type: '"start" | "center" | "end"',
+    description:
+      "The slider sets this from <code>alignment</code>. Write it in your HTML too when you use a non-center alignment, so snapping and the reserved space match before JavaScript runs.",
+    example: "ex-autoplay",
+  },
+];
+
+attributes.push({
+  name: "data-aero-status",
+  type: "string",
+  default: '"{index} of {count}"',
+  description:
+    "Wording of the position the slider announces to screen readers when a user changes slide, for example <code>Bild {index} von {count}</code>.",
+});
+
+export const stateClasses: RefEntry[] = [
+  { name: "aero-slider--ready", description: "The slider has initialized" },
+  {
+    name: "aero-slider--draggable",
+    description:
+      "<code>draggable</code> is on. The track shows the <code>grab</code> cursor only then",
+  },
+  {
+    name: "aero-slider--dragging",
+    description: "A mouse or pen drag is in progress (<code>grabbing</code> cursor)",
+  },
+  {
+    name: "aero-slider--free",
+    description:
+      '<code>snap</code> is <code>"settle"</code> or <code>"none"</code>. Turns CSS scroll snapping off',
+  },
+  { name: "aero-slider--vertical", description: "<code>vertical</code> is on" },
+];
+
+/** Classes the slider sets on the controls, listed beside the container's state classes. */
+export const controlStates: RefEntry[] = [
+  {
+    name: "aero-slider__dot--active",
+    description: "The dot for the current position",
+  },
+  {
+    name: ":disabled",
+    description:
+      "Set on <code>aero-slider__nav--prev</code> or <code>--next</code> when it cannot go further. Never with <code>loop</code>",
+  },
+  {
+    name: "aero-slider__dot--edge",
+    description:
+      "With <code>maxDots</code>: the outermost dot of the window when more dots lie beyond it. <code>aero-slider__dot--near-edge</code> marks the next one in, and <code>aero-slider__dot--hidden</code> the dots outside the window",
+  },
+  {
+    name: "aero-slider__thumb--active",
+    description: "Set by <code>syncThumbnails</code> on the thumbnail of the current slide",
+  },
+];
+
+/** Groups a registry in the given group order; `display` maps a key to its shown name. */
+export function toRefGroups<G extends string, K extends string>(
+  registry: Record<K, Doc<G>>,
+  order: readonly G[],
+  display: (key: K) => string = (key) => key
+): RefGroup[] {
+  const docs = Object.entries(registry) as [K, Doc<G>][];
+  return order.map((title) => ({
+    title,
+    entries: docs
+      .filter(([, doc]) => doc.group === title)
+      .map(([key, { group: _, name, ...rest }]) => ({ ...rest, name: name ?? display(key) })),
+  }));
+}
+
+export const optionRefGroups = toRefGroups(options, optionGroups);
+export const instanceRefGroups = toRefGroups(instanceMembers, instanceGroups);

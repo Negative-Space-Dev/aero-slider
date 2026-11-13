@@ -1,0 +1,262 @@
+/* ── Examples menu ─────────────────────────────────────────────────────── */
+/* The trigger fills the bar's height so the pointer never leaves the menu on
+   its way down to the panel. */
+.nav-menu {
+  display: flex;
+  align-items: center;
+  height: 3.5rem;
+}
+.nav-menu__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  white-space: nowrap;
+}
+.nav-menu__trigger > svg {
+  width: 0.75rem;
+  height: 0.75rem;
+  transition: rotate 0.15s;
+}
+.nav-menu[data-open] .nav-menu__trigger {
+  color: var(--ink);
+}
+.nav-menu[data-open] .nav-menu__trigger > svg {
+  rotate: 180deg;
+}
+.nav-menu__panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: var(--docs-page-gutter);
+  left: var(--docs-page-gutter);
+  display: grid;
+  gap: 1.75rem 2.5rem;
+  padding: 1.5rem 1.75rem 1.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 1rem;
+  background: var(--paper);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.6);
+  visibility: hidden;
+  opacity: 0;
+  translate: 0 -0.25rem;
+  transition:
+    opacity 0.15s,
+    translate 0.15s,
+    visibility 0s 0.15s;
+}
+/* Covers the gap between the bar and the panel for the pointer. */
+.nav-menu__panel::before {
+  content: "";
+  position: absolute;
+  inset: -0.625rem 0 auto;
+  height: 0.625rem;
+}
+.nav-menu[data-open] .nav-menu__panel {
+  visibility: visible;
+  opacity: 1;
+  translate: 0;
+  transition-delay: 0s;
+}
+.nav-menu__intro {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .nav-menu__panel {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 3.4fr);
+  }
+  .nav-menu__intro {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding-right: 2rem;
+    border-right: 1px solid var(--line);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+  .nav-menu__intro > a {
+    margin-top: auto;
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--line-strong);
+    text-underline-offset: 0.25em;
+    transition: text-decoration-color 0.15s;
+  }
+  .nav-menu__intro > a:hover {
+    text-decoration-color: var(--accent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-menu__panel {
+    transition: none;
+  }
+}
+
+/* ── Example links, in the menu and the drawer ─────────────────────────── */
+.ex-links {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.5rem 2rem;
+}
+.ex-links__title {
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid var(--line-strong);
+}
+.ex-links ul {
+  margin-top: 0.5rem;
+}
+.ex-links a {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+  padding-block: 0.375rem;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: var(--muted);
+  transition: color 0.15s;
+}
+.ex-links a:hover {
+  color: var(--ink);
+}
+.ex-links a > span {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.ex-links a:hover > span {
+  color: var(--accent);
+}
+
+/* ── Drawer ────────────────────────────────────────────────────────────── */
+.drawer-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.25rem;
+  padding-inline: 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+@media (min-width: 640px) {
+  .drawer-button {
+    display: none;
+  }
+}
+.drawer-button > svg {
+  width: 1rem;
+  height: 1rem;
+}
+.drawer__close > svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+/* The dialog is a clear full-screen layer; the scrim and the sheet inside it
+   are positioned by the drawer script. */
+.drawer {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  /* clip, so focusing a link in the off-screen sheet cannot scroll the layer. */
+  overflow: hidden;
+  overflow: clip;
+}
+.drawer::backdrop {
+  background: transparent;
+}
+.drawer__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.6);
+  opacity: var(--drawer-dim, 0);
+  touch-action: none;
+}
+.drawer__sheet {
+  position: absolute;
+  inset: auto 0 0;
+  display: flex;
+  flex-direction: column;
+  height: 90vh;
+  height: calc(100dvh - 2.75rem);
+  border-top: 1px solid var(--line-strong);
+  border-radius: 0.875rem 0.875rem 0 0;
+  background: var(--paper);
+  /* Stays solid below the screen edge while the sheet is pulled upwards. */
+  box-shadow: 0 50vh 0 var(--paper);
+  transform: translate3d(0, 100%, 0);
+  will-change: transform;
+}
+.drawer__head {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.125rem var(--docs-page-gutter) 0.625rem calc(var(--docs-page-gutter) + 0.25rem);
+  border-bottom: 1px solid var(--line);
+  touch-action: none;
+  user-select: none;
+}
+.drawer__grabber {
+  position: absolute;
+  top: 0.3125rem;
+  left: 50%;
+  width: 2.25rem;
+  height: 0.3125rem;
+  border-radius: 9999px;
+  background: var(--line-strong);
+  translate: -50% 0;
+}
+.drawer__close {
+  display: grid;
+  place-items: center;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: 9999px;
+  background: var(--line);
+  color: var(--muted);
+}
+.drawer__body {
+  display: grid;
+  gap: 1.75rem;
+  padding: 1.25rem calc(var(--docs-page-gutter) + 0.25rem) 2.5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.drawer__top {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+.drawer .ex-links {
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 1rem;
+}
+.drawer .ex-links a,
+.drawer__sub a {
+  padding-block: 0.5rem;
+  font-size: 0.9375rem;
+}
+.drawer__sub {
+  margin-top: 0.5rem;
+}
+.drawer__sub a {
+  display: block;
+  color: var(--muted);
+}

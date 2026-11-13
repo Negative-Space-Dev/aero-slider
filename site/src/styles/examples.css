@@ -1,0 +1,396 @@
+/* ── Groups and entries ────────────────────────────────────────────────── */
+.ex-group + .ex-group {
+  margin-top: 4.5rem;
+}
+@media (min-width: 640px) {
+  .ex-group + .ex-group {
+    margin-top: 6rem;
+  }
+}
+.ex-group__title {
+  margin-bottom: 0.5rem;
+}
+
+.ex {
+  padding-top: 2rem;
+  border-top: 1px solid var(--line);
+}
+.ex + .ex {
+  margin-top: 3.5rem;
+}
+@media (min-width: 640px) {
+  .ex {
+    padding-top: 2.5rem;
+  }
+  .ex + .ex {
+    margin-top: 5rem;
+  }
+}
+.ex-group__title + .ex {
+  border-top-color: var(--line-strong);
+}
+
+.ex__head {
+  display: grid;
+  gap: 0.5rem 2.5rem;
+}
+@media (min-width: 1024px) {
+  .ex__head {
+    grid-template-columns: 18rem minmax(0, 1fr);
+    align-items: baseline;
+  }
+  .ex__meta {
+    grid-column: 1;
+  }
+  .ex__title {
+    grid-column: 1;
+  }
+  .ex__lead {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: end;
+  }
+}
+.ex__meta {
+  display: flex;
+  gap: 0.75rem;
+}
+.ex__title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  font-variant-ligatures: no-common-ligatures;
+  color: var(--ink);
+}
+.ex__lead {
+  max-width: 36rem;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+.ex__lead code,
+.ex__notes code {
+  white-space: nowrap;
+}
+
+.ex__demo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+  margin-top: 1.75rem;
+}
+.ex__sliders {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.75rem 1.5rem;
+}
+.ex__sliders--row {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+}
+.ex-slider {
+  min-width: 0;
+}
+.ex-slider__caption {
+  margin-bottom: 0.625rem;
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.ex__more {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+.ex__more > .disclosure {
+  width: 100%;
+}
+.ex__more > .disclosure > .disclosure__body {
+  margin-bottom: 0.75rem;
+}
+.ex__notes {
+  display: grid;
+  gap: 0.5rem;
+  max-width: 40rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.ex__notes > li {
+  position: relative;
+  padding-left: 1.125rem;
+  text-wrap: pretty;
+}
+.ex__notes > li::before {
+  content: "";
+  position: absolute;
+  top: 0.8em;
+  left: 0;
+  width: 0.5rem;
+  border-top: 1px solid var(--line-strong);
+}
+.ex__notes a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+}
+.ex__notes a:hover {
+  text-decoration-color: var(--accent);
+}
+
+.ex-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+}
+/* A label and its control wrap as one unit. */
+.ex-controls__row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+/* Phones: one row per control, label left and control right. */
+@media (max-width: 639.98px) {
+  .ex-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ex-controls__row {
+    justify-content: space-between;
+  }
+}
+
+/* ── Slide content ─────────────────────────────────────────────────────── */
+.aero-slider__track > .ex-wordmark {
+  align-items: stretch;
+  container-type: inline-size;
+  border-radius: var(--slide-radius);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+
+/* A product card: a tonal plate for the image, then name, price and a button. The slider
+   stretches a slide's one child to fill it, so the card is that child. */
+.aero-slider__track > .ex-product {
+  align-items: stretch;
+  /* Room for the focus ring of the link and the button, which the slide clips. */
+  padding: 0 2px 2px;
+}
+.ex-product__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.ex-product__image {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: flex-end;
+  aspect-ratio: 4 / 3;
+  padding: 0.875rem;
+  overflow: hidden;
+  border-radius: var(--slide-radius);
+  background: var(--slide-bg, var(--tone-1));
+  color: var(--slide-fg, var(--tone-1-fg));
+  box-shadow: inset 0 0 0 1px var(--slide-edge);
+}
+.ex-product__image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, currentColor 1px, transparent 1.5px) 11px 11px / 22px 22px;
+  opacity: 0.16;
+  mask-image: linear-gradient(to bottom left, #000, transparent 65%);
+  pointer-events: none;
+}
+.ex-product__image > span {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+.ex-product__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: start;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+}
+
+/* The site's arrows sit halfway down the viewport; here that is halfway down the images. */
+#product-row .aero-slider__viewport {
+  container-type: inline-size;
+}
+#product-row :is(.aero-slider__nav--prev, .aero-slider__nav--next) {
+  top: calc(
+    (100cqi - var(--aero-slide-gap) * (var(--aero-slides-per-view) - 1)) /
+      var(--aero-slides-per-view) * 0.375
+  );
+}
+.ex-product__name {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.ex-product__name:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+}
+.ex-product__price {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+.ex-product__add {
+  grid-column: 1 / -1;
+  justify-content: center;
+  margin-top: 0.5rem;
+  cursor: pointer;
+}
+
+.aero-slider__track > .ex-wordmark {
+  background: var(--surface);
+}
+.ex-wordmark {
+  user-select: none;
+}
+.ex-wordmark > span {
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: clamp(0.6875rem, 11cqi, 1.5rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  font-variant-ligatures: no-common-ligatures;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.ex-wordmark:nth-child(3n + 2) > span {
+  font-family: var(--font-mono);
+  font-size: clamp(0.5625rem, 8cqi, 1rem);
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* One line of an announcement bar. The bar is the box; the lines roll inside it. */
+#announcement .aero-slider__viewport {
+  border-radius: 0.5rem;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+.ex-message > span {
+  display: grid;
+  place-items: center;
+  padding-inline: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-align: center;
+  color: var(--ink);
+}
+
+/* ── Variant swatches ──────────────────────────────────────────────────── */
+#swatches > button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+#variant-rest > button {
+  white-space: nowrap;
+}
+.ex-swatch {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background: var(--tone-1);
+  box-shadow: 0 0 0 1px var(--line-strong);
+}
+.ex-swatch[data-variant="ceramic"] {
+  background: var(--tone-2);
+}
+.ex-swatch[data-variant="blue"] {
+  background: var(--tone-3);
+}
+
+/* ── Counter and progress bar ──────────────────────────────────────────── */
+.ex-progress {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.ex-progress__count {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.ex-progress__track {
+  flex: 1;
+  height: 2px;
+  background: var(--line-strong);
+}
+/* The bar's own rules are the example's CSS; this is its width before the script runs. */
+.ex-progress__track > div {
+  width: 20%;
+}
+
+/* ── Edge-to-edge column guide ─────────────────────────────────────────── */
+/* Spans the window and centres a column on the same variable the slider sizes
+   against, so the dashed lines fall where the active card aligns. */
+.ex-guide {
+  display: flex;
+  justify-content: center;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+}
+.ex-guide__column {
+  position: relative;
+  width: var(--content-column);
+  padding: 0.5rem 0.75rem;
+}
+.ex-guide__column::before,
+.ex-guide__column::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed var(--accent);
+}
+.ex-guide__column::before {
+  left: 0;
+}
+.ex-guide__column::after {
+  right: 0;
+}
+
+/* ── Bare controls for the styling example ─────────────────────────────── */
+/* That demo shows what its own CSS produces, so the site's arrow and dot
+   chrome is taken off first. Its sample rules use ids and win over these. */
+.ex-bare.aero-slider .aero-slider__nav--prev,
+.ex-bare.aero-slider .aero-slider__nav--next {
+  all: revert;
+}
+.ex-bare.aero-slider .aero-slider__pagination {
+  gap: 8px;
+  padding-block: 12px 16px;
+}
+.ex-bare.aero-slider .aero-slider__dot {
+  display: inline-block;
+  width: auto;
+  height: auto;
+}
+.ex-bare.aero-slider .aero-slider__dot::before {
+  all: revert;
+}

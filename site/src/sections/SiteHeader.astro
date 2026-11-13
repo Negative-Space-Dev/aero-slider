@@ -1,0 +1,156 @@
+---
+import pkg from "../../../package.json";
+import ExampleLinks from "../components/ExampleLinks.astro";
+import Logo from "../components/Logo.astro";
+import { REPO } from "../lib/site";
+import "../styles/nav.css";
+
+interface NavLink {
+  id: string;
+  label: string;
+  children?: { id: string; label: string }[];
+}
+
+// The row shows from sm up, and sub-sections from lg up, where it has room for
+// them. Below sm the same links live in the drawer.
+const links: NavLink[] = [
+  { id: "playground", label: "Playground" },
+  { id: "start", label: "Get started" },
+  { id: "examples", label: "Examples" }, // its groups are the headings in the menu
+
+  {
+    id: "api",
+    label: "API",
+    children: [
+      { id: "api-options", label: "Options" },
+      { id: "api-states", label: "States" },
+      { id: "api-methods", label: "Methods" },
+      { id: "api-events", label: "Events" },
+    ],
+  },
+];
+---
+
+<header class="sticky top-0 z-50 border-b border-line bg-paper/80 backdrop-blur-md">
+  <div class="container-page relative flex h-14 items-center justify-between gap-3">
+    <a href="/" class="flex min-w-0 items-center gap-2 text-[0.9375rem] font-medium tracking-tight text-ink">
+      <Logo class="size-5 shrink-0" />
+      <span class="whitespace-nowrap">Aero Slider</span>
+      <span class="shrink-0 rounded-full border border-line px-2 py-0.5 font-mono text-[0.6875rem] font-normal tracking-normal whitespace-nowrap text-faint max-[359px]:hidden sm:max-md:hidden lg:max-xl:hidden">
+        v{pkg.version}
+      </span>
+    </a>
+
+    <nav class="hidden items-center gap-5 text-sm text-muted sm:flex md:gap-7" aria-label="Primary">
+      {
+        links.map((link) => (
+          <div class="flex items-center gap-3.5">
+            {link.id === "examples" ? (
+              <div class="nav-menu" data-menu>
+                <a
+                  href="#examples"
+                  class="nav-link nav-menu__trigger"
+                  data-spy="examples"
+                  aria-expanded="false"
+                  aria-controls="examples-menu"
+                >
+                  Examples
+                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                    <path d="M2.5 4.5 6 8l3.5-3.5" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </a>
+                <div id="examples-menu" class="nav-menu__panel">
+                  <div class="nav-menu__intro">
+                    <p class="caption">Examples</p>
+                    <p>Eleven live examples, each with the code that runs it.</p>
+                    <a href="#examples">Browse them all</a>
+                  </div>
+                  <ExampleLinks />
+                </div>
+              </div>
+            ) : (
+              <a href={`#${link.id}`} class="nav-link whitespace-nowrap" data-spy={link.id}>
+                {link.label}
+              </a>
+            )}
+            {link.children && (
+              <span class="hidden items-center gap-3.5 border-l border-line pl-3.5 lg:flex">
+                {link.children.map((child) => (
+                  <a href={`#${child.id}`} class="nav-link nav-link--sub" data-spy={child.id} data-parent={link.id}>
+                    {child.label}
+                  </a>
+                ))}
+              </span>
+            )}
+          </div>
+        ))
+      }
+      <a href="/aeroslider.md" class="nav-link whitespace-nowrap lg:max-xl:hidden">AI Guide</a>
+      <a href={REPO} target="_blank" rel="noopener" class="shrink-0 transition-colors hover:text-ink" aria-label="GitHub">
+        <svg class="size-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            fill-rule="evenodd"
+            d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.654-1.093 2.75-1.026 2.75-1.026.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+            clip-rule="evenodd"></path>
+        </svg>
+      </a>
+    </nav>
+
+    <button type="button" class="drawer-button" data-drawer-open aria-haspopup="dialog" aria-controls="site-drawer">
+      Menu
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path d="M2.5 5.5h11M2.5 10.5h11" stroke-linecap="round" />
+      </svg>
+    </button>
+  </div>
+</header>
+
+<dialog id="site-drawer" class="drawer" aria-label="Menu">
+  <div class="drawer__scrim" data-drawer-close></div>
+  <div class="drawer__sheet">
+    <div class="drawer__head">
+      <span class="drawer__grabber" aria-hidden="true"></span>
+      <p class="caption">Menu</p>
+      <button type="button" class="drawer__close" data-drawer-close aria-label="Close menu">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+          <path d="m4.5 4.5 7 7M11.5 4.5l-7 7" stroke-linecap="round" />
+        </svg>
+      </button>
+    </div>
+    <nav class="drawer__body" aria-label="Sections">
+      {
+        links.map((link) => (
+          <section>
+            <a class="drawer__top" href={`#${link.id}`}>
+              {link.label}
+            </a>
+            {link.id === "examples" ? (
+              <ExampleLinks />
+            ) : (
+              link.children && (
+                <ul class="drawer__sub">
+                  {link.children.map((child) => (
+                    <li>
+                      <a href={`#${child.id}`}>{child.label}</a>
+                    </li>
+                  ))}
+                </ul>
+              )
+            )}
+          </section>
+        ))
+      }
+      <section>
+        <a class="drawer__top" href="/aeroslider.md">AI Guide</a>
+      </section>
+      <section>
+        <a class="drawer__top" href={REPO} target="_blank" rel="noopener">GitHub</a>
+      </section>
+    </nav>
+  </div>
+</dialog>
+
+<script>
+  import "../scripts/nav.ts";
+  import "../scripts/drawer.ts";
+</script>

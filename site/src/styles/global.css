@@ -1,21 +1,158 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Manrope";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: block;
+  src: url("@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2")
+    format("woff2-variations");
+}
+
+@font-face {
+  font-family: "Sora";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: block;
+  src: url("@fontsource-variable/sora/files/sora-latin-wght-normal.woff2")
+    format("woff2-variations");
+}
+
+@font-face {
+  font-family: "Geist Mono";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: block;
+  src: url("@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2")
+    format("woff2-variations");
+}
+
+/* Local fonts resized to take the same space as the web fonts, so the page keeps
+   its height when they arrive. Without them the page is ~400px taller until the
+   fonts load, and Safari, which has no scroll anchoring, restores a reload's
+   scroll position against that taller page and then jumps. Liberation fonts
+   share Arial's and Courier New's metrics. Numbers from @capsizecss/core, except
+   Manrope's size-adjust: Capsize gives 99.48% for regular text, but the site sets
+   most text at 500 and up, where Manrope widens and Arial does not. 104% keeps the
+   page height within a line in Safari; ascent and descent are rescaled to match. */
+@font-face {
+  font-family: "Manrope Fallback";
+  src: local("Arial"), local("ArialMT"), local("Liberation Sans");
+  ascent-override: 102.5%;
+  descent-override: 28.8461%;
+  line-gap-override: 0%;
+  size-adjust: 104%;
+}
+
+@font-face {
+  font-family: "Sora Fallback";
+  src: local("Arial"), local("ArialMT"), local("Liberation Sans");
+  ascent-override: 85.2913%;
+  descent-override: 25.4995%;
+  line-gap-override: 0%;
+  size-adjust: 113.7279%;
+}
+
+@font-face {
+  font-family: "Geist Mono Fallback";
+  src: local("Courier New"), local("CourierNewPSMT"), local("Liberation Mono");
+  ascent-override: 100.5164%;
+  descent-override: 29.5048%;
+  size-adjust: 99.9837%;
+}
+
+/* ── Tokens ─────────────────────────────────────────────────────────────
+   Every colour on the site resolves to one of these. The Tailwind palette is
+   reset below, so an off-palette class such as bg-indigo-500 generates
+   nothing instead of drifting the design. */
+:root {
+  color-scheme: dark;
+
+  --paper: #08090a;
+  --surface: #15171b;
+  --ink: #eceef1;
+  --muted: #a4aab3;
+  --subtle: #949aa3; /* dim text on a surface, where faint runs short of contrast */
+  --faint: #7c828b;
+  --line: #1b1d21;
+  --line-strong: #2d3036;
+  --accent: #6aa5ff;
+  --on-accent: #08090a;
+
+  /* Slide tones: graphite, ceramic, blue, slate, ice. Ordered so neighbours
+     always contrast, including the wrap from 5 back to 1. */
+  --tone-1: #16181c;
+  --tone-1-fg: #eceef1;
+  --tone-2: #e6e9ed;
+  --tone-2-fg: #08090a;
+  --tone-3: #6aa5ff;
+  --tone-3-fg: #08090a;
+  --tone-4: #262a30;
+  --tone-4-fg: #eceef1;
+  --tone-5: #c6d9fb;
+  --tone-5-fg: #08090a;
+  --slide-edge: rgb(255 255 255 / 0.06);
+
+  --docs-page-gutter: 1rem;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --docs-page-gutter: 1.5rem;
+  }
+}
+
+@theme {
+  --color-*: initial;
+  --font-sans:
+    "Manrope", "Manrope Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display:
+    "Sora", "Sora Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:
+    "Geist Mono", "Geist Mono Fallback", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+}
+
+/* ── Base ───────────────────────────────────────────────────────────── */
 /* Disable double-tap zoom on the whole page; keep pinch-to-zoom */
 html {
   touch-action: manipulation;
   scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
   scrollbar-gutter: stable;
 }
 
 body {
-  font-family:
-    "Inter",
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  /* Light text on black reads tighter than it is; a little tracking opens it up. */
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 ::-webkit-scrollbar {
@@ -26,190 +163,1129 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--line-strong);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--faint);
 }
 
-/* Nav buttons: require aero-slider__nav--prev / --next for discovery; style with Tailwind */
+/* Headings are set in the display face. Layered, so a font-mono utility on a
+   code-identifier heading still wins. */
+@layer base {
+  /* Sora's fi ligature fuses the two letters into one shape at display sizes. */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-variant-ligatures: no-common-ligatures;
+  }
+
+  /* The medium body weight is for Manrope only; mono text stays regular
+     unless a utility or component sets its own weight. */
+  code,
+  pre,
+  .font-mono {
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+}
+
+@layer components {
+  .container-page {
+    width: 100%;
+    max-width: 72rem;
+    margin-inline: auto;
+    padding-inline: var(--docs-page-gutter);
+  }
+
+  /* Small uppercase mono caption used for eyebrows, table heads and labels. */
+  .caption {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+
+  /* Running documentation text. */
+  /* 36rem holds a line of Manrope at this size to roughly 75 characters. */
+  .copy {
+    max-width: 36rem;
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+  .copy > * + * {
+    margin-top: 1rem;
+  }
+  .copy p {
+    text-wrap: pretty;
+  }
+  .copy strong {
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .copy a,
+  .doc-table a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--line-strong);
+    text-underline-offset: 3px;
+    transition: text-decoration-color 0.15s;
+  }
+  .copy a:hover,
+  .doc-table a:hover {
+    text-decoration-color: var(--accent);
+  }
+
+  :not(pre) > code {
+    padding: 0.125rem 0.375rem;
+    border: 1px solid var(--line);
+    border-radius: 0.375rem;
+    background: var(--surface);
+    font-family: var(--font-mono);
+    font-size: 0.8125em;
+    color: var(--ink);
+    /* Inline-block moves a whole identifier to the next line instead of
+       splitting it at a hyphen; it only wraps inside when wider than the line. */
+    display: inline-block;
+    max-width: 100%;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .note {
+    max-width: 36rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--line);
+    border-left: 2px solid var(--accent);
+    border-radius: 0.5rem;
+    background: var(--surface);
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    color: var(--muted);
+    text-wrap: pretty;
+  }
+  .note strong {
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.25rem;
+    padding-inline: 0.875rem;
+    border: 1px solid var(--line-strong);
+    border-radius: 0.5rem;
+    background: var(--surface);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--ink);
+    transition:
+      border-color 0.15s,
+      background-color 0.15s;
+  }
+  .btn:hover {
+    border-color: var(--faint);
+  }
+
+  /* Segmented control: buttons with data-active, or radios inside labels. */
+  .segmented {
+    display: inline-flex;
+    padding: 2px;
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    background: var(--paper);
+  }
+  .segmented > button,
+  .segmented > label > span {
+    display: block;
+    flex: 1;
+    padding: 0.3125rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    text-align: center;
+    color: var(--muted);
+    cursor: pointer;
+    transition:
+      color 0.15s,
+      background-color 0.15s;
+  }
+  .segmented > label {
+    position: relative;
+    flex: 1;
+  }
+  .segmented > button:hover,
+  .segmented > label:hover > span {
+    color: var(--ink);
+  }
+  .segmented > button[data-active],
+  .segmented > label > input:checked + span {
+    background: var(--line-strong);
+    color: var(--ink);
+  }
+  .segmented > label > input:focus-visible + span {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* On/off chip: a visually hidden checkbox followed by a span. The dot is an
+     indicator light, lit in the accent when the option is on. */
+  .toggle {
+    position: relative;
+    display: block;
+  }
+  .toggle > span {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    height: 2.25rem;
+    padding-inline: 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    transition:
+      color 0.15s,
+      border-color 0.15s,
+      background-color 0.15s;
+  }
+  .toggle > span::before {
+    content: "";
+    flex: none;
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 9999px;
+    background: var(--line-strong);
+    transition:
+      background-color 0.15s,
+      box-shadow 0.15s;
+  }
+  .toggle:hover > span {
+    border-color: var(--line-strong);
+    color: var(--ink);
+  }
+  .toggle > input:checked + span {
+    border-color: var(--line-strong);
+    background: var(--surface);
+    color: var(--ink);
+  }
+  .toggle > input:checked + span::before {
+    background: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+  .toggle > input:focus-visible + span {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  input[type="range"] {
+    display: block;
+    width: 100%;
+    height: 1.25rem;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 2px;
+    border-radius: 1px;
+    background: var(--line-strong);
+  }
+  input[type="range"]::-moz-range-track {
+    height: 2px;
+    border-radius: 1px;
+    background: var(--line-strong);
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    width: 14px;
+    height: 14px;
+    margin-top: -6px;
+    appearance: none;
+    border-radius: 50%;
+    background: var(--ink);
+    box-shadow: 0 0 0 3px var(--surface);
+    transition: transform 0.15s;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--ink);
+    box-shadow: 0 0 0 3px var(--surface);
+    transition: transform 0.15s;
+  }
+  input[type="range"]:hover::-webkit-slider-thumb {
+    transform: scale(1.15);
+  }
+  input[type="range"]:hover::-moz-range-thumb {
+    transform: scale(1.15);
+  }
+  input[type="range"]:focus-visible {
+    outline: none;
+  }
+  input[type="range"]:focus-visible::-webkit-slider-thumb {
+    box-shadow:
+      0 0 0 3px var(--surface),
+      0 0 0 5px var(--accent);
+  }
+  input[type="range"]:focus-visible::-moz-range-thumb {
+    box-shadow:
+      0 0 0 3px var(--surface),
+      0 0 0 5px var(--accent);
+  }
+
+  /* Code blocks: Shiki's css-variables theme, drawn from the page tokens. */
+  .code {
+    --astro-code-foreground: var(--ink);
+    --astro-code-background: var(--surface);
+    --astro-code-token-constant: var(--ink);
+    --astro-code-token-string: var(--accent);
+    --astro-code-token-string-expression: var(--accent);
+    --astro-code-token-comment: var(--faint);
+    --astro-code-token-keyword: var(--muted);
+    --astro-code-token-parameter: var(--ink);
+    --astro-code-token-function: var(--ink);
+    --astro-code-token-punctuation: var(--muted);
+    --astro-code-token-link: var(--accent);
+    min-width: 0;
+  }
+  .code > figcaption {
+    margin-bottom: 0.5rem;
+  }
+  .code > pre {
+    padding: 1rem 1.125rem;
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.7;
+    tab-size: 2;
+  }
+
+  /* Tabbed code block: one frame, a tab bar (or a single label) and a copy button. */
+  .code-tabs {
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    background: var(--surface);
+  }
+  .code-tabs__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-height: 2.5rem;
+    padding-inline: 0.375rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .code-tabs__list {
+    display: flex;
+    min-width: 0;
+    align-self: stretch;
+  }
+  .code-tabs__tab {
+    margin-bottom: -1px;
+    padding-inline: 0.625rem;
+    border-bottom: 1px solid transparent;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--faint);
+    transition:
+      color 0.15s,
+      border-color 0.15s;
+  }
+  .code-tabs__tab:hover,
+  .code-tabs__tab[aria-selected="true"] {
+    color: var(--ink);
+  }
+  .code-tabs__tab[aria-selected="true"] {
+    border-bottom-color: var(--accent);
+  }
+  .code-tabs__label {
+    padding-inline: 0.625rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--faint);
+  }
+  .code-tabs__copy {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.375rem;
+    height: 1.75rem;
+    padding-inline: 0.5rem;
+    border-radius: 0.375rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--faint);
+    transition:
+      color 0.15s,
+      background-color 0.15s;
+  }
+  .code-tabs__copy:hover {
+    background: var(--line);
+    color: var(--ink);
+  }
+  .code-tabs__copy svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+  .code-tabs__copy svg[data-icon="done"] {
+    color: var(--accent);
+  }
+  .code-tabs pre {
+    margin: 0;
+    padding: 1rem 1.125rem;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.7;
+    tab-size: 2;
+  }
+
+  /* Flush variant: sits inside another panel, which supplies the frame. */
+  .code-tabs--flush {
+    border: 0;
+    border-radius: 0;
+  }
+  .code-tabs--flush .code-tabs__bar {
+    padding-inline: 0.75rem 0.5rem;
+  }
+  .code-tabs--flush pre {
+    padding-inline: 1.25rem;
+  }
+
+  .nav-link {
+    transition: color 0.15s;
+  }
+  .nav-link:hover,
+  .nav-link[aria-current] {
+    color: var(--ink);
+  }
+  .nav-link--sub {
+    font-size: 0.8125rem;
+    color: var(--faint);
+  }
+  .nav-link--sub[aria-current] {
+    color: var(--accent);
+  }
+
+  /* Collapsed content behind a real <details>, so it works from the keyboard. */
+  .disclosure > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding-block: 0.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s;
+  }
+  .disclosure > summary::-webkit-details-marker {
+    display: none;
+  }
+  .disclosure > summary::before {
+    content: "";
+    width: 0.375rem;
+    height: 0.375rem;
+    margin-inline: 0.125rem;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    rotate: -45deg;
+    transition: rotate 0.15s;
+  }
+  .disclosure[open] > summary::before {
+    rotate: 45deg;
+  }
+  .disclosure > summary:hover,
+  .disclosure[open] > summary {
+    color: var(--ink);
+  }
+  .disclosure__body {
+    margin-top: 0.75rem;
+  }
+
+  /* Playground code: a full-width row under the slider, closed until asked for. */
+  .playground-code > summary {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.875rem 1.25rem;
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s;
+  }
+  .playground-code > summary::-webkit-details-marker {
+    display: none;
+  }
+  .playground-code > summary:hover {
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+  }
+  .playground-code > summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+  .playground-code__icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    color: var(--accent);
+  }
+  .playground-code__label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .playground-code__hint {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--faint);
+  }
+  /* Chevron at the far end: right when closed, down when open. */
+  .playground-code > summary::after {
+    content: "";
+    width: 0.4375rem;
+    height: 0.4375rem;
+    margin-inline: auto 0.25rem;
+    border-right: 1.5px solid var(--muted);
+    border-bottom: 1.5px solid var(--muted);
+    rotate: -45deg;
+    transition: rotate 0.15s;
+  }
+  .playground-code[open] > summary::after {
+    rotate: 45deg;
+  }
+
+  /* Reference rows: identifier and chips on one line, the description beneath.
+     Wraps instead of scrolling, so it reads at phone width. */
+  .ref-list {
+    display: grid;
+    gap: 3rem;
+    max-width: 48rem;
+  }
+  /* Clear of the entry's intro, which sits closer to its heading than to the list. */
+  * + .ref-list {
+    margin-top: 2.5rem;
+  }
+  .ref-list__title {
+    padding-bottom: 0.625rem;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .ref-row {
+    padding-block: 1.5rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .ref-row:last-child {
+    border-bottom: 0;
+  }
+  .ref-row__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.375rem 0.5rem;
+  }
+  .ref-row__name {
+    margin-right: 0.375rem;
+    font-family: var(--font-mono);
+    font-size: 1.0625rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+  .ref-chip {
+    padding: 0.0625rem 0.375rem;
+    border: 1px solid var(--line);
+    border-radius: 0.375rem;
+    background: var(--surface);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+  }
+  .ref-chip__key {
+    color: var(--faint);
+  }
+  .ref-row__desc {
+    max-width: 40rem;
+    margin-top: 0.625rem;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--muted);
+    text-wrap: pretty;
+  }
+  .ref-row__link {
+    display: inline-block;
+    margin-top: 0.375rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--accent);
+  }
+  .ref-row__link::after {
+    content: " →";
+  }
+  .ref-row__link:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .ref-row > .disclosure {
+    margin-top: 0.5rem;
+  }
+
+  .doc-table {
+    width: 100%;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+  .doc-table th {
+    padding: 0 1rem 0.625rem 0;
+    border-bottom: 1px solid var(--line-strong);
+    text-align: left;
+    white-space: nowrap;
+  }
+  .doc-table td {
+    padding: 0.75rem 1rem 0.75rem 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .doc-table tr:last-child > td {
+    border-bottom: 0;
+  }
+  .doc-table :is(th, td):last-child {
+    padding-right: 0;
+  }
+  .doc-table td[data-mono] {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    letter-spacing: 0;
+    font-size: 0.8125rem;
+    color: var(--ink);
+  }
+  .doc-table td[data-mono="soft"] {
+    color: var(--muted);
+  }
+  .doc-table td[data-nowrap] {
+    white-space: nowrap;
+  }
+}
+
+/* ── Slider chrome ──────────────────────────────────────────────────────
+   Unlayered on purpose: the library's slider.css is unlayered too, and layered
+   rules would lose to it regardless of specificity. */
+.aero-slider {
+  --slide-radius: 0.75rem;
+}
+
+.aero-slider__viewport {
+  border-radius: var(--slide-radius);
+}
+
+/* Nav buttons sit on slides of any tone, so they stay light on every one. */
 .aero-slider__nav--prev,
 .aero-slider__nav--next {
-  @apply absolute top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full border-0 bg-white/90 p-0 text-slate-700 shadow-lg backdrop-blur-sm transition-all hover:bg-white hover:scale-105 active:scale-95 disabled:cursor-default disabled:opacity-30 disabled:hover:scale-100;
+  position: absolute;
+  top: 50%;
+  z-index: 10;
+  display: flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.92);
+  color: #0e1013;
+  font-size: 1.125rem;
+  line-height: 1;
+  box-shadow:
+    0 0 0 1px rgb(14 16 19 / 0.08),
+    0 4px 12px -2px rgb(14 16 19 / 0.18);
+  backdrop-filter: blur(8px);
+  translate: 0 -50%;
+  transition:
+    scale 0.15s ease-out,
+    opacity 0.15s,
+    background-color 0.15s;
 }
 .aero-slider__nav--prev {
-  @apply start-3;
+  inset-inline-start: 0.75rem;
 }
 .aero-slider__nav--next {
-  @apply end-3;
+  inset-inline-end: 0.75rem;
+}
+.aero-slider__nav--prev:hover,
+.aero-slider__nav--next:hover {
+  background: #fff;
+  scale: 1.06;
+}
+.aero-slider__nav--prev:active,
+.aero-slider__nav--next:active {
+  scale: 0.95;
+}
+.aero-slider__nav--prev:disabled,
+.aero-slider__nav--next:disabled {
+  cursor: default;
+  opacity: 0.35;
+  scale: 1;
+}
+:is(.aero-slider__nav--prev, .aero-slider__nav--next) svg {
+  width: 1rem;
+  height: 1rem;
 }
 /* Arrows point toward the direction of travel in RTL too */
-.aero-slider[dir="rtl"] :is(.aero-slider__nav--prev, .aero-slider__nav--next) svg {
+.aero-slider:dir(rtl) :is(.aero-slider__nav--prev, .aero-slider__nav--next) svg {
   transform: scaleX(-1);
 }
 
-.aero-slider__dot--active {
-  background-color: #1e293b !important;
-  transform: scale(1.25);
+/* Each dot is a 16 by 24px button around a 6px mark, so it is easier to tap than the mark
+   alone. The buttons touch, which sets the marks 16px apart, and the row's padding shrinks to
+   keep them where smaller buttons would put them. */
+.aero-slider__pagination {
+  gap: 0;
+  padding-block: 2px 6px;
 }
-.aero-slider__thumb--active {
-  border-color: #1e293b !important;
-  background-color: #e2e8f0 !important;
+.aero-slider__dot {
+  display: grid;
+  place-items: center;
+  width: 1rem;
+  height: 1.5rem;
+}
+.aero-slider__dot::before {
+  content: "";
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: var(--line-strong);
+  transition:
+    transform 0.2s ease-out,
+    background-color 0.2s ease-out;
+}
+.aero-slider__dot--active::before {
+  background: var(--ink);
+  transform: scale(1.35);
+}
+/* With maxDots the library shrinks the buttons at the window's edges. Shrink the marks instead,
+   so those stay full-size targets too. */
+.aero-slider__dot--edge,
+.aero-slider__dot--near-edge {
+  transform: none;
+}
+.aero-slider__dot--edge::before {
+  transform: scale(0.6);
+}
+.aero-slider__dot--near-edge::before {
+  transform: scale(0.8);
 }
 
-/* Thumbnail strip nav: smaller buttons to fit compact strip */
+/* ── Slides ─────────────────────────────────────────────────────────────
+   One flat tonal plate per slide. data-tone picks the surface; type scales
+   with the slide's own width through container units, so the same markup
+   works from a thumbnail to the hero. */
+.aero-slider__track > .slide {
+  align-items: stretch;
+  container-type: inline-size;
+  border-radius: var(--slide-radius);
+  background: var(--slide-bg, var(--tone-1));
+  color: var(--slide-fg, var(--tone-1-fg));
+  box-shadow: inset 0 0 0 1px var(--slide-edge);
+}
+/* A faint dot grid in the slide's own foreground, fading out toward the corner
+   that holds the numeral. */
+.aero-slider__track > .slide::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, currentColor 1px, transparent 1.5px) 11px 11px / 22px 22px;
+  opacity: 0.16;
+  mask-image: linear-gradient(to bottom left, #000, transparent 65%);
+  pointer-events: none;
+}
+.slide[data-tone="2"] {
+  --slide-bg: var(--tone-2);
+  --slide-fg: var(--tone-2-fg);
+}
+.slide[data-tone="3"] {
+  --slide-bg: var(--tone-3);
+  --slide-fg: var(--tone-3-fg);
+}
+.slide[data-tone="4"] {
+  --slide-bg: var(--tone-4);
+  --slide-fg: var(--tone-4-fg);
+}
+.slide[data-tone="5"] {
+  --slide-bg: var(--tone-5);
+  --slide-fg: var(--tone-5-fg);
+}
+
+.slide__body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: clamp(0.25rem, 1.5cqi, 0.75rem);
+  padding: clamp(0.5rem, 5cqi, 2rem);
+}
+.slide__label {
+  margin-bottom: auto;
+  font-family: var(--font-mono);
+  font-size: clamp(0.625rem, 2.6cqi, 0.6875rem);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+.slide__num {
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 13cqi, 5.5rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  font-variant-ligatures: no-common-ligatures;
+  line-height: 0.85;
+}
+.slide__text {
+  max-width: 22rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  opacity: 0.8;
+}
+
+/* Playground: square the slides when the gap is zero so they tile cleanly. */
+#hero-slider[data-flush] .slide {
+  border-radius: 0;
+}
+
+/* ── Thumbnail strips (doc site only) ──────────────────────────────────── */
+.aero-slider--thumbnails {
+  --slide-radius: 0.5rem;
+}
 .aero-slider--thumbnails .aero-slider__nav--prev,
 .aero-slider--thumbnails .aero-slider__nav--next {
-  @apply size-8;
+  width: 1.75rem;
+  height: 1.75rem;
 }
 .aero-slider--thumbnails .aero-slider__nav--prev {
-  @apply start-1;
+  inset-inline-start: 0.375rem;
 }
 .aero-slider--thumbnails .aero-slider__nav--next {
-  @apply end-1;
+  inset-inline-end: 0.375rem;
 }
-
-/* Thumbnail strip (doc site example only) */
+.aero-slider--thumbnails .aero-slider__track > .slide::after {
+  display: none;
+}
 .aero-slider--thumbnails .aero-slider__track > * {
-  opacity: 0.6;
+  cursor: pointer;
+  opacity: 0.45;
   transition: opacity 0.2s;
 }
-.aero-slider--thumbnails:focus {
-  outline: none;
+.aero-slider--thumbnails .aero-slider__track > *:hover {
+  opacity: 0.75;
 }
-.aero-slider--thumbnails:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 2px;
+/* The ring takes the slide's own foreground, so it reads on every tone. */
+.aero-slider--thumbnails .aero-slider__track > .aero-slider__thumb--active {
+  opacity: 1;
+  box-shadow: inset 0 0 0 2px var(--slide-fg, var(--tone-1-fg));
 }
-
+.aero-slider--thumbnails:focus,
 .aero-slider--thumbnails .aero-slider__track > *:focus {
   outline: none;
 }
+.aero-slider--thumbnails:focus-visible,
 .aero-slider--thumbnails .aero-slider__track > *:focus-visible {
-  outline: 2px solid currentColor;
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-.aero-slider--thumbnails .aero-slider__track > .aero-slider__thumb--active {
-  opacity: 1;
-}
-
-.aero-slider--no-pagination .aero-slider__pagination {
-  display: none !important;
-}
-
-/* Responsive example: layout adapts via media queries */
-.aero-slider--responsive {
-  --slides-per-view: 1;
-  --slide-gap: 8px;
-}
-
-/* Docs-only breakout demo utilities */
-:root {
-  --docs-page-gutter: 1rem;
-  /* The readable content column the breakout slider aligns its active card to. */
-  --breakout-column: calc(min(72rem, 100vw) - var(--docs-page-gutter) * 2);
-}
-
-@media (min-width: 640px) {
-  :root {
-    --docs-page-gutter: 1.5rem;
-  }
-}
-
-/* Full-bleed wrapper lets slides reach the screen edges. */
-.docs-breakout-clip {
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
-}
-
-.aero-slider--viewport-breakout-demo {
-  --slides-per-view: 1.12;
-  --slide-gap: 12px;
-  --aero-layout-width: var(--breakout-column);
-}
-
-.aero-slider--viewport-breakout-demo .aero-slider__pagination {
+/* ── Drafting sheet ─────────────────────────────────────────────────────
+   Benefits and anatomy are drawn like a technical drawing: one framed sheet
+   on a faint grid, cells split by hairlines, registration marks where the
+   hairlines meet. */
+.draft-sheet {
   position: relative;
-  z-index: 1;
+  border: 1px solid var(--line-strong);
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--line) 48%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--line) 48%, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: -1px -1px;
 }
 
-/* Guide bleeds full width and centers a column marker on the same reference the
-   slider uses, so the dashed lines land exactly where the active card aligns. */
-.docs-breakout-guide {
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
-  display: flex;
-  justify-content: center;
-}
-
-.docs-breakout-guide-column {
-  position: relative;
-  width: var(--breakout-column);
-}
-
-.docs-breakout-guide-column::before,
-.docs-breakout-guide-column::after {
+/* Registration mark: a crosshair with a ring, centred on a corner. */
+.draft-sheet::before,
+.draft-sheet::after,
+.draft-cell::before,
+.draft-cell::after {
   content: "";
   position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  border-left: 1px dashed rgb(148 163 184 / 0.7);
+  z-index: 1;
+  width: 15px;
+  height: 15px;
+  background:
+    linear-gradient(var(--faint), var(--faint)) center / 1px 100% no-repeat,
+    linear-gradient(var(--faint), var(--faint)) center / 100% 1px no-repeat,
+    radial-gradient(circle, transparent 3.5px, var(--faint) 3.5px 4.5px, transparent 4.5px);
   pointer-events: none;
 }
-
-.docs-breakout-guide-column::before {
-  left: 0;
+.draft-sheet::before {
+  top: -8px;
+  right: -8px;
+}
+.draft-sheet::after {
+  bottom: -8px;
+  left: -8px;
+}
+.draft-cell::before {
+  top: -8px;
+  left: -8px;
+}
+.draft-cell::after {
+  right: -8px;
+  bottom: -8px;
 }
 
-.docs-breakout-guide-column::after {
-  right: 0;
+.draft-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 1.25rem 1.25rem 1.5rem;
+  border-color: var(--line-strong);
 }
-
+.draft-cell + .draft-cell {
+  border-top-width: 1px;
+}
 @media (min-width: 640px) {
-  .aero-slider--viewport-breakout-demo {
-    --slides-per-view: 1.35;
-    --slide-gap: 18px;
-  }
-
-  .aero-slider--responsive {
-    --slides-per-view: 2;
-    --slide-gap: 12px;
+  .draft-cell {
+    padding: 1.5rem 1.75rem 1.75rem;
   }
 }
 @media (min-width: 1024px) {
-  .aero-slider--responsive {
-    --slides-per-view: 3;
-    --slide-gap: 16px;
+  /* Benefits: 7/5 over 5/7. */
+  .draft-sheet--benefits > .draft-cell + .draft-cell {
+    border-top-width: 0;
+  }
+  .draft-sheet--benefits > .draft-cell:nth-child(-n + 2) {
+    border-bottom-width: 1px;
+  }
+  .draft-sheet--benefits > .draft-cell:nth-child(odd) {
+    border-right-width: 1px;
+  }
+
+  /* Anatomy: the drawing across the top, the three layers in a row beneath it. */
+  .draft-sheet--anatomy > .draft-cell:nth-child(n + 3) {
+    border-left-width: 1px;
   }
 }
 
-@keyframes marquee {
-  0% {
-    transform: translateX(0);
+.draft-cell__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.draft-cell__meta > :first-child {
+  color: var(--accent);
+}
+.draft-cell > h3 {
+  font-size: 1.5rem;
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+@media (min-width: 1024px) {
+  .draft-cell > h3 {
+    font-size: 1.75rem;
   }
-  100% {
-    transform: translateX(calc(-100% / 3 - var(--marquee-gap, 0.75rem) / 3));
+}
+/* Benefits read claim first, drawing second. Drawings sit on the cell floor so
+   they line up across a row whatever the text length above them. */
+.draft-sheet--benefits > .draft-cell > :is(.draft-fig, .draft-fig-row) {
+  margin-top: auto;
+  padding-top: 2rem;
+}
+.draft-sheet--benefits .draft-fig {
+  margin-block: 0;
+}
+.draft-cell > h4 {
+  margin-top: 0.875rem;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.draft-cell :not(pre) > code {
+  white-space: nowrap;
+}
+/* On a phone the drawing runs to the cell's edges, which keeps its labels near 10px. */
+.draft-fig.draft-fig--anatomy {
+  width: calc(100% + 2.5rem);
+  max-width: none;
+  margin: 1rem -1.25rem;
+}
+.draft-fig.draft-fig--anatomy text {
+  font-size: 10.5px;
+  dominant-baseline: central;
+}
+/* A wider cell draws it larger, so its labels shrink to stay near 13px. */
+@media (min-width: 640px) {
+  .draft-fig.draft-fig--anatomy {
+    width: 100%;
+    max-width: 40rem;
+    margin: 1.5rem auto;
+  }
+  .draft-fig.draft-fig--anatomy text {
+    font-size: 8px;
+  }
+}
+/* Containers are never seen, so they are drawn dashed and dim. The parts a visitor sees are
+   solid and bright, and a dot that isn't the current one is only dimmer. */
+.draft-fig .dr-box {
+  stroke: var(--faint);
+  stroke-dasharray: 3 3;
+  opacity: 0.7;
+}
+.draft-fig .dr-part {
+  stroke: var(--ink);
+}
+.draft-fig.draft-fig--anatomy .dr-dot {
+  stroke: none;
+  fill: var(--faint);
+  opacity: 0.6;
+}
+.draft-fig.draft-fig--anatomy .dr-dot--active {
+  fill: var(--ink);
+  opacity: 1;
+}
+.draft-cell a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+}
+.draft-cell a:hover {
+  text-decoration-color: var(--accent);
+}
+.draft-cell > p {
+  max-width: 34rem;
+  margin-top: 0.5rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+.draft-note {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .draft-fig-row {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+  }
+  .draft-fig-row > .draft-fig {
+    max-width: 24rem;
+  }
+  .draft-note {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    line-height: 1.7;
+    color: var(--faint);
+    white-space: pre;
+  }
+  .draft-note b {
+    font-weight: 500;
+    color: var(--accent);
   }
 }
 
-@keyframes marquee-reverse {
-  0% {
-    transform: translateX(calc(-100% / 3 - var(--marquee-gap, 0.75rem) / 3));
-  }
-  100% {
-    transform: translateX(0);
-  }
+/* Line drawings. Strokes stay one device pixel at any scale. */
+.draft-fig {
+  display: block;
+  width: 100%;
+  max-width: 28rem;
+  height: auto;
+  margin-block: 1.5rem 1.75rem;
+  overflow: hidden;
+}
+.draft-fig :is(path, rect, circle) {
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.draft-fig :is(path, rect, circle):not([fill]) {
+  fill: none;
+}
+.draft-fig .dr-strong {
+  stroke: var(--line-strong);
+}
+.draft-fig .dr-faint {
+  stroke: var(--faint);
+}
+.draft-fig .dr-muted {
+  stroke: var(--muted);
+}
+.draft-fig .dr-accent {
+  stroke: var(--accent);
+}
+.draft-fig .dr-dashed {
+  stroke-dasharray: 3 3;
+}
+.draft-fig .dr-dashed-fine {
+  stroke-dasharray: 2 2;
+}
+.draft-fig .dr-fill {
+  fill: var(--faint);
+}
+.draft-fig text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.01em;
+  fill: var(--faint);
+}
+.draft-fig .dr-value {
+  fill: var(--ink);
+}
+.draft-fig .dr-accent-text {
+  fill: var(--accent);
 }
 
-.animate-marquee {
-  animation: marquee 50s linear infinite;
-}
-
-.animate-marquee-reverse {
-  animation: marquee-reverse 50s linear infinite;
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 @keyframes shake {

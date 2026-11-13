@@ -1,0 +1,211 @@
+---
+import CodeTabs from "../components/CodeTabs.astro";
+import type { CodeTab } from "../lib/code";
+
+const CDN = "https://unpkg.com/aero-slider/dist";
+
+const markup = `<div class="aero-slider" role="region" aria-roledescription="carousel" aria-label="Featured">
+  <div class="aero-slider__viewport">
+    <!-- Optional: arrows, placed before the track -->
+    <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">‹</button>
+    <button type="button" class="aero-slider__nav--next" aria-label="Next slide">›</button>
+
+    <div class="aero-slider__track">
+      <div role="group" aria-roledescription="slide" aria-label="1 of 3">Slide 1</div>
+      <div role="group" aria-roledescription="slide" aria-label="2 of 3">Slide 2</div>
+      <div role="group" aria-roledescription="slide" aria-label="3 of 3">Slide 3</div>
+    </div>
+  </div>
+
+  <!-- Optional: pagination, with one dot as a template -->
+  <div class="aero-slider__pagination" role="group" aria-label="Slides">
+    <button type="button" class="aero-slider__dot" aria-label="Go to slide {index}"></button>
+  </div>
+</div>`;
+
+const load: CodeTab[] = [
+  {
+    label: "Package",
+    lang: "javascript",
+    code: `import { createSlider } from "aero-slider";
+import "aero-slider/slider.css";`,
+  },
+  {
+    label: "CDN",
+    lang: "html",
+    code: `<link rel="stylesheet" href="${CDN}/aero-slider.min.css" />
+<script type="module" src="${CDN}/aero-slider.min.js"></script>`,
+  },
+];
+
+const create: CodeTab[] = [
+  {
+    label: "Package",
+    lang: "javascript",
+    code: `const slider = createSlider(document.querySelector(".aero-slider"), { loop: true });`,
+  },
+  {
+    label: "CDN",
+    lang: "html",
+    code: `<script type="module">
+  const slider = AeroSlider.createSlider(document.querySelector(".aero-slider"), { loop: true });
+</script>`,
+  },
+];
+
+const steps = [
+  {
+    title: "Markup",
+    text: [
+      "A container, a viewport and a track. Each child of the track is a slide.",
+      "Arrows and dots are optional. Add them only if you want them.",
+      "You write the roles and labels. The slider keeps state such as <code>aria-current</code> on the active dot up to date.",
+    ],
+    tabs: [{ label: "HTML", lang: "html", code: markup }] satisfies CodeTab[],
+  },
+  {
+    title: "Load it",
+    text: "From the package, or from a CDN without a bundler. The CDN module puts an <code>AeroSlider</code> object on <code>window</code>.",
+    tabs: load,
+  },
+  {
+    title: "Create it",
+    text: "Pass the container and any options. It returns the slider instance, which is also stored on the element as <code>element.aeroSlider</code>.",
+    tabs: create,
+  },
+];
+
+const layers = [
+  {
+    tag: "HTML",
+    title: "HTML decides what exists",
+    body: "Arrows and dots are not JavaScript options. If the elements are inside the container, the slider finds them and wires them up. The dot is one template that the slider clones for each position it can scroll to.",
+  },
+  {
+    tag: "CSS",
+    title: "CSS variables decide how it looks",
+    body: "<code>--aero-slides-per-view</code>, <code>--aero-slide-gap</code> and <code>--aero-slide-aspect</code>, set on the container and changed in media queries.",
+  },
+  {
+    tag: "JS",
+    title: "JS config decides how it behaves",
+    body: '<code>loop</code>, <code>autoplay</code>, <code>snap</code>, <code>vertical</code> and the rest of the <a href="#api-options">options</a>.',
+  },
+];
+
+// The anatomy drawing. Containers, which are never seen, are named on the left; the parts a
+// visitor sees are named on the right. Every leader runs level from a dot on the edge it names.
+const slideXs = [130.5, 178.5, 226.5];
+
+interface Callout {
+  label: string;
+  /** The point on the part's edge that the leader starts from. */
+  at: [number, number];
+  side: "left" | "right";
+  /** A part a visitor sees, so its label is bright. */
+  seen?: boolean;
+  accent?: boolean;
+}
+
+const callouts: Callout[] = [
+  { label: ".aero-slider", at: [98.5, 7.5], side: "left" },
+  { label: "__viewport", at: [110.5, 21.5], side: "left" },
+  { label: "__track", at: [122.5, 35.5], side: "left" },
+  { label: "__nav--prev", at: [114.5, 54.5], side: "left", seen: true },
+  { label: "__pagination", at: [110.5, 115.5], side: "left" },
+  { label: "__nav--next", at: [282.5, 54.5], side: "right", seen: true },
+  { label: "slides", at: [266.5, 68.5], side: "right", accent: true },
+  { label: "__dot", at: [212.5, 115.5], side: "right", seen: true },
+];
+const leaderEnd = { left: 88, right: 308 };
+const labelX = { left: 82, right: 314 };
+---
+
+<section id="start" class="container-page py-12 sm:py-16">
+  <h2 class="mb-10 text-3xl font-medium tracking-[-0.025em] sm:mb-14 sm:text-4xl">Get started</h2>
+
+  <div class="space-y-16 sm:space-y-20">
+    <div>
+      <h3 class="caption mb-6">Quick start</h3>
+      <ol class="space-y-10 sm:space-y-12">
+        {
+          steps.map((step, i) => (
+            <li class="grid gap-4 border-t border-line pt-6 lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-10">
+              <div>
+                <p class="flex items-baseline gap-3">
+                  <span class="caption text-accent tabular-nums">{String(i + 1).padStart(2, "0")}</span>
+                  <span class="text-lg font-medium tracking-[-0.015em] text-ink">{step.title}</span>
+                </p>
+                {[step.text].flat().map((text) => (
+                  <p class="copy mt-2 text-[0.9375rem]" set:html={text} />
+                ))}
+              </div>
+              <CodeTabs tabs={step.tabs} group={step.tabs.length > 1 ? "setup" : undefined} class="self-start" />
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+
+    <div>
+      <h3 class="caption mb-6">Three layers</h3>
+      <div class="draft-sheet draft-sheet--anatomy grid lg:grid-cols-12">
+        <figure class="draft-cell lg:col-span-12">
+          <svg class="draft-fig draft-fig--anatomy" viewBox="-5 0 402 141" role="img" aria-labelledby="anatomy-title">
+            <title id="anatomy-title">
+              A container holds a viewport and a pagination row. The viewport holds the previous and
+              next buttons and the track, and the track holds the slides. The pagination row holds
+              one dot template and its clones.
+            </title>
+            <rect class="dr-box" x="98.5" y="0.5" width="200" height="140" rx="5" />
+            <rect class="dr-box" x="110.5" y="14.5" width="176" height="80" rx="3" />
+            <rect class="dr-box" x="122.5" y="28.5" width="152" height="52" rx="2" />
+            <rect class="dr-box" x="110.5" y="104.5" width="176" height="22" rx="3" />
+            {slideXs.map((x) => <rect class="dr-accent" x={x} y="36.5" width="40" height="36" rx="2" />)}
+            <circle class="dr-part" cx="122.5" cy="54.5" r="8" fill="var(--paper)" />
+            <path class="dr-part" d="M124 51L120.5 54.5L124 58" />
+            <circle class="dr-part" cx="274.5" cy="54.5" r="8" fill="var(--paper)" />
+            <path class="dr-part" d="M273 51L276.5 54.5L273 58" />
+            <circle class="dr-dot dr-dot--active" cx="188.5" cy="115.5" r="2.5" />
+            <circle class="dr-dot" cx="198.5" cy="115.5" r="2.5" />
+            <circle class="dr-dot" cx="208.5" cy="115.5" r="2.5" />
+            {
+              callouts.map(({ label, at: [x, y], side, seen, accent }) => (
+                <g>
+                  <path class={accent ? "dr-accent" : "dr-strong"} d={`M${x} ${y}H${leaderEnd[side]}`} />
+                  <circle cx={x} cy={y} r="1.5" stroke="none" fill={accent ? "var(--accent)" : "var(--faint)"} />
+                  <text
+                    x={labelX[side]}
+                    y={y}
+                    text-anchor={side === "left" ? "end" : "start"}
+                    class:list={[accent ? "dr-accent-text" : seen && "dr-value"]}
+                  >
+                    {label}
+                  </text>
+                </g>
+              ))
+            }
+          </svg>
+        </figure>
+
+        {
+          layers.map((layer, i) => (
+            <div class="draft-cell lg:col-span-4">
+              <div class="draft-cell__meta">
+                <span>Layer {String(i + 1).padStart(2, "0")}</span>
+                <span>{layer.tag}</span>
+              </div>
+              <h4>{layer.title}</h4>
+              <p set:html={layer.body} />
+            </div>
+          ))
+        }
+      </div>
+
+      <p class="note mt-6">
+        <strong>The library ships layout only.</strong> It has no styles for the arrow buttons and
+        no size or colour for the dots, so you style those yourself.
+      </p>
+    </div>
+  </div>
+</section>

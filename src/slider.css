@@ -6,9 +6,6 @@
   width: 100%;
   min-width: 0;
   min-height: 0;
-  --slide-aspect: 5 / 3;
-  --slides-per-view: 1;
-  --slide-gap: 0px;
   --aero-layout-width: 100%;
 }
 
@@ -19,26 +16,32 @@
 .aero-slider[data-aero-defer-visibility] {
   --aero-defer-offset: calc(
     var(--aero-layout-width, 100%) / 2 -
-      (var(--aero-layout-width, 100%) - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) /
-      (2 * var(--slides-per-view, 1))
+      (
+        var(--aero-layout-width, 100%) - var(--aero-slide-gap, 0px) *
+          (var(--aero-slides-per-view, 1) - 1)
+      ) /
+      (2 * var(--aero-slides-per-view, 1))
   );
 }
 
-.aero-slider[data-aero-defer-visibility][data-aero-alignment="left"] {
+.aero-slider[data-aero-defer-visibility][data-aero-alignment="start"] {
   --aero-defer-offset: 0px;
 }
 
-.aero-slider[data-aero-defer-visibility][data-aero-alignment="right"] {
+.aero-slider[data-aero-defer-visibility][data-aero-alignment="end"] {
   --aero-defer-offset: calc(
     var(--aero-layout-width, 100%) -
-      (var(--aero-layout-width, 100%) - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) /
-      var(--slides-per-view, 1)
+      (
+        var(--aero-layout-width, 100%) - var(--aero-slide-gap, 0px) *
+          (var(--aero-slides-per-view, 1) - 1)
+      ) /
+      var(--aero-slides-per-view, 1)
   );
 }
 
 .aero-slider[data-aero-defer-visibility] .aero-slider__track::before {
   content: "";
-  flex: 0 0 max(0px, calc(var(--aero-defer-offset, 0px) - var(--slide-gap, 0px)));
+  flex: 0 0 max(0px, calc(var(--aero-defer-offset, 0px) - var(--aero-slide-gap, 0px)));
   scroll-snap-align: none;
 }
 
@@ -64,7 +67,7 @@
   min-width: 100%;
   min-height: 0;
   box-sizing: border-box;
-  gap: var(--slide-gap, 0px);
+  gap: var(--aero-slide-gap, 0px);
   overflow: auto hidden;
   scroll-snap-type: x mandatory;
   overscroll-behavior-x: contain; /* x only, so vertical wheel scrolling still reaches the page */
@@ -85,6 +88,7 @@
   outline: none;
 }
 
+.aero-slider:focus-visible,
 .aero-slider__track:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 2px;
@@ -103,10 +107,13 @@
 .aero-slider__track > * {
   flex: 0 0
     calc(
-      (var(--aero-layout-width, 100%) - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) /
-        var(--slides-per-view, 1)
+      (
+          var(--aero-layout-width, 100%) - var(--aero-slide-gap, 0px) *
+            (var(--aero-slides-per-view, 1) - 1)
+        ) /
+        var(--aero-slides-per-view, 1)
     );
-  aspect-ratio: var(--slide-aspect, 5 / 3);
+  aspect-ratio: var(--aero-slide-aspect, 5 / 3);
   scroll-snap-align: center;
   display: flex;
   align-items: center;
@@ -117,12 +124,43 @@
   contain: layout style paint;
 }
 
-.aero-slider[data-aero-alignment="left"] .aero-slider__track > * {
+.aero-slider[data-aero-alignment="start"] .aero-slider__track > * {
   scroll-snap-align: start;
 }
 
-.aero-slider[data-aero-alignment="right"] .aero-slider__track > * {
+.aero-slider[data-aero-alignment="end"] .aero-slider__track > * {
   scroll-snap-align: end;
+}
+
+/* Read by screen readers, never seen: names the slide a user moves to. */
+.aero-slider__status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Slides and the viewport clip, so focus rings draw inside the focused box. The track takes
+   focus only when the author gives it a tabindex. */
+:where(
+  .aero-slider__track:focus-visible,
+  .aero-slider__track > :focus-visible,
+  .aero-slider__track > * :focus-visible
+) {
+  outline-offset: -2px;
+}
+
+/* The --aero-* names stop at a slide's content. A slider nested in a slide then starts from the
+   defaults, and not from the outer slider's settings.
+   A slide that is itself a slider is cut off one level up, on the slider, so the settings made
+   on it still reach its own slides. :where() keeps any rule that sets them on the nested slider
+   ahead of this one. */
+:where(.aero-slider__track > .aero-slider, .aero-slider__track > :not(.aero-slider) > *) {
+  --aero-slides-per-view: initial;
+  --aero-slide-gap: initial;
+  --aero-slide-aspect: initial;
 }
 
 .aero-slider__track > * > * {
@@ -199,9 +237,9 @@
 }
 
 /* === Vertical (ttb) === */
-/* Viewport height derives from width via --slide-aspect, as for horizontal. */
+/* Viewport height derives from width via --aero-slide-aspect, as for horizontal. */
 .aero-slider--vertical .aero-slider__viewport {
-  aspect-ratio: var(--slide-aspect, 5 / 3);
+  aspect-ratio: var(--aero-slide-aspect, 5 / 3);
 }
 
 .aero-slider--vertical .aero-slider__track {
@@ -216,7 +254,8 @@
 
 .aero-slider--vertical .aero-slider__track > * {
   flex-basis: calc(
-    (100% - var(--slide-gap, 0px) * (var(--slides-per-view, 1) - 1)) / var(--slides-per-view, 1)
+    (100% - var(--aero-slide-gap, 0px) * (var(--aero-slides-per-view, 1) - 1)) /
+      var(--aero-slides-per-view, 1)
   );
   aspect-ratio: auto;
   width: 100%;

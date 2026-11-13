@@ -1,0 +1,29 @@
+---
+import { exampleNav } from "../data/examples";
+
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+---
+
+<div class:list={["ex-links", className]}>
+  {
+    exampleNav.map((group) => (
+      <div>
+        <p class="caption ex-links__title">{group.title}</p>
+        <ul>
+          {group.items.map((item) => (
+            <li>
+              <a href={`#${item.id}`}>
+                <span>{String(item.index).padStart(2, "0")}</span>
+                {item.title}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))
+  }
+</div>

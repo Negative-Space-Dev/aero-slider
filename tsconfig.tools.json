@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src",
+    "test/*.spec.ts",
+    "test/fixtures.ts",
+    "test/server.ts",
+    "playwright.config.ts",
+    "build.ts",
+    "scripts"
+  ],
+  "compilerOptions": { "resolveJsonModule": true, "moduleDetection": "force" }
+}

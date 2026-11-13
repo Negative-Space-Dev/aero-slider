@@ -1,6 +1,9 @@
 ---
 import "aero-slider/slider.css";
 import "../styles/global.css";
+import manropeUrl from "@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2?url";
+import soraUrl from "@fontsource-variable/sora/files/sora-latin-wght-normal.woff2?url";
+import geistMonoUrl from "@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2?url";
 
 interface Props {
   title: string;
@@ -20,6 +23,8 @@ const {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#08090a" />
     <title>{title}</title>
     <meta name="title" content={title} />
     <meta name="description" content={description} />
@@ -38,26 +43,16 @@ const {
     <meta property="twitter:description" content={description} />
     <meta property="twitter:image" content={new URL(image, Astro.url)} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="preload"
-      href="https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7W0Q5nw.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=block"
-      rel="stylesheet"
-    />
+    <link rel="preload" href={manropeUrl} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={soraUrl} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={geistMonoUrl} as="font" type="font/woff2" crossorigin />
     <!-- Hero slider defaults match config form to prevent layout shift before JS -->
     <style is:inline id="hero-defaults">
-      #hero-slider{--slides-per-view:1;--slide-gap:10px}
+      #hero-slider{--aero-slides-per-view:1;--aero-slide-gap:10px}
     </style>
     <slot name="head" />
   </head>
-  <body class="bg-slate-50 text-slate-950 selection:bg-indigo-100 selection:text-indigo-900 overflow-x-hidden">
+  <body class="overflow-x-hidden">
     <!-- Critical: inject hero slider CSS from URL params before first paint -->
     <script is:inline>
       (function(){
@@ -70,14 +65,15 @@ const {
         var spvVal = 1;
         if (!isNaN(spvIdx) && spvIdx >= 0 && spvIdx < SPV.length) {
           spvVal = SPV[spvIdx];
-          parts.push('--slides-per-view:' + spvVal);
+          parts.push('--aero-slides-per-view:' + spvVal);
         }
         var gap = parseInt(p.get('gap'), 10);
         if (!isNaN(gap) && gap >= 0 && gap <= 32) {
-          parts.push('--slide-gap:' + gap + 'px');
+          parts.push('--aero-slide-gap:' + gap + 'px');
         }
         var align = p.get('align');
-        if (align !== 'left' && align !== 'right' && align !== 'center') {
+        align = { left: 'start', right: 'end' }[align] || align;
+        if (align !== 'start' && align !== 'end' && align !== 'center') {
           align = 'center';
         }
         var loop = p.get('loop') === '1' || p.get('loop') === 'on' || p.get('loop') === 'true';
@@ -87,15 +83,15 @@ const {
           s.textContent = '#hero-slider{' + parts.join(';') + '}';
           document.head.appendChild(s);
         }
-        if (loop && align !== 'left') {
+        if (loop && align !== 'start') {
           document.documentElement.setAttribute('data-aero-defer-hero', '');
-          var offset = align === 'right'
-            ? 'calc(100% - (100% - var(--slide-gap,0px) * (var(--slides-per-view,1) - 1)) / var(--slides-per-view,1))'
-            : 'calc(50% - (100% - var(--slide-gap,0px) * (var(--slides-per-view,1) - 1)) / (2 * var(--slides-per-view,1)))';
-          var snap = align === 'right' ? 'end' : 'center';
+          var offset = align === 'end'
+            ? 'calc(100% - (100% - var(--aero-slide-gap,0px) * (var(--aero-slides-per-view,1) - 1)) / var(--aero-slides-per-view,1))'
+            : 'calc(50% - (100% - var(--aero-slide-gap,0px) * (var(--aero-slides-per-view,1) - 1)) / (2 * var(--aero-slides-per-view,1)))';
+          var snap = align === 'end' ? 'end' : 'center';
           var s2 = document.createElement('style');
           s2.id = 'config-inline-defer';
-          s2.textContent = '[data-aero-defer-hero] #hero-slider .aero-slider__track::before{content:"";flex:0 0 max(0px,calc(' + offset + ' - var(--slide-gap,0px)));scroll-snap-align:none}[data-aero-defer-hero] #hero-slider .aero-slider__track>*{scroll-snap-align:' + snap + '}';
+          s2.textContent = '[data-aero-defer-hero] #hero-slider .aero-slider__track::before{content:"";flex:0 0 max(0px,calc(' + offset + ' - var(--aero-slide-gap,0px)));scroll-snap-align:none}[data-aero-defer-hero] #hero-slider .aero-slider__track>*{scroll-snap-align:' + snap + '}';
           document.head.appendChild(s2);
         }
       })();

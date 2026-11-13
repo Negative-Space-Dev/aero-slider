@@ -1,0 +1,52 @@
+---
+import CodeTabs from "../../components/CodeTabs.astro";
+import Entry from "../../components/Entry.astro";
+import type { CodeTab } from "../../lib/code";
+
+const usage: CodeTab[] = [
+  {
+    label: "JavaScript",
+    lang: "javascript",
+    code: `import { createSlider } from "aero-slider";
+
+const el = document.querySelector(".aero-slider");
+const slider = createSlider(el, { loop: true });
+
+el.aeroSlider === slider; // true`,
+  },
+];
+
+const errors = [
+  { message: "aero-slider: missing .aero-slider__track", cause: "No track element inside the container." },
+  { message: "aero-slider: no slides found", cause: "The track has no children." },
+];
+---
+
+<Entry tag="Function" title="createSlider(element, config?)" mono id="api-create">
+  <div class="api-split">
+    <div class="copy">
+      <p>
+        Turns a container into a slider and returns its instance. <code>config</code> takes any of the
+        <a href="#api-options">options</a> below. The instance is also stored on the element as
+        <code>element.aeroSlider</code>, so other code can reach it from the DOM.
+      </p>
+      <p>
+        Arrows and dots are not options. Put them in the markup and the slider wires them up; see
+        <a href="#ex-styling">arrows and dots</a>.
+      </p>
+    </div>
+    <CodeTabs tabs={usage} />
+  </div>
+
+  <dl class="api-throws">
+    <dt class="caption">Throws</dt>
+    {
+      errors.map((error) => (
+        <dd>
+          <code>{error.message}</code>
+          <span>{error.cause}</span>
+        </dd>
+      ))
+    }
+  </dl>
+</Entry>

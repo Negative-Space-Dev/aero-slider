@@ -1,0 +1,21 @@
+---
+import Entry from "../../components/Entry.astro";
+import RefList from "../../components/RefList.astro";
+import { instanceRefGroups } from "../../data/api";
+---
+
+<Entry tag="Instance" title="Methods" id="api-methods">
+  <div class="copy">
+    <p>
+      <code>createSlider</code> returns an instance with methods to move, pause, change and tear down
+      the slider.
+    </p>
+  </div>
+
+  <RefList groups={instanceRefGroups} />
+
+  <p class="note">
+    The instance is also on the container as <code>element.aeroSlider</code>, so code that only has
+    the element can still reach it. <code>destroy()</code> deletes it.
+  </p>
+</Entry>

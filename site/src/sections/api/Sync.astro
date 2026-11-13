@@ -1,0 +1,66 @@
+---
+import Entry from "../../components/Entry.astro";
+import RefList from "../../components/RefList.astro";
+import type { RefGroup } from "../../data/api";
+
+const groups: RefGroup[] = [
+  {
+    title: "Parameters",
+    entries: [
+      { name: "primary", type: "SliderInstance", description: "The main slider." },
+      {
+        name: "thumbnails",
+        type: "SliderInstance",
+        description:
+          "The strip. It needs the same number of slides as <code>primary</code>: thumbnail <code>i</code> stands for slide <code>i</code>.",
+      },
+      {
+        name: "options.loop",
+        type: "boolean",
+        default: "true",
+        description: "Whether the strip loops.",
+      },
+    ],
+  },
+  {
+    title: "Returns",
+    entries: [
+      {
+        name: "teardown",
+        type: "() => void",
+        description:
+          "Removes the sync. Call it before destroying either slider.",
+      },
+    ],
+  },
+];
+
+const behaviours = [
+  "Turns dragging off on the strip and sets its <code>loop</code>, through <code>thumbnails.update()</code>, so clicks alone drive it.",
+  "A click on a thumbnail, loop clones included, calls <code>primary.goTo()</code> with its index.",
+  "On each <code>aero:slideChange</code> from <code>primary</code>, the matching thumbnails get <code>aero-slider__thumb--active</code> and <code>aria-current=\"true\"</code>, and the strip scrolls to them with <code>thumbnails.goTo()</code>.",
+  "Starts with the primary's current slide marked.",
+  'Leaves the strip\'s alignment alone. Set <code>alignment: "center"</code> on it to keep the active thumbnail centred.',
+  "The teardown removes its listeners, the pointer cursor, the active class and <code>aria-current</code>. It doesn't destroy either slider or undo the <code>update()</code>.",
+];
+---
+
+<Entry tag="Function" title="syncThumbnails(primary, thumbnails, options?)" mono id="api-sync">
+  <div class="copy">
+    <p>
+      Links a thumbnail strip to a main slider: a click on a thumbnail shows that slide, and the
+      strip follows the main slider however it moves. Both are ordinary sliders made with
+      <code>createSlider</code>. The <a href="#ex-gallery">gallery example</a> has a working demo
+      and its code.
+    </p>
+  </div>
+
+  <RefList groups={groups} />
+
+  <div>
+    <h4 class="caption api-behaviours__title">What it does</h4>
+    <ul class="api-behaviours">
+      {behaviours.map((item) => <li set:html={item} />)}
+    </ul>
+  </div>
+</Entry>

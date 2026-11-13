@@ -1,0 +1,18 @@
+---
+interface Props {
+  /** Summary text, e.g. "Show code" or "Good to know". */
+  label?: string;
+  open?: boolean;
+  id?: string;
+  class?: string;
+}
+
+const { label = "Show code", open = false, id, class: className } = Astro.props;
+---
+
+<details class:list={["disclosure", className]} open={open} id={id}>
+  <summary>{label}</summary>
+  <div class="disclosure__body">
+    <slot />
+  </div>
+</details>

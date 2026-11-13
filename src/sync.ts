@@ -22,9 +22,15 @@ export function syncThumbnails(
   const controller = new AbortController();
   const { signal } = controller;
 
-  // Drag would swallow clicks, and clicks alone drive the strip.
-  thumbnails.update({ draggable: false, loop: options.loop ?? true });
+  thumbnails.update({ loop: options.loop ?? true });
+  // A thumbnail is a click target, so the strip shows a pointer rather than a grab hand.
+  // Dragging the strip still shows the grabbing hand.
   track.style.cursor = "pointer";
+  const showCursor = (cursor: string) => (event: Event) => {
+    if (event.target === thumbnails.element) track.style.cursor = cursor;
+  };
+  thumbnails.element.addEventListener("aero:dragStart", showCursor("grabbing"), { signal });
+  thumbnails.element.addEventListener("aero:dragEnd", showCursor("pointer"), { signal });
 
   /** Slide index for any track child, loop clones included. */
   const indexOf = (child: Element): number => {
@@ -36,9 +42,18 @@ export function syncThumbnails(
     return (((children.indexOf(child) - firstReal) % count) + count) % count;
   };
 
+  /** Marks thumbnail `index` as the current one, or none of them. Clones stay unmarked. */
+  const mark = (index: number): void => {
+    for (const child of track.children) {
+      const active = indexOf(child) === index;
+      child.classList.toggle(ACTIVE_CLASS, active);
+      if (active && child.hasAttribute(SLIDE_INDEX_ATTR))
+        child.setAttribute("aria-current", "true");
+      else child.removeAttribute("aria-current");
+    }
+  };
   const activate = (index: number): void => {
-    for (const child of track.children)
-      child.classList.toggle(ACTIVE_CLASS, indexOf(child) === index);
+    mark(index);
     thumbnails.goTo(index);
   };
 
@@ -53,14 +68,33 @@ export function syncThumbnails(
   );
   primary.element.addEventListener(
     "aero:slideChange",
-    (event) => activate((event as CustomEvent<{ index: number }>).detail.index),
+    (event) => {
+      // A slider nested inside a primary slide bubbles its own changes through here.
+      if (event.target === primary.element) activate(event.detail.index);
+    },
+    { signal }
+  );
+
+  // refresh() renumbers the slides without a slideChange when the index stays put, and the
+  // thumbnail that now holds that index may be a new element.
+  const renumbered = new MutationObserver(() => mark(primary.currentIndex));
+  renumbered.observe(track, { subtree: true, attributeFilter: [SLIDE_INDEX_ATTR] });
+
+  const teardown = (): void => {
+    controller.abort();
+    renumbered.disconnect();
+    track.style.cursor = "";
+    if (!track.getAttribute("style")) track.removeAttribute("style");
+    mark(-1);
+  };
+  // Destroying the strip without calling the teardown still takes the marks back.
+  // A slider nested in a thumbnail bubbles its own destroy through here.
+  thumbnails.element.addEventListener(
+    "aero:destroy",
+    (event) => event.target === thumbnails.element && teardown(),
     { signal }
   );
 
   activate(primary.currentIndex);
-  return () => {
-    controller.abort();
-    track.style.cursor = "";
-    for (const child of track.children) child.classList.remove(ACTIVE_CLASS);
-  };
+  return teardown;
 }

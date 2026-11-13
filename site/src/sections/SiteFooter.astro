@@ -1,0 +1,19 @@
+---
+import Logo from "../components/Logo.astro";
+import { REPO } from "../lib/site";
+---
+
+<footer class="border-t border-line">
+  <div class="container-page flex flex-col gap-4 py-8 text-sm text-faint sm:flex-row sm:items-center sm:justify-between">
+    <p class="flex items-center gap-2.5">
+      <Logo class="size-4 shrink-0 text-ink" />
+      Aero Slider — CSS-first, dependency-free slider for the modern web.
+    </p>
+    <nav class="flex gap-6" aria-label="Footer">
+      <a href="/aeroslider.md" class="transition-colors hover:text-ink">AI Guide</a>
+      <a href={REPO} target="_blank" rel="noopener" class="transition-colors hover:text-ink">GitHub</a>
+      <a href="https://www.npmjs.com/package/aero-slider" target="_blank" rel="noopener" class="transition-colors hover:text-ink">npm</a>
+      <a href={`${REPO}/blob/main/LICENSE`} target="_blank" rel="noopener" class="transition-colors hover:text-ink">MIT License</a>
+    </nav>
+  </div>
+</footer>

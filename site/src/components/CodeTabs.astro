@@ -1,0 +1,72 @@
+---
+import { Code } from "astro:components";
+import { tabKey, type CodeTab } from "../lib/code";
+
+interface Props {
+  /** One tab renders a plain block with the tab label as its caption. */
+  tabs: CodeTab[];
+  /** Blocks sharing a group switch tabs together, matched by tab key. */
+  group?: string;
+  id?: string;
+  class?: string;
+}
+
+const { tabs, group, id, class: className } = Astro.props;
+const multi = tabs.length > 1;
+const uid = id ?? `code-${crypto.randomUUID().slice(0, 8)}`;
+---
+
+<figure class:list={["code code-tabs", className]} id={id} data-code-tabs data-tab-group={group}>
+  <div class="code-tabs__bar">
+    {
+      multi ? (
+        <div class="code-tabs__list" role="tablist" aria-label="Code">
+          {tabs.map((tab, i) => (
+            <button
+              type="button"
+              role="tab"
+              class="code-tabs__tab"
+              id={`${uid}-tab-${i}`}
+              aria-controls={`${uid}-panel-${i}`}
+              aria-selected={i === 0 ? "true" : "false"}
+              tabindex={i === 0 ? 0 : -1}
+              data-tab={tabKey(tab)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <span class="code-tabs__label">{tabs[0].label}</span>
+      )
+    }
+    <button type="button" class="code-tabs__copy" data-copy aria-label="Copy code">
+      <svg data-icon="copy" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>
+      <svg data-icon="done" hidden fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+      <span data-copy-label>Copy</span>
+    </button>
+  </div>
+  {
+    tabs.map((tab, i) => (
+      <div
+        class="code-tabs__panel"
+        id={`${uid}-panel-${i}`}
+        role={multi ? "tabpanel" : undefined}
+        aria-labelledby={multi ? `${uid}-tab-${i}` : undefined}
+        data-panel={tabKey(tab)}
+        hidden={i > 0}
+      >
+        <Code code={tab.code} lang={tab.lang} theme="css-variables" />
+      </div>
+    ))
+  }
+</figure>
+
+<script>
+  import "../scripts/code-tabs.ts";
+</script>

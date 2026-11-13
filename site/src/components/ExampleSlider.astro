@@ -1,0 +1,84 @@
+---
+import Pagination from "./Pagination.astro";
+import Slide from "./Slide.astro";
+import SliderNav from "./SliderNav.astro";
+import { sliderRole, styleOf, type DemoSlider } from "../data/examples";
+import { slideRole } from "../lib/slide";
+
+interface Props {
+  slider: DemoSlider;
+}
+
+const { slider } = Astro.props;
+// Examples keep to the two dark tones, so the controls and content read first.
+const quietTone = (i: number) => (i % 2 === 0 ? 1 : 4);
+const role = (i: number) => slideRole(i + 1, slider.slides.length);
+---
+
+<figure class="ex-slider">
+  {slider.caption && <figcaption class="caption ex-slider__caption">{slider.caption}</figcaption>}
+  <div class={slider.wrapperClass}>
+    <div
+      id={slider.id}
+      class:list={["aero-slider", slider.className, slider.chrome]}
+      style={styleOf(slider.vars)}
+      {...sliderRole(slider)}
+      {...slider.attrs}
+    >
+      <div class="aero-slider__viewport">
+        {
+          slider.nav &&
+            (slider.glyphNav ? (
+              <>
+                <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide">‹</button>
+                <button type="button" class="aero-slider__nav--next" aria-label="Next slide">›</button>
+              </>
+            ) : (
+              <SliderNav />
+            ))
+        }
+        <div class="aero-slider__track">
+          {
+            slider.slides.map((slide, i) =>
+              slide.kind === "product" ? (
+                <div class="ex-product" {...role(i)}>
+                  <div class="ex-product__card">
+                    <div class="slide ex-product__image" data-tone={slide.tone} aria-hidden="true">
+                      <span>{String(i + 1).padStart(2, "0")}</span>
+                    </div>
+                    <div class="ex-product__body">
+                      <a class="ex-product__name" href="#ex-product-row" data-demo-link>
+                        {slide.name}
+                      </a>
+                      <span class="ex-product__price">{slide.price}</span>
+                      <button type="button" class="btn ex-product__add" data-label="Add to cart">
+                        Add to cart
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : slide.kind === "wordmark" ? (
+                <div class="ex-wordmark" {...role(i)}>
+                  <span>{slide.name}</span>
+                </div>
+              ) : slide.kind === "message" ? (
+                <div class="ex-message" {...role(i)}>
+                  <span>{slide.text}</span>
+                </div>
+              ) : (
+                <Slide
+                  position={i + 1}
+                  total={slider.slides.length}
+                  thumb={slider.thumbs}
+                  {...slide}
+                  tone={slide.tone ?? quietTone(i)}
+                />
+              )
+            )
+          }
+        </div>
+      </div>
+      {slider.dots && <Pagination />}
+    </div>
+  </div>
+</figure>

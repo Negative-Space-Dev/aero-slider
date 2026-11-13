@@ -1,0 +1,41 @@
+---
+import CodeTabs from "./CodeTabs.astro";
+import Disclosure from "./Disclosure.astro";
+import type { EventEntry } from "../data/api";
+
+interface Props {
+  groups: { title: string; entries: EventEntry[] }[];
+}
+
+const { groups } = Astro.props;
+---
+
+<div class="ref-list">
+  {
+    groups.map((group) => (
+      <section class="ref-list__group">
+        <h4 class="caption ref-list__title">{group.title}</h4>
+        <ul>
+          {group.entries.map((entry) => (
+            <li class="ref-row">
+              <div class="ref-row__head">
+                <h5 class="ref-row__name">aero:{entry.key}</h5>
+                <span class="ref-chip">
+                  <span class="sr-only">event.detail: </span>
+                  {entry.type}
+                </span>
+              </div>
+              <div class="ref-row__desc" set:html={entry.description} />
+              <p class="ref-row__desc api-event__use">
+                <span class="api-event__label">Use it for</span> <span set:html={entry.useFor} />
+              </p>
+              <Disclosure label="Show recipe">
+                <CodeTabs tabs={entry.snippet} />
+              </Disclosure>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))
+  }
+</div>

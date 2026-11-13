@@ -1,4 +1,4 @@
-export type SliderAlignment = "left" | "center" | "right";
+export type SliderAlignment = "start" | "center" | "end";
 
 /**
  * How the track comes to rest. `native` uses CSS scroll snapping; `settle` scrolls freely, then
@@ -13,19 +13,37 @@ export interface SliderConfig {
    * `autoplaySpeed` like a ticker; it implies `loop` and `snap: "none"`.
    */
   autoplay?: boolean | "continuous";
+  /** Milliseconds between automatic moves, at least 100. */
   autoplayInterval?: number;
   /** Continuous autoplay speed, in pixels per second. 0 or less keeps the track still. */
   autoplaySpeed?: number;
   draggable?: boolean;
-  /** Where the active slide rests in the viewport. */
+  /**
+   * Where the active slide rests in the viewport. The values are logical: `"start"` is the left
+   * edge in a left-to-right slider, the right edge in a right-to-left one and the top edge in a
+   * vertical one, and `"end"` is the opposite edge. Defaults to `"center"`.
+   */
   alignment?: SliderAlignment;
   /** Show at most this many pagination dots, scrolling them iOS-style. 0 = unlimited. */
   maxDots?: number;
-  /** Selector for elements inside slides that should not start a mouse drag. */
+  /**
+   * Selector for elements inside slides that should not start a mouse drag. Defaults to form
+   * fields and media controls, which are dragged themselves: `"input, textarea, select,
+   * [contenteditable], audio[controls], video[controls]"`. Your value replaces the default.
+   */
   noDrag?: string;
-  /** Slides advanced per next()/prev() call. */
+  /**
+   * Stops advanced per next()/prev() call, a whole number of at least 1. A stop is a distinct
+   * resting place: without loop, the slides that clamp to the same spot near an end share one.
+   */
   perMove?: number;
-  direction?: "ltr" | "rtl" | "ttb";
+  /**
+   * Scroll top to bottom, whatever the text direction. Without it the slider is horizontal and
+   * follows the container's computed direction, so `dir="rtl"` on it or an ancestor makes it
+   * right-to-left. That direction is read when the slider starts; call `refresh()` after
+   * changing `dir`.
+   */
+  vertical?: boolean;
   /** How the track comes to rest after scrolling. Defaults to `"native"`. */
   snap?: SliderSnap;
   /**
@@ -53,9 +71,8 @@ export interface SliderInstance {
   pause(): void;
   resume(): void;
   update(config?: SliderConfig): void;
+  /** Re-reads the slides from the track and rebuilds, resting on the same index. */
   refresh(): void;
-  add(slides: HTMLElement | HTMLElement[], index?: number): void;
-  remove(index: number | number[]): void;
   destroy(): void;
 }
 
@@ -76,8 +93,13 @@ export interface SliderEventMap {
 export type SliderEvent = keyof SliderEventMap;
 export type SliderEventData<E extends SliderEvent = SliderEvent> = SliderEventMap[E];
 
+export type SliderDomEventMap = {
+  [E in SliderEvent as `aero:${E}`]: CustomEvent<SliderEventMap[E]>;
+};
+
 declare global {
   interface HTMLElement {
     aeroSlider?: SliderInstance;
   }
+  interface HTMLElementEventMap extends SliderDomEventMap {}
 }

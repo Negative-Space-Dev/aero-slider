@@ -1,0 +1,57 @@
+---
+import CodeTabs from "./CodeTabs.astro";
+import Disclosure from "./Disclosure.astro";
+import ExampleSlider from "./ExampleSlider.astro";
+import { exampleGroups, exampleTabs, examples } from "../data/examples";
+import type { ExampleId } from "../data/anchors";
+
+interface Props {
+  id: ExampleId;
+  /** 1-based position on the page. */
+  index: number;
+}
+
+const { id, index } = Astro.props;
+const example = examples[id];
+const group = exampleGroups.find((g) => g.key === example.group)!;
+const multi = example.sliders.length > 1;
+const css = example.css;
+---
+
+<article id={id} class="ex">
+  <header class="ex__head">
+    <p class="ex__meta caption">
+      <span class="text-accent tabular-nums">{String(index).padStart(2, "0")}</span>
+      <span>{group.title}</span>
+    </p>
+    <h4 class="ex__title">{example.title}</h4>
+    <p class="ex__lead" set:html={example.lead} />
+  </header>
+
+  {css && <style is:inline set:html={css} />}
+
+  <div class="ex__demo">
+    <slot name="controls" />
+    <div class:list={["ex__sliders", multi && `ex__sliders--${example.layout ?? "row"}`]}>
+      {example.sliders.map((slider) => <ExampleSlider slider={slider} />)}
+    </div>
+    <slot name="below" />
+  </div>
+
+  <div class="ex__more">
+    <Disclosure>
+      <CodeTabs tabs={exampleTabs(example)} />
+    </Disclosure>
+    {
+      example.notes && (
+        <Disclosure label="Good to know">
+          <ul class="ex__notes">
+            {example.notes.map((note) => (
+              <li set:html={note} />
+            ))}
+          </ul>
+        </Disclosure>
+      )
+    }
+  </div>
+</article>

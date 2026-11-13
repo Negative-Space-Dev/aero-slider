@@ -1,0 +1,31 @@
+---
+interface Props {
+  /** Short caption before the title: an index for examples, a kind for API items. */
+  tag: string;
+  title: string;
+  /** Set the title in the mono face, for code identifiers. */
+  mono?: boolean;
+  id?: string;
+}
+
+const { tag, title, mono = false, id } = Astro.props;
+---
+
+<article id={id} class="border-t border-line-strong pt-8 sm:pt-10">
+  <header class="mb-6 sm:mb-8">
+    <p class="caption text-accent tabular-nums">{tag}</p>
+    <h3
+      class:list={[
+        "mt-2 font-medium text-ink",
+        mono
+          ? "font-mono text-lg break-words sm:text-xl"
+          : "text-2xl tracking-[-0.02em] sm:text-3xl",
+      ]}
+    >
+      {title}
+    </h3>
+  </header>
+  <div class="space-y-5">
+    <slot />
+  </div>
+</article>

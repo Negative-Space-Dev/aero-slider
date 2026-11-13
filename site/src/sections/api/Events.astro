@@ -1,0 +1,79 @@
+---
+import ApiEventList from "../../components/ApiEventList.astro";
+import CodeTabs from "../../components/CodeTabs.astro";
+import Entry from "../../components/Entry.astro";
+import { eventEntryGroups } from "../../data/api";
+import type { CodeTab } from "../../lib/code";
+
+const listen: CodeTab[] = [
+  {
+    label: "Listen",
+    lang: "javascript",
+    code: `el.addEventListener("aero:slideChange", (event) => {
+  console.log(event.detail.index);
+});`,
+  },
+];
+
+const notes: { kind: string; title: string; body: string; code?: CodeTab[] }[] = [
+  {
+    kind: "Gotcha",
+    title: "One listener for every slider",
+    body: "Events bubble, so a listener on <code>document</code> hears every slider on the page. <code>event.target</code> is the container and <code>event.target.aeroSlider</code> its instance. If sliders nest, check <code>event.target === el</code>.",
+  },
+  {
+    kind: "TypeScript",
+    title: "Typing event data",
+    body: "<code>addEventListener</code> types these events as a plain <code>Event</code>. Cast to <code>CustomEvent</code> with the exported <code>SliderEventData</code> to type <code>detail</code>.",
+    code: [
+      {
+        label: "TypeScript",
+        lang: "typescript",
+        code: `import type { SliderEventData } from "aero-slider";
+
+type DragEnd = CustomEvent<SliderEventData<"dragEnd">>;
+
+el.addEventListener("aero:dragEnd", (event) => {
+  const { detail } = event as DragEnd;
+  console.log(detail.fromIndex, detail.index);
+});`,
+      },
+    ],
+  },
+];
+---
+
+<Entry tag="DOM events" title="Events" id="api-events">
+  <div class="api-split">
+    <div class="copy">
+      <p>
+        The slider reports what it does as events on its container. Each is a native
+        <code>CustomEvent</code> named with the <code>aero:</code> prefix, carries its data on
+        <code>event.detail</code>, and bubbles.
+      </p>
+      <p>
+        Each event below says when it fires and what it is useful for, with a recipe to copy. In
+        the recipes, <code>el</code> is the container.
+      </p>
+    </div>
+    <CodeTabs tabs={listen} />
+  </div>
+
+  <ApiEventList groups={eventEntryGroups} />
+
+  <div class="draft-sheet api-gotchas">
+    {
+      notes.map((note, i) => (
+        <div class="draft-cell">
+          <div class="draft-cell__meta">
+            <span>Note {String(i + 1).padStart(2, "0")}</span>
+            <span>{note.kind}</span>
+          </div>
+          <h4>{note.title}</h4>
+          <p set:html={note.body} />
+          {note.code && <CodeTabs tabs={note.code} />}
+        </div>
+      ))
+    }
+  </div>
+</Entry>

@@ -1,0 +1,108 @@
+/* API reference section. Tokens and base classes come from global.css. */
+
+/* Prose beside its code sample; stacked below lg. */
+.api-split {
+  display: grid;
+  gap: 1.25rem;
+}
+@media (min-width: 1024px) {
+  .api-split {
+    grid-template-columns: minmax(0, 36rem) minmax(0, 1fr);
+    gap: 2.5rem;
+    align-items: start;
+  }
+}
+
+/* Errors a function throws: message and cause on one hairline row each. */
+.api-throws {
+  display: grid;
+  max-width: 48rem;
+}
+.api-throws > dt {
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid var(--line-strong);
+}
+.api-throws > dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  padding-block: 0.75rem;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.api-throws > dd:last-child {
+  border-bottom: 0;
+}
+
+/* Code wraps instead of scrolling sideways, so nothing in the section needs a
+   horizontal swipe, even a recipe in the narrow events column. */
+#api .code-tabs pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 639px) {
+  #api .code-tabs pre {
+    font-size: 0.75rem;
+  }
+}
+
+.api-event__label {
+  margin-right: 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+/* Notes: cells of a drafting sheet, side by side on wide screens. */
+@media (min-width: 1024px) {
+  .api-gotchas {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .api-gotchas > .draft-cell + .draft-cell {
+    border-top-width: 0;
+    border-left-width: 1px;
+  }
+}
+.api-gotchas .draft-cell > .code {
+  margin-top: 1.25rem;
+}
+.api-gotchas .draft-cell > h4 {
+  margin-top: 1.25rem;
+}
+
+/* A short list of behaviours, one hairline row each. */
+.api-behaviours__title {
+  max-width: 48rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid var(--line-strong);
+}
+.api-behaviours {
+  max-width: 48rem;
+}
+.api-behaviours > li {
+  position: relative;
+  padding: 0.75rem 0 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+.api-behaviours > li:last-child {
+  border-bottom: 0;
+}
+.api-behaviours > li::before {
+  content: "";
+  position: absolute;
+  top: 1.45rem;
+  left: 0.25rem;
+  width: 0.375rem;
+  height: 1px;
+  background: var(--accent);
+}
