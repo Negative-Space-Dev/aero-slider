@@ -343,7 +343,7 @@ createSlider(el, { autoplay: true, loop: true });`),
     group: "Layout",
     type: "{}",
     description:
-      "The track or any slide changed size, from a window resize, an image loading or a CSS variable such as <code>--aero-slides-per-view</code>. A new gap between slides of a fixed width resizes nothing, so it fires once the track comes to rest. Fires before the slider re-measures and moves the slides back into place.",
+      "The slider or one of its slides changed size: the window resized, the page layout gave the container a new width, an image loaded, or a CSS variable such as <code>--aero-slides-per-view</code> changed. A new gap between slides of a fixed width resizes nothing, so it fires once the track comes to rest. Fires before the slider re-measures and moves the slides back into place.",
     useFor: "Hiding anything pinned to where a slide was, before the slider moves it.",
     snippet: recipe(`// A tooltip pinned to a slide would point at the wrong spot once slides move.
 const tip = document.querySelector(".slide-tip");
