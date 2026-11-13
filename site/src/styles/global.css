@@ -587,6 +587,57 @@ body {
     margin-top: 0.75rem;
   }
 
+  /* Playground code: a full-width row under the slider, closed until asked for. */
+  .playground-code > summary {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.875rem 1.25rem;
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s;
+  }
+  .playground-code > summary::-webkit-details-marker {
+    display: none;
+  }
+  .playground-code > summary:hover {
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+  }
+  .playground-code > summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+  .playground-code__icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    color: var(--accent);
+  }
+  .playground-code__label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .playground-code__hint {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--faint);
+  }
+  /* Chevron at the far end: right when closed, down when open. */
+  .playground-code > summary::after {
+    content: "";
+    width: 0.4375rem;
+    height: 0.4375rem;
+    margin-inline: auto 0.25rem;
+    border-right: 1.5px solid var(--muted);
+    border-bottom: 1.5px solid var(--muted);
+    rotate: -45deg;
+    transition: rotate 0.15s;
+  }
+  .playground-code[open] > summary::after {
+    rotate: 45deg;
+  }
+
   /* Reference rows: identifier and chips on one line, the description beneath.
      Wraps instead of scrolling, so it reads at phone width. */
   .ref-list {

@@ -511,16 +511,6 @@ form.addEventListener("input", renderCode);
 form.addEventListener("change", renderCode);
 renderCode();
 
-const codeToggle = getRequiredElementById<HTMLButtonElement>("code-toggle");
-const codeContent = getRequiredElementById<HTMLElement>("code-content");
-const codeToggleIcon = getRequiredElementById<HTMLElement>("code-toggle-icon");
-codeToggle.addEventListener("click", () => {
-  const expanded = codeToggle.getAttribute("aria-expanded") !== "true";
-  codeToggle.setAttribute("aria-expanded", String(expanded));
-  codeContent.classList.toggle("max-sm:hidden", !expanded);
-  codeToggleIcon.textContent = expanded ? "−" : "+";
-});
-
 if (isTouchDevice && draggableLabel) {
   // Create tooltip element
   const tooltip = document.createElement("div");

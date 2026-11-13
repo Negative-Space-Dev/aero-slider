@@ -3,6 +3,7 @@ import Pagination from "../components/Pagination.astro";
 import SliderNav from "../components/SliderNav.astro";
 import Slides from "../components/Slides.astro";
 import CodeTabs from "../components/CodeTabs.astro";
+import TerminalIcon from "../components/icons/TerminalIcon.astro";
 import type { CodeTab } from "../lib/code";
 import { playgroundCode } from "../lib/playground-code";
 import { heroToneFor, type SlideContent } from "../lib/slide";
@@ -109,21 +110,16 @@ const heroThumbs: SlideContent[] = heroSlides.map(({ num, tone }) => ({ num, ton
         </div>
       </div>
 
-      <div class="flex flex-1 flex-col border-t border-line">
-        <button
-          type="button"
-          id="code-toggle"
-          aria-expanded="true"
-          aria-controls="code-content"
-          class="flex w-full items-center justify-between px-5 py-3 text-left sm:hidden"
-        >
-          <span class="caption">Code</span>
-          <span id="code-toggle-icon" class="font-mono text-faint" aria-hidden="true">−</span>
-        </button>
-        <div id="code-content" class="flex-1 max-sm:border-t max-sm:border-line">
+      <details class="playground-code mt-auto border-t border-line">
+        <summary>
+          <TerminalIcon class="playground-code__icon" />
+          <span class="playground-code__label">Code</span>
+          <span class="playground-code__hint">HTML · CSS · JS</span>
+        </summary>
+        <div class="border-t border-line">
           <CodeTabs id="playground-code" class="code-tabs--flush" tabs={initialTabs} />
         </div>
-      </div>
+      </details>
     </div>
 
     <!-- Config Panel -->
