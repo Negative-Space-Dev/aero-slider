@@ -58,7 +58,7 @@ CSS variables on the slider or any ancestor, except `--aero-layout-width`, which
 
 | Variable                 | Default | Meaning                                              |
 | ------------------------ | ------- | ---------------------------------------------------- |
-| `--aero-slides-per-view` | `1`     | Slides in view. Fractions such as `1.5` show a peek. |
+| `--aero-slides-per-view` | `1`     | Slides in view, 1 or more. `1.5` shows a peek.       |
 | `--aero-slide-gap`       | `0px`   | Space between slides.                                |
 | `--aero-slide-aspect`    | `5 / 3` | Aspect ratio of each slide.                          |
 | `--aero-layout-width`    | `100%`  | Content column width, for a breakout slider.         |

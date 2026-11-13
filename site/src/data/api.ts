@@ -419,7 +419,7 @@ export const cssVariables: RefEntry[] = [
     name: "--aero-slides-per-view",
     default: "1",
     description:
-      "How many slides fit the viewport. Fractions such as <code>1.5</code> show a peek of the next slide.",
+      "How many slides fit the viewport, <code>1</code> or more. Fractions such as <code>1.5</code> show a peek of the next slide.",
     example: "ex-product-row",
   },
   { name: "--aero-slide-gap", default: "0px", description: "Space between slides." },
