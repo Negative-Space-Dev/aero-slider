@@ -28,8 +28,10 @@ export interface SliderConfig {
   maxDots?: number;
   /**
    * Selector for elements inside slides that should not start a mouse drag. Defaults to form
-   * fields and media controls, which are dragged themselves: `"input, textarea, select,
-   * [contenteditable], audio[controls], video[controls]"`. Your value replaces the default.
+   * fields, which are dragged themselves: `"input, textarea, select, [contenteditable]"`. Your
+   * value replaces the default. Video and audio with native controls are safe to drag: browsers
+   * keep a press on the control bar inside their own controls, so the scrubber still scrubs.
+   * Firefox does not let a mouse drag a video with `controls` at all.
    */
   noDrag?: string;
   /**

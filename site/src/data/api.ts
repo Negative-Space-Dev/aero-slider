@@ -108,9 +108,9 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
   noDrag: {
     group: "Interaction",
     type: "string",
-    default: "form fields and media controls",
+    default: "form fields",
     description:
-      'A selector for elements inside slides where a mouse drag should not start. The default is <code>"input, textarea, select, [contenteditable], audio[controls], video[controls]"</code>, so text fields, range inputs and media scrubbers work as usual. Links and buttons are left out so that a slide that is a link can still be dragged. Your value replaces the default.',
+      'A selector for elements inside slides where a mouse drag should not start. The default is <code>"input, textarea, select, [contenteditable]"</code>, so text fields and range inputs work as usual. Links and buttons are left out so that a slide that is a link can still be dragged. Video and audio with native controls are safe to drag, because browsers keep a press on the control bar inside their own controls: the picture drags the slider and the scrubber still scrubs. Firefox does not let a mouse drag a video with <code>controls</code> at all. Your value replaces the default.',
     example: "ex-product-row",
   },
   snap: {

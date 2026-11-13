@@ -101,7 +101,7 @@ CSS variables on the slider or any ancestor, except `--aero-layout-width`, which
 | `scrollDuration`   | `0`            | Milliseconds for scripted moves. `0` uses native smooth scrolling.                                  |
 | `scrollEasing`     | ease-out cubic | `(progress) => eased`, used with `scrollDuration`.                                                  |
 
-`noDrag` defaults to `"input, textarea, select, [contenteditable], audio[controls], video[controls]"`: controls that are dragged themselves. Links and buttons are left out, so a slide that is a link still drags. Add them if a slide's links must never start a drag.
+`noDrag` defaults to `"input, textarea, select, [contenteditable]"`: fields that are dragged themselves. Links and buttons are left out, so a slide that is a link still drags. Add them if a slide's links must never start a drag. Video and audio with native controls are safe to drag, because browsers keep a press on the control bar inside their own controls: the picture drags the slider and the scrubber still scrubs. Firefox does not let a mouse drag a video with `controls` at all.
 
 Autoplay pauses on hover, on keyboard focus inside, during a press or drag and while the tab is hidden. It never runs under `prefers-reduced-motion`.
 

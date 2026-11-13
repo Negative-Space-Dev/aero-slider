@@ -26,8 +26,9 @@ const DEFAULTS: Config = {
   draggable: true,
   alignment: "center",
   maxDots: 0,
-  // Controls that are themselves dragged: a text selection, a range thumb, a media scrubber.
-  noDrag: "input, textarea, select, [contenteditable], audio[controls], video[controls]",
+  // Fields that are themselves dragged: a text selection, a range thumb. Media with controls is
+  // left out: a browser keeps a press on its control bar to itself, so only the picture drags.
+  noDrag: "input, textarea, select, [contenteditable]",
   perMove: 1,
   vertical: false,
   snap: "native",

@@ -110,7 +110,7 @@ toggle.addEventListener("click", () => {
 });
 ```
 
-Text inside a slide can't be selected while a mouse drag would move the slider; list it in `noDrag` (for example `noDrag: "p, h2"`) to keep it selectable.
+Text inside a slide can't be selected while a mouse drag would move the slider; list it in `noDrag` (for example `noDrag: "p, h2"`) to keep it selectable. `noDrag` defaults to `"input, textarea, select, [contenteditable]"`, and your value replaces it. Video and audio with native controls are safe to drag, because browsers keep a press on the control bar inside their own controls. Firefox does not let a mouse drag a video with `controls` at all.
 
 ## TypeScript
 
