@@ -46,23 +46,27 @@ const groups = exampleGroups.map((group) => ({
           ) : id === "ex-variants" ? (
             <Example id={id} index={indexOf(id)}>
               <div slot="controls" class="ex-controls">
-                <span class="caption">Colour</span>
-                <div id="swatches" class="segmented" role="group" aria-label="Colour">
-                  {variantOptions.map(({ key, label }, i) => (
-                    <button type="button" data-variant={key} data-active={i === 0 ? "" : undefined}>
-                      <span class="ex-swatch" data-variant={key} />
-                      {label}
-                    </button>
-                  ))}
+                <div class="ex-controls__row">
+                  <span class="caption">Colour</span>
+                  <div id="swatches" class="segmented" role="group" aria-label="Colour">
+                    {variantOptions.map(({ key, label }, i) => (
+                      <button type="button" data-variant={key} data-active={i === 0 ? "" : undefined}>
+                        <span class="ex-swatch" data-variant={key} />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <span class="caption">On switch</span>
-                <div id="variant-rest" class="segmented" role="group" aria-label="After a colour switch">
-                  <button type="button" data-rest="first" data-active>
-                    First slide
-                  </button>
-                  <button type="button" data-rest="same">
-                    Same index
-                  </button>
+                <div class="ex-controls__row">
+                  <span class="caption">On switch</span>
+                  <div id="variant-rest" class="segmented" role="group" aria-label="After a colour switch">
+                    <button type="button" data-rest="first" data-active>
+                      First slide
+                    </button>
+                    <button type="button" data-rest="same">
+                      Same index
+                    </button>
+                  </div>
                 </div>
               </div>
             </Example>
