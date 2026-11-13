@@ -85,7 +85,10 @@ const WHEEL_SETTLE_MS = 200; // Firefox can skip scrollend after wheel scrolling
 /** What the UI features (nav, dots, keyboard, autoplay) need from the core. */
 export interface SliderCore {
   container: HTMLElement;
+  /** The scroller. */
   track: HTMLElement;
+  /** The row inside it. Every child is a slide or a loop clone. */
+  row: HTMLElement;
   config: Config;
   signal: AbortSignal;
   reducedMotion: MediaQueryList;
@@ -113,11 +116,13 @@ export interface SliderCore {
   cycle(): { start: number; width: number } | null;
 }
 
-function requireTrack(container: HTMLElement): HTMLElement {
+function requireParts(container: HTMLElement): [track: HTMLElement, row: HTMLElement] {
   const track = container.querySelector<HTMLElement>(".aero-slider__track");
   if (!track) throw new Error("aero-slider: missing .aero-slider__track");
-  if (!track.children.length) throw new Error("aero-slider: no slides found");
-  return track;
+  const row = track.querySelector<HTMLElement>(":scope > .aero-slider__slides");
+  if (!row) throw new Error("aero-slider: missing .aero-slider__slides inside the track");
+  if (!row.children.length) throw new Error("aero-slider: no slides found");
+  return [track, row];
 }
 
 export function createSlider(
@@ -125,7 +130,7 @@ export function createSlider(
   userConfig: SliderConfig = {}
 ): SliderInstance {
   container.aeroSlider?.destroy();
-  const track = requireTrack(container);
+  const [track, row] = requireParts(container);
 
   const config = { ...DEFAULTS };
   configure(config, userConfig);
@@ -144,7 +149,7 @@ export function createSlider(
   let slidesPerView = 1;
   let clonesBefore = 0; // loop clones prepended ahead of the real slides
   let slideStride = 0; // distance between neighbouring snap positions; 0 until laid out
-  let firstSnapPosition = 0; // snap position of track.children[0]
+  let firstSnapPosition = 0; // snap position of row.children[0]
   // Snap position of every track child, clones included. Slides can differ in width, so nothing
   // derives these from the stride. Moving the track reads them and never the DOM: a read there
   // would force a layout of the page whenever a slideChange handler had just changed it.
@@ -291,7 +296,7 @@ export function createSlider(
     const snapportStart = axisStart + paddingStart;
     const snapportEnd = axisStart + axisSize - paddingEnd;
     const position = scrollPosition();
-    return Array.from(track.children, (el) => {
+    return Array.from(row.children, (el) => {
       const rect = el.getBoundingClientRect();
       const [elStart, elEnd] = isVertical()
         ? [rect.top, rect.bottom]
@@ -590,7 +595,7 @@ export function createSlider(
   }
 
   /**
-   * Eases onto track.children[domIndex]. On a loop, a clone whose snap point lies off the runway
+   * Eases onto row.children[domIndex]. On a loop, a clone whose snap point lies off the runway
    * (fractional slides per view put the end clones there) is swapped for its real twin: the track
    * first jumps by the same distance, which looks identical, so nothing visibly flies across.
    */
@@ -621,7 +626,7 @@ export function createSlider(
       startMove(target);
       return true;
     }
-    const domIndex = clamp(domIndexAt(position), 0, track.children.length - 1);
+    const domIndex = clamp(domIndexAt(position), 0, row.children.length - 1);
     if (Math.abs(snaps[domIndex]! - scrollPosition()) <= 1) return false;
     settleOnto(domIndex);
     return true;
@@ -808,7 +813,7 @@ export function createSlider(
 
   function onIntersection(entries: IntersectionObserverEntry[]): void {
     for (const entry of entries) intersecting.set(entry.target, entry.isIntersecting);
-    const children = Array.from(track.children);
+    const children = Array.from(row.children);
     const nowVisible = new Set<number>();
     for (const [el, isIn] of intersecting) {
       // The slide itself (or the one a clone copies), not the clamped index navigation would use.
@@ -820,11 +825,12 @@ export function createSlider(
   }
 
   function observe(): void {
-    // A later slide can change size alone (an image loads, a font swaps), and the track's own box
-    // stays the same when it does: the track scrolls, so only its scroll width grows.
+    // The track's own box stays the same when its content changes: it scrolls. The row is as long
+    // as its slides and gaps, so it shows a slide or a gap that changed. Each slide is watched as
+    // well, since two can trade width and leave the row as long as it was.
     resizeObserver.disconnect();
     measuredSizes.clear();
-    for (const el of [track, ...track.children]) {
+    for (const el of [track, row, ...row.children]) {
       measuredSizes.set(el, sizeOf(el));
       resizeObserver.observe(el);
     }
@@ -835,7 +841,7 @@ export function createSlider(
       root: track,
       rootMargin: isVertical() ? "-1px 0px" : "0px -1px", // ignore sub-pixel bleed from neighbours
     });
-    for (const child of track.children) intersectionObserver.observe(child);
+    for (const child of row.children) intersectionObserver.observe(child);
   }
 
   // ── Layout ───────────────────────────────────────────────────────────
@@ -873,8 +879,8 @@ export function createSlider(
   /** Full path: re-read slides from the DOM, rebuild clones and UI, and rest on slide `index`. */
   function rebuild(index = current): void {
     play.reset(true);
-    for (const clone of track.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
-    slides = Array.from(track.children) as HTMLElement[];
+    for (const clone of row.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
+    slides = Array.from(row.children) as HTMLElement[];
     slideCount = slides.length;
     slides.forEach((slide, i) => {
       if (!slide.classList.contains(SLIDE_CLASS)) classed.add(slide);
@@ -890,11 +896,11 @@ export function createSlider(
 
     readSlidesPerView();
     clonesBefore = cloneCount();
-    for (let i = 1; i <= clonesBefore; i++) track.prepend(cloneOf(slides[wrap(-i)]!));
-    for (let i = 0; i < clonesBefore; i++) track.append(cloneOf(slides[i % slideCount]!));
+    for (let i = 1; i <= clonesBefore; i++) row.prepend(cloneOf(slides[wrap(-i)]!));
+    for (let i = 0; i < clonesBefore; i++) row.append(cloneOf(slides[i % slideCount]!));
     // WebKit never starts loading media that arrived from another document with <source> children.
     // The clone can be the media element itself.
-    for (const media of track.querySelectorAll<HTMLMediaElement>("video, audio")) {
+    for (const media of row.querySelectorAll<HTMLMediaElement>("video, audio")) {
       if (media.closest(`[${CLONE_ATTR}]`) && media.networkState === media.NETWORK_EMPTY)
         media.load();
     }
@@ -929,7 +935,7 @@ export function createSlider(
     clearTimeout(settleTimer);
     cancelAnimationFrame(scrollFrame);
     cancelEase();
-    for (const clone of track.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
+    for (const clone of row.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
     for (const slide of slides) {
       slide.removeAttribute(SLIDE_INDEX_ATTR);
       if (classed.has(slide)) slide.classList.remove(SLIDE_CLASS);
@@ -972,6 +978,7 @@ export function createSlider(
   const core: SliderCore = {
     container,
     track,
+    row,
     config,
     signal,
     reducedMotion,

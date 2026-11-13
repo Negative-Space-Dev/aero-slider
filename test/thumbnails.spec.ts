@@ -7,7 +7,7 @@ test("a loop whose slides all fit makes no clones", async ({ page }) => {
   await create(page, "main");
   await create(page, "thumbs");
   await page.evaluate(() => window.syncThumbnails(window.sliders.main!, window.sliders.thumbs!));
-  await expect(page.locator("#thumbs .aero-slider__track > *")).toHaveCount(4);
+  await expect(page.locator("#thumbs .aero-slider__slides > *")).toHaveCount(4);
   await expect(page.locator("#thumbs [data-aero-slider-clone]")).toHaveCount(0);
   await expect(page.locator("#thumbs .aero-slider__nav--next")).toBeDisabled();
 });

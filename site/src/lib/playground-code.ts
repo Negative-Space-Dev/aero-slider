@@ -54,12 +54,14 @@ function html(s: PlaygroundSettings): string {
         ]
       : []),
     `    <div class="aero-slider__track">`,
+    `      <div class="aero-slider__slides">`,
     ...slideLines(
       s.slideCount,
-      "      ",
+      "        ",
       (n) =>
         `<div role="group" aria-roledescription="slide" aria-label="${n} of ${s.slideCount}">Slide ${n}</div>`
     ),
+    `      </div>`,
     `    </div>`,
     `  </div>`,
     ...(s.pagination
@@ -77,11 +79,13 @@ function html(s: PlaygroundSettings): string {
       `<div id="thumbs" class="aero-slider" role="group" aria-label="Thumbnails">`,
       `  <div class="aero-slider__viewport">`,
       `    <div class="aero-slider__track">`,
+      `      <div class="aero-slider__slides">`,
       ...slideLines(
         s.slideCount,
-        "      ",
+        "        ",
         (n) => `<button type="button" aria-label="Show slide ${n}">${n}</button>`
       ),
+      `      </div>`,
       `    </div>`,
       `  </div>`,
       `</div>`

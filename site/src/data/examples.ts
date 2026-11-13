@@ -115,10 +115,13 @@ const mobileOnlyCss = `#collections {
 
 /* From 768px up the slider is destroyed and the same markup is a grid. */
 @media (min-width: 768px) {
-  #collections .aero-slider__track {
+  #collections .aero-slider__slides {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    overflow: visible;
+    width: auto;
+  }
+  #collections .aero-slider__slides > * {
+    width: auto;
   }
 }`;
 
@@ -267,15 +270,17 @@ const variantHtml = `<div id="swatches" role="group" aria-label="Colour">
 <div id="variant-gallery" class="aero-slider" role="region" aria-roledescription="carousel" aria-label="Product images">
   <div class="aero-slider__viewport">
     <div class="aero-slider__track">
-      <!-- data-variant: shown for that colour only -->
-      <div data-variant="graphite">Graphite, front</div>
-      <div data-variant="graphite">Graphite, side</div>
-      <div data-variant="ceramic">Ceramic, front</div>
-      <div data-variant="ceramic">Ceramic, side</div>
-      <div data-variant="blue">Blue, front</div>
-      <div data-variant="blue">Blue, side</div>
-      <!-- No data-variant: shown for every colour -->
-      <div>Fit guide</div>
+      <div class="aero-slider__slides">
+        <!-- data-variant: shown for that colour only -->
+        <div data-variant="graphite">Graphite, front</div>
+        <div data-variant="graphite">Graphite, side</div>
+        <div data-variant="ceramic">Ceramic, front</div>
+        <div data-variant="ceramic">Ceramic, side</div>
+        <div data-variant="blue">Blue, front</div>
+        <div data-variant="blue">Blue, side</div>
+        <!-- No data-variant: shown for every colour -->
+        <div>Fit guide</div>
+      </div>
     </div>
   </div>
 </div>
@@ -284,9 +289,11 @@ const variantHtml = `<div id="swatches" role="group" aria-label="Colour">
 <div id="variant-thumbs" class="aero-slider" role="group" aria-label="Product image thumbnails">
   <div class="aero-slider__viewport">
     <div class="aero-slider__track">
-      <button type="button" data-variant="graphite" aria-label="Show graphite, front">…</button>
-      <!-- … -->
-      <button type="button" aria-label="Show fit guide">…</button>
+      <div class="aero-slider__slides">
+        <button type="button" data-variant="graphite" aria-label="Show graphite, front">…</button>
+        <!-- … -->
+        <button type="button" aria-label="Show fit guide">…</button>
+      </div>
     </div>
   </div>
 </div>`;
@@ -399,7 +406,7 @@ sync();`,
     },
     notes: [
       "<code>destroy()</code> removes the slider's listeners, clones and classes and leaves your markup, so the same elements can be laid out as a grid and started again later.",
-      "The library's classes are still in your markup, so the track keeps its flex row until your own CSS replaces it. That is the one rule in the media query.",
+      "The library's classes are still in your markup, so the slides keep their flex row and their widths until your own CSS replaces them. Those are the two rules in the media query.",
       "Keep the breakpoint in the script and the one in the stylesheet the same.",
       "Resize the window across 768px to watch it switch.",
     ],
@@ -600,17 +607,17 @@ sync();`,
       imports: ["syncThumbnails"],
       after: `syncThumbnails(main, thumbs);
 
-// Hold on to every slide, in the track or out of it, so each image loads once.
+// Hold on to every slide, in the row or out of it, so each image loads once.
 const galleries = [main, thumbs].map((slider) => ({
   slider,
-  track: slider.element.querySelector(".aero-slider__track"),
+  row: slider.element.querySelector(".aero-slider__slides"),
   slides: [...slider.element.querySelectorAll("[data-aero-slider-index]")],
 }));
 
 function show(variant) {
-  for (const { slider, track, slides } of galleries) {
+  for (const { slider, row, slides } of galleries) {
     // A slide with no data-variant belongs to every variant.
-    track.replaceChildren(
+    row.replaceChildren(
       ...slides.filter((slide) => (slide.dataset.variant ?? variant) === variant)
     );
     slider.refresh();
@@ -625,10 +632,10 @@ document.getElementById("swatches").addEventListener("click", (event) => {
 });`,
     },
     notes: [
-      "<code>refresh()</code> re-reads the slides from the track, so the slider becomes whatever elements are in it. Change the track first, then call it.",
-      "Take slides out of the track to hide them. One hidden with CSS still counts as a slide, with its own stop and dot.",
+      "<code>refresh()</code> re-reads the slides from <code>.aero-slider__slides</code>, so the slider becomes whatever elements are in it. Change the row first, then call it.",
+      "Take slides out of the row to hide them. One hidden with CSS still counts as a slide, with its own stop and dot.",
       "<code>refresh()</code> rests on the same index as before. <code>goTo(0, { instant: true })</code> after it starts the new set from its first image. The swap and the jump happen before the browser paints, so nothing flashes in between. The switch above the gallery turns that jump on and off.",
-      "Find slides by <code>data-aero-slider-index</code>, as here, and not by their place in the track. A looping track also holds copies of its slides, and the thumbnail strip loops.",
+      "Find slides by <code>data-aero-slider-index</code>, as here, and not by their place in the row. A looping slider also holds copies of its slides, and the thumbnail strip loops.",
       "Reusing the same elements keeps the images they have already loaded.",
       "No <code>slideChange</code> fires when the set changes under the same index. Update a counter or caption yourself after the swap.",
       'Slides named "2 of 5" in the markup need their names rewritten when the count changes.',
@@ -793,10 +800,12 @@ function sliderHtml(slider: DemoSlider): string[] {
         ]
       : []),
     `    <div class="aero-slider__track">`,
-    ...shown.flatMap((slide, i) => slideSample(slider, slide, i + 1, "      ")),
+    `      <div class="aero-slider__slides">`,
+    ...shown.flatMap((slide, i) => slideSample(slider, slide, i + 1, "        ")),
     ...(slider.slides.length > shown.length
-      ? [`      <!-- … ${slider.slides.length} slides in total -->`]
+      ? [`        <!-- … ${slider.slides.length} slides in total -->`]
       : []),
+    `      </div>`,
     `    </div>`,
     `  </div>`,
     ...(slider.dots

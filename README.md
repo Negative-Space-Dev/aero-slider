@@ -85,9 +85,11 @@ You write this:
     <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide"></button>
     <button type="button" class="aero-slider__nav--next" aria-label="Next slide"></button>
     <div class="aero-slider__track">
-      <div role="group" aria-roledescription="slide" aria-label="1 of 3">…</div>
-      <div role="group" aria-roledescription="slide" aria-label="2 of 3">…</div>
-      <div role="group" aria-roledescription="slide" aria-label="3 of 3">…</div>
+      <div class="aero-slider__slides">
+        <div role="group" aria-roledescription="slide" aria-label="1 of 3">…</div>
+        <div role="group" aria-roledescription="slide" aria-label="2 of 3">…</div>
+        <div role="group" aria-roledescription="slide" aria-label="3 of 3">…</div>
+      </div>
     </div>
   </div>
   <div class="aero-slider__pagination" role="group" aria-label="Slides">
@@ -125,6 +127,27 @@ el.addEventListener("aero:slideChange", (e) => console.log(e.detail.index));
 type SlideChange = SliderEventMap["slideChange"]; // { index: number }
 ```
 
+## Upgrading from 1.0
+
+1.1 adds a required element. Wrap the slides in `.aero-slider__slides`, inside the track:
+
+```html
+<div class="aero-slider__track">
+  <div class="aero-slider__slides">
+    <div>…</div>
+    <div>…</div>
+  </div>
+</div>
+```
+
+The track still scrolls. The new row is as long as its slides and the gaps between them, which lets the slider see a slide or a gap change size and measure again on its own.
+
+- **Selectors.** `.aero-slider__track > *` no longer matches a slide. Use `.aero-slider__slides > *`, and move any `gap` you set on the track to the row (or set `--aero-slide-gap`).
+- **Scripts that add or remove slides** change the children of `.aero-slider__slides`, then call `slider.refresh()`.
+- **Slide sizes.** Slides are sized with `width` in `cqi` units against the track. A percentage width on a slide no longer works: use a length or `cqi`. A `flex-basis` of your own still wins over the default width.
+- **Vertical sliders** need a viewport height that does not come from the slides. The default takes it from `--aero-slide-aspect`.
+- **`noDrag`** no longer lists `audio[controls]` and `video[controls]`. Add them back if a press on a video must not drag.
+
 ## Upgrading from a beta
 
 1.0 renamed these, and the old names no longer work. Rename them in your options, markup and CSS:
@@ -139,17 +162,17 @@ type SlideChange = SliderEventMap["slideChange"]; // { index: number }
 
 The betas also had these, which 1.0 removes:
 
-| Beta                              | 1.0                                                       |
-| --------------------------------- | --------------------------------------------------------- |
-| `slider.add()`, `slider.remove()` | Change the track's children, then call `slider.refresh()` |
-| `direction: "ttb"`                | `vertical: true`                                          |
-| `direction: "rtl"`                | `dir="rtl"` on the slider or any ancestor                 |
-| `labels`                          | Write the names in your markup                            |
+| Beta                              | 1.0                                                                         |
+| --------------------------------- | --------------------------------------------------------------------------- |
+| `slider.add()`, `slider.remove()` | Change the children of `.aero-slider__slides`, then call `slider.refresh()` |
+| `direction: "ttb"`                | `vertical: true`                                                            |
+| `direction: "rtl"`                | `dir="rtl"` on the slider or any ancestor                                   |
+| `labels`                          | Write the names in your markup                                              |
 
 More things to check:
 
 - **Roles and names are yours now.** The betas wrote the roles and labels for the container, slides, arrows and dots. 1.0 leaves them to your markup, so add them as [Accessibility](#accessibility) shows. Without them the slider still works, but screen readers get unnamed controls.
-- **Finding slides in a looping slider.** A looping track also holds copies of its slides. Select a real slide with `[data-aero-slider-index="2"]`, not by its place among the track's children.
+- **Finding slides in a looping slider.** A looping slider also holds copies of its slides. Select a real slide with `[data-aero-slider-index="2"]`, not by its place among the children of `.aero-slider__slides`.
 - **Alignment is logical.** `"start"` is the right edge in an RTL slider and the top in a vertical one.
 - **Your own selectors on `data-aero-alignment`.** The attribute now holds `"start"`, `"center"` or `"end"`, so a rule such as `[data-aero-alignment="left"]` no longer matches.
 - **Nested sliders.** The `--aero-*` variables are inherited, so you can set them on any ancestor of a slider. The exception is `--aero-layout-width`, which goes on the slider itself. They stop at the content of a slide: a slider nested inside a slide, or used as a slide itself, does not take the outer slider's settings, so set its variables on the nested slider itself.

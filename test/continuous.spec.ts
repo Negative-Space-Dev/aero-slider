@@ -49,7 +49,7 @@ function installTicker(): void {
   const track = (id: string) =>
     document.querySelector<HTMLElement>(`#${id} > .aero-slider__viewport > .aero-slider__track`)!;
   const stride = (id: string) => {
-    const [a, b] = track(id).children;
+    const [a, b] = track(id).firstElementChild!.children;
     return b!.getBoundingClientRect().left - a!.getBoundingClientRect().left;
   };
   const animations = (id: string) => track(id).getAnimations({ subtree: true });
@@ -57,7 +57,7 @@ function installTicker(): void {
     const r = track(id).getBoundingClientRect();
     const centre = r.left + r.width / 2;
     let best: { left: number; label: number } | null = null;
-    for (const k of track(id).children) {
+    for (const k of track(id).firstElementChild!.children) {
       const b = k.getBoundingClientRect();
       if (b.left <= centre && (!best || b.left > best.left)) {
         best = { left: b.left, label: Number(k.textContent) };
@@ -74,7 +74,7 @@ function installTicker(): void {
       const r = track(id).getBoundingClientRect();
       const mid = r.left + r.width / 2;
       let best = { label: -1, d: Infinity };
-      for (const k of track(id).children) {
+      for (const k of track(id).firstElementChild!.children) {
         const b = k.getBoundingClientRect();
         const d = Math.abs(b.left + b.width / 2 - mid);
         if (d < best.d) best = { label: Number(k.textContent), d };
@@ -153,7 +153,7 @@ test("continuous autoplay runs one shared animation on every slide, clones inclu
   const setup = await page.evaluate(() => {
     const animations = window.ticker.animations("s");
     return {
-      children: window.ticker.track("s").children.length,
+      children: window.ticker.track("s").firstElementChild!.children.length,
       animations: animations.length,
       startTimes: new Set(animations.map((a) => a.startTime)).size,
     };
@@ -190,7 +190,7 @@ test("rtl drifts the other way on screen", async ({ page }) => {
   await mount(page, tickerMarkup("s", 4), { htmlAttributes: { dir: "rtl" } });
   await create(page, "s", { autoplay: "continuous", autoplaySpeed: SPEED });
   const pxPerMs = await page.evaluate(async () => {
-    const slide = window.ticker.track("s").children[5]!;
+    const slide = window.ticker.track("s").firstElementChild!.children[5]!;
     const cycle = 4 * Math.abs(window.ticker.stride("s"));
     const t0 = await new Promise<number>(requestAnimationFrame);
     const x0 = slide.getBoundingClientRect().left;
@@ -301,7 +301,7 @@ test("a scroll that crosses the lap's boundary mid-gesture isn't jumped back", a
   await settled(page, "s");
   const crossed = await page.evaluate(async () => {
     const t = window.ticker.track("s");
-    const kids = t.children;
+    const kids = t.firstElementChild!.children;
     const home = t.scrollLeft;
     const cycle = kids[4]!.getBoundingClientRect().left - kids[0]!.getBoundingClientRect().left;
     window.sliders.s!.resume();
@@ -357,7 +357,7 @@ test.describe("product links as slides", () => {
     );
     await mount(
       page,
-      `<div id="s" class="aero-slider" style="width:600px;--aero-slides-per-view:3;--aero-slide-gap:10px"><div class="aero-slider__viewport"><div class="aero-slider__track">${links.join("")}</div></div></div>`
+      `<div id="s" class="aero-slider" style="width:600px;--aero-slides-per-view:3;--aero-slide-gap:10px"><div class="aero-slider__viewport"><div class="aero-slider__track"><div class="aero-slider__slides">${links.join("")}</div></div></div></div>`
     );
     await create(page, "s", { autoplay: "continuous", autoplaySpeed: 36, draggable: false });
   });
@@ -433,7 +433,7 @@ test("autoplaySpeed is honoured below 1px/s", async ({ page }) => {
   await mount(page, tickerMarkup("s", 4));
   await create(page, "s", { autoplay: "continuous", autoplaySpeed: 0.5 });
   const { duration, lap } = await page.evaluate(() => {
-    const kids = window.ticker.track("s").children;
+    const kids = window.ticker.track("s").firstElementChild!.children;
     return {
       duration: window.ticker.lapDuration("s"),
       lap: kids[4]!.getBoundingClientRect().left - kids[0]!.getBoundingClientRect().left,

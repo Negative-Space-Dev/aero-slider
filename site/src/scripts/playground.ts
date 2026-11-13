@@ -190,36 +190,36 @@ function createThumbSlide(n: number): HTMLElement {
 }
 
 function reconcileSlideCount(targetCount: number): void {
-  const heroTrack = heroSliderEl.querySelector<HTMLElement>(".aero-slider__track");
+  const heroRow = heroSliderEl.querySelector<HTMLElement>(".aero-slider__slides");
   const thumbsEl = document.getElementById("hero-thumbs");
-  const thumbsTrack = thumbsEl?.querySelector<HTMLElement>(".aero-slider__track");
-  if (!heroTrack) return;
+  const thumbsRow = thumbsEl?.querySelector<HTMLElement>(".aero-slider__slides");
+  if (!heroRow) return;
 
-  const currentHero = heroTrack.children.length;
+  const currentHero = heroRow.children.length;
   if (currentHero < targetCount) {
     for (let i = currentHero + 1; i <= targetCount; i++) {
-      heroTrack.appendChild(createHeroSlide(i));
+      heroRow.appendChild(createHeroSlide(i));
     }
   } else if (currentHero > targetCount) {
-    while (heroTrack.children.length > targetCount) {
-      heroTrack.lastElementChild?.remove();
+    while (heroRow.children.length > targetCount) {
+      heroRow.lastElementChild?.remove();
     }
   }
 
-  if (thumbsTrack) {
-    const currentThumbs = thumbsTrack.children.length;
+  if (thumbsRow) {
+    const currentThumbs = thumbsRow.children.length;
     if (currentThumbs < targetCount) {
       for (let i = currentThumbs + 1; i <= targetCount; i++) {
-        thumbsTrack.appendChild(createThumbSlide(i));
+        thumbsRow.appendChild(createThumbSlide(i));
       }
     } else if (currentThumbs > targetCount) {
-      while (thumbsTrack.children.length > targetCount) {
-        thumbsTrack.lastElementChild?.remove();
+      while (thumbsRow.children.length > targetCount) {
+        thumbsRow.lastElementChild?.remove();
       }
     }
-    nameSlides(thumbsTrack);
+    nameSlides(thumbsRow);
   }
-  nameSlides(heroTrack);
+  nameSlides(heroRow);
 }
 
 let heroSlider: SliderInstance;

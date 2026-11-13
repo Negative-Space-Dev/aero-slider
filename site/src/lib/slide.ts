@@ -59,16 +59,16 @@ export function thumbRole(position: number): Record<string, string> {
   return { type: "button", "aria-label": `Show slide ${position}` };
 }
 
-/** Renames every slide of a track after its count changed. Loop clones are left to the slider. */
-export function nameSlides(track: HTMLElement): void {
-  const slides = [...track.children].filter((el) => !el.hasAttribute("data-aero-slider-clone"));
+/** Renames every slide of a slides row after its count changed. Loop clones are left to the slider. */
+export function nameSlides(row: HTMLElement): void {
+  const slides = [...row.children].filter((el) => !el.hasAttribute("data-aero-slider-clone"));
   slides.forEach((el, i) => {
     const attrs = el.matches("button") ? thumbRole(i + 1) : slideRole(i + 1, slides.length);
     for (const [name, value] of Object.entries(attrs)) el.setAttribute(name, value);
   });
 }
 
-/** A slide to append at runtime. Call `nameSlides` on its track once it is in place. */
+/** A slide to append at runtime. Call `nameSlides` on its row once it is in place. */
 export function createSlideElement(
   content: SlideContent,
   position: number,

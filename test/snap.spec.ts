@@ -198,7 +198,7 @@ test.describe("snap: settle on a loop", () => {
       await settled(page, "s");
       const { from, clone, home } = await page.evaluate(() => {
         const kids = [
-          ...document.querySelector("#s .aero-slider__track")!.children,
+          ...document.querySelector("#s .aero-slider__slides")!.children,
         ] as HTMLElement[];
         const pos = (i: number) => kids[i]!.offsetLeft - kids[0]!.offsetLeft;
         const lastReal = kids.findLastIndex((k) => !k.hasAttribute("data-aero-slider-clone"));
@@ -245,7 +245,7 @@ test.describe("snap: settle on a loop", () => {
           const r = track.getBoundingClientRect();
           const mid = r.left + r.width / 2;
           const off = Math.min(
-            ...[...track.children].map((k) => {
+            ...[...track.querySelector(".aero-slider__slides")!.children].map((k) => {
               const b = k.getBoundingClientRect();
               return Math.abs(b.left + b.width / 2 - mid);
             })
@@ -334,7 +334,7 @@ test("snap: none on a loop: a fast flick near the end stays on the runway and ke
 
   await page.evaluate(() => {
     const track = document.querySelector<HTMLElement>("#s .aero-slider__track")!;
-    const real1 = [...track.children].find(
+    const real1 = [...track.querySelector(".aero-slider__slides")!.children].find(
       (k) => !k.hasAttribute("data-aero-slider-clone") && k.textContent === "1"
     ) as HTMLElement;
     track.scrollLeft +=

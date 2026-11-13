@@ -62,7 +62,7 @@ test("reduced motion stops continuous autoplay, keeps a rebuild still, and lifti
   await expect.poll(() => animationCount(page)).toBe(0);
 
   await page.evaluate(() => window.sliders.s!.update({}));
-  const slide = page.locator("#s .aero-slider__track > *").nth(6);
+  const slide = page.locator("#s .aero-slider__slides > *").nth(6);
   const x = (await slide.boundingBox())!.x;
   await page.waitForTimeout(500);
   expect(await animationCount(page)).toBe(0);

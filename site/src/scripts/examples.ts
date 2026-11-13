@@ -85,18 +85,18 @@ function wireVariants(): void {
 
   const galleries = [main, thumbs].map((slider) => ({
     slider,
-    track: slider.element.querySelector<HTMLElement>(".aero-slider__track")!,
+    row: slider.element.querySelector<HTMLElement>(".aero-slider__slides")!,
     slides: [...slider.element.querySelectorAll<HTMLElement>("[data-aero-slider-index]")],
   }));
 
   // The switch beside the swatches: start each colour from its first image, or stay put.
   let toFirst = true;
   function show(variant: string): void {
-    for (const { slider, track, slides } of galleries) {
-      track.replaceChildren(
+    for (const { slider, row, slides } of galleries) {
+      row.replaceChildren(
         ...slides.filter((slide) => (slide.dataset.variant ?? variant) === variant)
       );
-      nameSlides(track);
+      nameSlides(row);
       slider.refresh();
     }
     if (toFirst) main.goTo(0, { instant: true });

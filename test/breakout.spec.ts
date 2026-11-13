@@ -30,7 +30,7 @@ async function restingSlide(page: Page, index: number) {
   await settled(page, "s");
   return page.evaluate((index) => {
     const track = document.querySelector<HTMLElement>("#s .aero-slider__track")!;
-    const r = track.children[index]!.getBoundingClientRect();
+    const r = track.querySelector(".aero-slider__slides")!.children[index]!.getBoundingClientRect();
     const tr = track.getBoundingClientRect();
     return {
       left: r.left - tr.left,

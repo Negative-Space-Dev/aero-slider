@@ -18,7 +18,8 @@ export function syncThumbnails(
   options: SyncThumbnailsOptions = {}
 ): () => void {
   const track = thumbnails.element.querySelector<HTMLElement>(".aero-slider__track");
-  if (!track) return () => {};
+  const row = track?.querySelector<HTMLElement>(":scope > .aero-slider__slides");
+  if (!track || !row) return () => {};
   const controller = new AbortController();
   const { signal } = controller;
 
@@ -32,11 +33,11 @@ export function syncThumbnails(
   thumbnails.element.addEventListener("aero:dragStart", showCursor("grabbing"), { signal });
   thumbnails.element.addEventListener("aero:dragEnd", showCursor("pointer"), { signal });
 
-  /** Slide index for any track child, loop clones included. */
+  /** Slide index for any child of the slides row, loop clones included. */
   const indexOf = (child: Element): number => {
     const own = child.getAttribute(SLIDE_INDEX_ATTR);
     if (own !== null) return Number(own);
-    const children = Array.from(track.children);
+    const children = Array.from(row.children);
     const firstReal = children.findIndex((el) => el.hasAttribute(SLIDE_INDEX_ATTR));
     const count = thumbnails.slideCount;
     return (((children.indexOf(child) - firstReal) % count) + count) % count;
@@ -44,7 +45,7 @@ export function syncThumbnails(
 
   /** Marks thumbnail `index` as the current one, or none of them. Clones stay unmarked. */
   const mark = (index: number): void => {
-    for (const child of track.children) {
+    for (const child of row.children) {
       const active = indexOf(child) === index;
       child.classList.toggle(ACTIVE_CLASS, active);
       if (active && child.hasAttribute(SLIDE_INDEX_ATTR))
@@ -57,11 +58,11 @@ export function syncThumbnails(
     thumbnails.goTo(index);
   };
 
-  track.addEventListener(
+  row.addEventListener(
     "click",
     (event) => {
       let el = event.target as Element | null;
-      while (el && el.parentElement !== track) el = el.parentElement;
+      while (el && el.parentElement !== row) el = el.parentElement;
       if (el) primary.goTo(indexOf(el)); // primary's slideChange then activates the thumb
     },
     { signal }
@@ -78,7 +79,7 @@ export function syncThumbnails(
   // refresh() renumbers the slides without a slideChange when the index stays put, and the
   // thumbnail that now holds that index may be a new element.
   const renumbered = new MutationObserver(() => mark(primary.currentIndex));
-  renumbered.observe(track, { subtree: true, attributeFilter: [SLIDE_INDEX_ATTR] });
+  renumbered.observe(row, { subtree: true, attributeFilter: [SLIDE_INDEX_ATTR] });
 
   const teardown = (): void => {
     controller.abort();

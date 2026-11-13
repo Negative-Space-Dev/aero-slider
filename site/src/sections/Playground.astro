@@ -85,7 +85,9 @@ const heroThumbs: SlideContent[] = heroSlides.map(({ num, tone }) => ({ num, ton
           <div class="aero-slider__viewport relative">
             <SliderNav />
             <div class="aero-slider__track">
-              <Slides items={heroSlides} />
+              <div class="aero-slider__slides">
+                <Slides items={heroSlides} />
+              </div>
             </div>
           </div>
           <Pagination />
@@ -103,7 +105,9 @@ const heroThumbs: SlideContent[] = heroSlides.map(({ num, tone }) => ({ num, ton
             <div class="aero-slider__viewport relative">
               <SliderNav noun="thumbnail" />
               <div class="aero-slider__track">
-                <Slides items={heroThumbs} thumbs />
+                <div class="aero-slider__slides">
+                  <Slides items={heroThumbs} thumbs />
+                </div>
               </div>
             </div>
           </div>

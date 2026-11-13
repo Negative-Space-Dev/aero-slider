@@ -95,7 +95,7 @@ for (const [where, markup] of [
   ],
   [
     "that is the slide itself",
-    `<div id="s" class="aero-slider" style="width:600px;--aero-slides-per-view:2"><div class="aero-slider__viewport"><div class="aero-slider__track">${VIDEO.repeat(4)}</div></div></div>`,
+    `<div id="s" class="aero-slider" style="width:600px;--aero-slides-per-view:2"><div class="aero-slider__viewport"><div class="aero-slider__track"><div class="aero-slider__slides">${VIDEO.repeat(4)}</div></div></div></div>`,
   ],
 ] as const) {
   test(`looped clones of a video ${where} load`, async ({ page }) => {

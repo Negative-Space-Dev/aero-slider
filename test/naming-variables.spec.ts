@@ -5,7 +5,9 @@ import { state } from "./helpers/state";
 const box = (page: Page, id = "s") =>
   page.evaluate((id) => {
     const [first, second] = Array.from(
-      document.querySelectorAll(`#${id} > .aero-slider__viewport > .aero-slider__track > *`),
+      document.querySelectorAll(
+        `#${id} > .aero-slider__viewport > .aero-slider__track > .aero-slider__slides > *`
+      ),
       (slide) => slide.getBoundingClientRect()
     );
     return {
@@ -116,9 +118,10 @@ test("a slide that is itself a slider keeps the settings made on it", async ({ p
   const inner = slider("inner", 3, { style: "--aero-slides-per-view:2", nav: false, dots: false });
   await mount(
     page,
-    `<div id="outer" class="aero-slider" style="width:600px"><div class="aero-slider__viewport"><div class="aero-slider__track">${inner}<div>1</div></div></div></div>`
+    `<div id="outer" class="aero-slider" style="width:600px"><div class="aero-slider__viewport"><div class="aero-slider__track"><div class="aero-slider__slides">${inner}<div>1</div></div></div></div></div>`
   );
-  expect((await box(page, "inner")).width).toBe(150);
+  // The fixture's inline width keeps the inner slider 600px wide, so two per view are 300px each.
+  expect((await box(page, "inner")).width).toBe(300);
 });
 
 test("a slide that is itself a slider ignores the outer slider's settings", async ({ page }) => {
@@ -129,7 +132,7 @@ test("a slide that is itself a slider ignores the outer slider's settings", asyn
   });
   await mount(
     page,
-    `<div id="outer" class="aero-slider" style="width:600px;--aero-slides-per-view:3;--aero-slide-gap:12px;--aero-slide-aspect:1"><div class="aero-slider__viewport"><div class="aero-slider__track">${inner}<div>1</div></div></div></div>`
+    `<div id="outer" class="aero-slider" style="width:600px;--aero-slides-per-view:3;--aero-slide-gap:12px;--aero-slide-aspect:1"><div class="aero-slider__viewport"><div class="aero-slider__track"><div class="aero-slider__slides">${inner}<div>1</div></div></div></div></div>`
   );
   expect(await box(page, "inner")).toEqual({ width: 600, height: 300, gap: 0 });
 });
@@ -183,7 +186,8 @@ test("the pre-init loop spacer reserves the space the clones will take", async (
       await page.evaluate(() => {
         const track = document.querySelector("#s .aero-slider__track")!;
         const offset =
-          track.children[0]!.getBoundingClientRect().left - track.getBoundingClientRect().left;
+          track.querySelector(".aero-slider__slides")!.children[0]!.getBoundingClientRect().left -
+          track.getBoundingClientRect().left;
         return Math.round(offset);
       })
     );

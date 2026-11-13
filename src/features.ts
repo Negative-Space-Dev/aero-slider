@@ -226,7 +226,7 @@ interface Lap {
 }
 
 export function autoplay(core: SliderCore) {
-  const { container, track, config, signal, reducedMotion } = core;
+  const { container, track, row, config, signal, reducedMotion } = core;
   const holds = new Set<string>();
   const continuous = () => config.autoplay === "continuous";
   let timer = 0;
@@ -284,7 +284,7 @@ export function autoplay(core: SliderCore) {
     const to = core.isVertical() ? `0 ${distance}px` : `${distance}px 0`;
     const duration = (width / config.autoplaySpeed) * 1000;
     const startTime = document.timeline.currentTime;
-    const animations = Array.from(track.children, (slide) => {
+    const animations = Array.from(row.children, (slide) => {
       const animation = slide.animate([{ translate: "0 0" }, { translate: to }], {
         duration,
         iterations: Infinity,
@@ -392,7 +392,7 @@ export function autoplay(core: SliderCore) {
           .replace("{index}", String(index + 1))
           .replace(
             "{count}",
-            String(track.querySelectorAll(":scope > [data-aero-slider-index]").length)
+            String(row.querySelectorAll(":scope > [data-aero-slider-index]").length)
           );
   });
   listen(document, "visibilitychange", () => (document.hidden ? stop() : start()));

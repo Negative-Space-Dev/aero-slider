@@ -1,12 +1,12 @@
 import { type Page, create, expect, mount, settled, test } from "./fixtures";
 
 // Slides sized by the page, not by --aero-slides-per-view: each 200px wide until one changes. The
-// fixed height keeps the track's own box the same when a slide widens.
+// fixed height keeps the track's own box the same whatever the slides do.
 const mixed = (n: number) =>
-  `<div id="s" class="aero-slider" style="width:600px"><div class="aero-slider__track">${Array.from(
+  `<div id="s" class="aero-slider" style="width:600px"><div class="aero-slider__track"><div class="aero-slider__slides">${Array.from(
     { length: n },
     (_, i) => `<div style="flex:none;width:200px;height:100px">${i}</div>`
-  ).join("")}</div></div>`;
+  ).join("")}</div></div></div>`;
 
 /** Resolves with how many `aero:resized` events `#s` dispatched during `change` and the frames after it. */
 const resizedDuring = (page: Page, change: () => void) =>
@@ -74,7 +74,7 @@ test("slides added before refresh() are tracked, and removed ones are not", asyn
       const slide = document.createElement("div");
       slide.id = id;
       slide.style.cssText = "flex:none;width:200px;height:100px";
-      track.append(slide);
+      track.querySelector(".aero-slider__slides")!.append(slide);
     }
     window.sliders.s!.refresh();
     // Still in the document, so the observer would report it if it were still observed.
@@ -100,4 +100,38 @@ test("slides added before refresh() are tracked, and removed ones are not", asyn
   expect(
     await page.evaluate(() => document.querySelector("#s .aero-slider__track")!.scrollLeft)
   ).toBe(5 * 200 + 350 + 200 - 600);
+});
+
+// The row stays as long, so only watching each slide shows the change.
+test("two slides trading width re-measure", async ({ page }) => {
+  await mount(page, mixed(8));
+  await create(page, "s", { alignment: "start" });
+  await settled(page, "s");
+  const resized = await resizedDuring(page, () => {
+    document.querySelector<HTMLElement>('#s [data-aero-slider-index="1"]')!.style.width = "300px";
+    document.querySelector<HTMLElement>('#s [data-aero-slider-index="2"]')!.style.width = "100px";
+  });
+  expect(resized).toBe(1);
+  await page.evaluate(() => window.sliders.s!.goTo(2, { instant: true }));
+  expect(await offsetOf(page, 2)).toBe(0);
+});
+
+// A gap between fixed-width slides resizes no slide and not the track: only the row grows.
+test("a new gap re-measures without a refresh()", async ({ page }) => {
+  await mount(page, mixed(8));
+  await create(page, "s", { alignment: "start" });
+  await settled(page, "s");
+  const resized = await resizedDuring(page, () => {
+    document.getElementById("s")!.style.setProperty("--aero-slide-gap", "20px");
+  });
+  expect(resized).toBe(1);
+
+  await page.evaluate(() => window.sliders.s!.goTo(3));
+  await settled(page, "s");
+  expect(await offsetOf(page, 3)).toBe(0);
+  await page.evaluate(() => {
+    document.querySelector("#s .aero-slider__track")!.scrollTo({ left: 1100, behavior: "smooth" });
+  });
+  await settled(page, "s");
+  expect(await page.evaluate(() => window.sliders.s!.currentIndex)).toBe(5);
 });

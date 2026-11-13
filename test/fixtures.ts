@@ -55,7 +55,7 @@ export interface SliderMarkup {
 /** One 600px-wide slider with `n` slides and the library's class names. */
 export const slider = (id: string, n: number, options: SliderMarkup = {}): string => {
   const { style = "", className = "", inner } = options;
-  return `<div id="${id}" class="aero-slider ${className}" style="width:600px;${style}"><div class="aero-slider__viewport" style="position:relative">${options.nav === false ? "" : nav}<div class="aero-slider__track">${slides(n, inner)}</div></div>${options.dots === false ? "" : dots}</div>`;
+  return `<div id="${id}" class="aero-slider ${className}" style="width:600px;${style}"><div class="aero-slider__viewport" style="position:relative">${options.nav === false ? "" : nav}<div class="aero-slider__track"><div class="aero-slider__slides">${slides(n, inner)}</div></div></div>${options.dots === false ? "" : dots}</div>`;
 };
 
 export interface MountOptions {
