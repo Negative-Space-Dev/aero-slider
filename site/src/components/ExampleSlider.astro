@@ -40,29 +40,30 @@ const role = (i: number) => slideRole(i + 1, slider.slides.length);
         <div class="aero-slider__track">
           {
             slider.slides.map((slide, i) =>
-              slide.kind === "card" ? (
-                <div class="ex-card" {...role(i)}>
-                  <div class="ex-card__body">
-                    <span class="ex-card__meta">{slide.meta}</span>
-                    <h4 class="ex-card__title">{slide.title}</h4>
-                    <p class="ex-card__text">{slide.text}</p>
+              slide.kind === "product" ? (
+                <div class="ex-product" {...role(i)}>
+                  <div class="ex-product__card">
+                    <div class="slide ex-product__image" data-tone={slide.tone} aria-hidden="true">
+                      <span>{String(i + 1).padStart(2, "0")}</span>
+                    </div>
+                    <div class="ex-product__body">
+                      <a class="ex-product__name" href="#ex-product-row" data-demo-link>
+                        {slide.name}
+                      </a>
+                      <span class="ex-product__price">{slide.price}</span>
+                      <button type="button" class="btn ex-product__add" data-label="Add to cart">
+                        Add to cart
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : slide.kind === "wordmark" ? (
                 <div class="ex-wordmark" {...role(i)}>
                   <span>{slide.name}</span>
                 </div>
-              ) : slide.kind === "form" ? (
-                <div class="ex-form" {...role(i)}>
-                  <div class="ex-form__body">
-                    <span class="ex-card__meta">{slide.title}</span>
-                    <div class="ex-form__row">
-                      <input type="text" class="ex-form__input" aria-label={slide.field} placeholder={slide.field} />
-                      <button type="button" class="btn ex-form__button" data-label={slide.action}>
-                        {slide.action}
-                      </button>
-                    </div>
-                  </div>
+              ) : slide.kind === "message" ? (
+                <div class="ex-message" {...role(i)}>
+                  <span>{slide.text}</span>
                 </div>
               ) : (
                 <Slide

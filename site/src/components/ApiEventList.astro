@@ -19,7 +19,7 @@ const { groups } = Astro.props;
           {group.entries.map((entry) => (
             <li class="ref-row">
               <div class="ref-row__head">
-                <span class="ref-row__name">aero:{entry.key}</span>
+                <h5 class="ref-row__name">aero:{entry.key}</h5>
                 <span class="ref-chip">
                   <span class="sr-only">event.detail: </span>
                   {entry.type}

@@ -38,6 +38,7 @@
   --surface: #15171b;
   --ink: #eceef1;
   --muted: #a4aab3;
+  --subtle: #949aa3; /* dim text on a surface, where faint runs short of contrast */
   --faint: #7c828b;
   --line: #1b1d21;
   --line-strong: #2d3036;
@@ -79,6 +80,7 @@
   --color-surface: var(--surface);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
   --color-faint: var(--faint);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
@@ -589,14 +591,19 @@ body {
      Wraps instead of scrolling, so it reads at phone width. */
   .ref-list {
     display: grid;
-    gap: 2.5rem;
+    gap: 3rem;
+    max-width: 48rem;
+  }
+  /* Clear of the entry's intro, which sits closer to its heading than to the list. */
+  * + .ref-list {
+    margin-top: 2.5rem;
   }
   .ref-list__title {
     padding-bottom: 0.625rem;
     border-bottom: 1px solid var(--line-strong);
   }
   .ref-row {
-    padding-block: 1rem;
+    padding-block: 1.5rem;
     border-bottom: 1px solid var(--line);
   }
   .ref-row:last-child {
@@ -609,9 +616,9 @@ body {
     gap: 0.375rem 0.5rem;
   }
   .ref-row__name {
-    margin-right: 0.25rem;
+    margin-right: 0.375rem;
     font-family: var(--font-mono);
-    font-size: 0.875rem;
+    font-size: 1.0625rem;
     font-weight: 500;
     letter-spacing: 0;
     color: var(--ink);
@@ -634,7 +641,7 @@ body {
   }
   .ref-row__desc {
     max-width: 40rem;
-    margin-top: 0.375rem;
+    margin-top: 0.625rem;
     font-size: 0.9375rem;
     line-height: 1.6;
     color: var(--muted);
@@ -1025,7 +1032,7 @@ body {
   letter-spacing: -0.01em;
   color: var(--ink);
 }
-.draft-cell code {
+.draft-cell :not(pre) > code {
   white-space: nowrap;
 }
 /* On a phone the drawing runs to the cell's edges, which keeps its labels near 10px. */

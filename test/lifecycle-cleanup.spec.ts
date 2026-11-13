@@ -21,11 +21,10 @@ test("rebuilding keeps interval autoplay running without announcing it again", a
   await page.evaluate(() => {
     const s = window.sliders.s!;
     s.update({ perMove: 1 });
-    s.refresh();
     const slide = document.createElement("div");
     slide.innerHTML = "<div>new</div>";
-    s.add(slide);
-    s.remove(5);
+    s.element.querySelector(".aero-slider__track")!.append(slide);
+    s.refresh();
   });
   expect(await lifecycle(page)).toEqual([]);
   await expect.poll(() => page.evaluate(() => window.sliders.s!.currentIndex)).toBeGreaterThan(0);

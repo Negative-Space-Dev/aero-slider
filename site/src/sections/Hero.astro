@@ -10,7 +10,7 @@ const kb = (value: number) => value.toFixed(1);
 
 <section class="container-page pt-12 text-center sm:pt-20">
   <div class="mb-6 flex flex-wrap items-center justify-center gap-3">
-    <span class="caption inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5">
+    <span class="caption inline-flex items-center gap-2 rounded-full border border-line bg-surface text-subtle px-3 py-1.5">
       <BoxIcon class="size-3.5 text-accent" />
       {kb(bundleSize.total)} KB gzipped
     </span>
@@ -30,7 +30,7 @@ const kb = (value: number) => value.toFixed(1);
             <button
               type="button"
               data-pm={pm}
-              class="install-tab -mb-px border-b border-transparent px-2.5 py-2.5 font-mono text-xs text-faint transition-colors hover:text-ink data-[active]:border-accent data-[active]:text-ink"
+              class="install-tab -mb-px border-b border-transparent px-2.5 py-2.5 font-mono text-xs text-subtle transition-colors hover:text-ink data-[active]:border-accent data-[active]:text-ink"
             >
               {pm}
             </button>
@@ -41,7 +41,7 @@ const kb = (value: number) => value.toFixed(1);
         href={`${REPO}/releases/latest`}
         target="_blank"
         rel="noopener noreferrer"
-        class="flex items-center gap-1.5 rounded-md px-2 py-1 font-mono text-xs text-faint transition-colors hover:text-ink"
+        class="flex items-center gap-1.5 rounded-md px-2 py-1 font-mono text-xs text-subtle transition-colors hover:text-ink"
         title="Download .zip"
       >
         <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -52,12 +52,12 @@ const kb = (value: number) => value.toFixed(1);
     </div>
     <div class="flex items-center justify-between gap-3 py-2.5 pr-2.5 pl-4">
       <p class="min-w-0 truncate font-mono text-sm text-ink">
-        <span class="text-faint select-none" aria-hidden="true">$ </span><span id="install-command">bun add aero-slider</span>
+        <span class="text-subtle select-none" aria-hidden="true">$ </span><span id="install-command">bun add aero-slider</span>
       </p>
       <button
         id="copy-install"
         type="button"
-        class="rounded-md p-2 text-faint transition-colors hover:bg-line hover:text-ink"
+        class="rounded-md p-2 text-subtle transition-colors hover:bg-line hover:text-ink"
         aria-label="Copy to clipboard"
       >
         <svg id="copy-icon" class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -71,11 +71,10 @@ const kb = (value: number) => value.toFixed(1);
     </div>
   </div>
 
-  <p class="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm text-muted">
-    Building with an AI agent?
+  <p class="mt-5 flex justify-center text-sm">
     <a href="/aeroslider.md" class="btn">
       AI Guide
-      <span class="font-mono text-xs font-normal text-faint">aeroslider.md</span>
+      <span class="font-mono text-xs font-normal text-subtle">aeroslider.md</span>
     </a>
   </p>
 

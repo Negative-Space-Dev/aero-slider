@@ -38,9 +38,10 @@ export interface SliderConfig {
    */
   perMove?: number;
   /**
-   * Scroll top to bottom instead of along the text direction. Horizontal sliders follow the
-   * container's computed direction, so `dir="rtl"` on it or an ancestor makes one right-to-left.
-   * The direction is read when the slider starts; call `refresh()` after changing it.
+   * Scroll top to bottom, whatever the text direction. Without it the slider is horizontal and
+   * follows the container's computed direction, so `dir="rtl"` on it or an ancestor makes it
+   * right-to-left. That direction is read when the slider starts; call `refresh()` after
+   * changing `dir`.
    */
   vertical?: boolean;
   /** How the track comes to rest after scrolling. Defaults to `"native"`. */
@@ -70,11 +71,8 @@ export interface SliderInstance {
   pause(): void;
   resume(): void;
   update(config?: SliderConfig): void;
+  /** Re-reads the slides from the track and rebuilds, resting on the same index. */
   refresh(): void;
-  /** Inserts slides before slide `index`, or at the end. The slide in view stays in view. */
-  add(slides: HTMLElement | HTMLElement[], index?: number): void;
-  /** Removes slides by index. The slide in view stays in view, or the next one takes its place. */
-  remove(index: number | number[]): void;
   destroy(): void;
 }
 

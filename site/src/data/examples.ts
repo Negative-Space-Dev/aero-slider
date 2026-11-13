@@ -7,7 +7,6 @@ import type { SliderConfig } from "aero-slider";
 import type { CodeTab } from "../lib/code";
 import { slideRole, thumbRole, type SlideContent } from "../lib/slide";
 import { exampleIds, type ExampleId } from "./anchors";
-import type { RefEntry } from "./api";
 
 export const exampleGroups = [
   { key: "layout", id: "examples-layout", title: "Layout" },
@@ -21,10 +20,13 @@ export type CssVars = Record<`--${string}`, string>;
 
 /** What a demo slide shows. The code samples stand each one in as a plain `<div>`. */
 export type DemoSlide =
-  | ({ kind?: "plate" } & SlideContent)
-  | { kind: "card"; meta: string; title: string; text: string }
+  | ({
+      kind?: "plate";
+      /** The variant a slide belongs to; none means every variant. */ variant?: string;
+    } & SlideContent)
+  | { kind: "product"; name: string; price: string; tone: number }
   | { kind: "wordmark"; name: string }
-  | { kind: "form"; title: string; field: string; action: string };
+  | { kind: "message"; text: string };
 
 export interface DemoSlider {
   /** Element id, in the page and in the code samples. */
@@ -53,8 +55,8 @@ export interface DemoSlider {
   attrs?: Record<string, string>;
   /** Class of a wrapper element around the slider; shown in the HTML sample. */
   wrapperClass?: string;
-  /** False for a demo-only comparison slider that the code tabs leave out. */
-  sample?: boolean;
+  /** The example's own script creates this slider, so the page does not start it. */
+  manual?: boolean;
 }
 
 export interface Example {
@@ -65,12 +67,20 @@ export interface Example {
   sliders: DemoSlider[];
   /** How several sliders sit: side by side from the small breakpoint up, or stacked. */
   layout?: "row" | "stack";
-  /** Show the HTML tab. Examples whose markup is the plain Get started markup leave it out. */
-  html?: boolean;
+  /**
+   * Show the HTML tab: `true` prints the sliders' markup, a string is the whole tab. Examples
+   * whose markup is the plain Get started markup leave it out.
+   */
+  html?: boolean | string;
+  /** Markup the example needs beside its sliders, appended to the HTML tab. */
+  htmlAfter?: string;
   /** Stylesheet the demo runs, injected as written and appended to the CSS tab. */
   css?: string;
-  /** Code that runs after the sliders are created, appended to the JS tab. */
-  js?: { imports: string[]; after: string };
+  /**
+   * The JS tab: `body` replaces the createSlider lines, `after` follows them. The demo's wiring
+   * in scripts/examples.ts runs the same steps.
+   */
+  js?: { imports?: string[]; body?: string; after?: string };
   /** "Good to know" bullets. HTML. */
   notes?: string[];
 }
@@ -80,22 +90,41 @@ const plates = (labels: (string | number)[], extra: Partial<SlideContent> = {}):
 const numbered = (count: number): DemoSlide[] =>
   plates(Array.from({ length: count }, (_, i) => i + 1));
 
-const responsiveCss = `/* One slide on phones, two on tablets, three on desktops. */
-#responsive {
-  --aero-slides-per-view: 1;
-  --aero-slide-gap: 8px;
+const productRowCss = `/* A peek of the next card on phones, whole rows from there up. */
+#product-row {
+  --aero-slides-per-view: 1.4;
+  --aero-slide-gap: 12px;
+  --aero-slide-aspect: auto; /* a card is as tall as its content */
 }
 @media (min-width: 640px) {
-  #responsive {
-    --aero-slides-per-view: 2;
-    --aero-slide-gap: 12px;
+  #product-row {
+    --aero-slides-per-view: 2.4;
   }
 }
 @media (min-width: 1024px) {
-  #responsive {
-    --aero-slides-per-view: 3;
+  #product-row {
+    --aero-slides-per-view: 4;
     --aero-slide-gap: 16px;
   }
+}`;
+
+const mobileOnlyCss = `#collections {
+  --aero-slides-per-view: 1.3;
+  --aero-slide-gap: 12px;
+}
+
+/* From 768px up the slider is destroyed and the same markup is a grid. */
+@media (min-width: 768px) {
+  #collections .aero-slider__track {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    overflow: visible;
+  }
+}`;
+
+const announcementCss = `/* A vertical slider is as tall as its viewport: one line of text here. */
+#announcement .aero-slider__viewport {
+  height: 2.75rem;
 }`;
 
 const edgeToEdgeCss = `/* Your page's content column: 72rem at most, inside the page gutter. */
@@ -186,77 +215,106 @@ const styledCss = `#styled .aero-slider__nav--prev,
   background: #6aa5ff;
 }`;
 
+const products: DemoSlide[] = [
+  ["Field Watch", "$148"],
+  ["Flight Jacket", "$320"],
+  ["Aviator Glasses", "$96"],
+  ["Kneeboard", "$42"],
+  ["Headset Case", "$58"],
+  ["Duffel 40L", "$184"],
+  ["Leather Gloves", "$74"],
+  ["Chart Pen", "$18"],
+].map(([name, price], i) => ({
+  kind: "product" as const,
+  name: name!,
+  price: price!,
+  tone: i % 2 ? 4 : 1,
+}));
+
+/** The variant gallery's slides: three views per colour, then two that every colour shares. */
+const variants = [
+  { key: "graphite", label: "Graphite", tone: 1 },
+  { key: "ceramic", label: "Ceramic", tone: 2 },
+  { key: "blue", label: "Blue", tone: 3 },
+] as const;
+export const variantOptions = variants.map(({ key, label }) => ({ key, label }));
+const variantSlides: DemoSlide[] = [
+  ...variants.flatMap(({ key, label, tone }) =>
+    ["Front", "Side", "Detail"].map((num) => ({ num, label, tone, variant: key }))
+  ),
+  { num: "Fit", label: "All colours", tone: 4 },
+  { num: "Box", label: "All colours", tone: 4 },
+];
+
+const variantHtml = `<div id="swatches" role="group" aria-label="Colour">
+  <button type="button" data-variant="graphite">Graphite</button>
+  <button type="button" data-variant="ceramic">Ceramic</button>
+  <button type="button" data-variant="blue">Blue</button>
+</div>
+
+<div id="variant-gallery" class="aero-slider" role="region" aria-roledescription="carousel" aria-label="Product images">
+  <div class="aero-slider__viewport">
+    <div class="aero-slider__track">
+      <!-- data-variant: shown for that colour only -->
+      <div data-variant="graphite">Graphite, front</div>
+      <div data-variant="graphite">Graphite, side</div>
+      <div data-variant="ceramic">Ceramic, front</div>
+      <div data-variant="ceramic">Ceramic, side</div>
+      <div data-variant="blue">Blue, front</div>
+      <div data-variant="blue">Blue, side</div>
+      <!-- No data-variant: shown for every colour -->
+      <div>Fit guide</div>
+    </div>
+  </div>
+</div>
+
+<!-- One button per slide, in the same order, with the same data-variant -->
+<div id="variant-thumbs" class="aero-slider" role="group" aria-label="Product image thumbnails">
+  <div class="aero-slider__viewport">
+    <div class="aero-slider__track">
+      <button type="button" data-variant="graphite" aria-label="Show graphite, front">…</button>
+      <!-- … -->
+      <button type="button" aria-label="Show fit guide">…</button>
+    </div>
+  </div>
+</div>`;
+
 export const examples: Record<ExampleId, Example> = {
-  "ex-card-row": {
-    group: "layout",
-    title: "Card row with a peek",
-    lead: "Use it when several cards should show at once and a partly visible card should hint that there is more.",
+  "ex-product-row": {
+    group: "controls",
+    title: "Product row",
+    lead: "Use it for a row of product cards: a peek of the next card on phones, whole rows on wider screens, and buttons that still click.",
+    html: true,
     sliders: [
       {
-        id: "card-row",
-        label: "Product features",
-        vars: {
-          "--aero-slides-per-view": "2.25",
-          "--aero-slide-gap": "16px",
-          "--aero-slide-aspect": "4 / 3",
-        },
+        id: "product-row",
+        label: "Best sellers",
+        config: { alignment: "start", noDrag: "a, button" },
         nav: true,
-        dots: true,
-        slides: [
-          ["Telemetry", "Live readings from every sensor on one screen."],
-          ["Flight plans", "Draft a route, check it and file it."],
-          ["Weather", "Winds aloft and ceilings along the route."],
-          ["Logbook", "Every hour flown, signed and searchable."],
-          ["Checklists", "Each phase in order, nothing skipped."],
-          ["Maintenance", "Parts, hours and the next inspection due."],
-        ].map(([title, text], i) => ({
-          kind: "card" as const,
-          meta: `Module ${String(i + 1).padStart(2, "0")}`,
-          title,
-          text,
-        })),
+        slides: products,
       },
     ],
+    css: productRowCss,
+    js: {
+      after: `// The arrows turn a whole row: as many cards as fully fit.
+const el = slider.element;
+let perMove = 1;
+function pageSize() {
+  const fit = Math.floor(parseFloat(getComputedStyle(el).getPropertyValue("--aero-slides-per-view")));
+  if (fit !== perMove) slider.update({ perMove: (perMove = fit) });
+}
+el.addEventListener("aero:resized", pageSize);
+pageSize();`,
+    },
     notes: [
       "<code>--aero-slides-per-view</code> takes fractions. The part after the point is how much of the next card shows.",
-      "Slide width is worked out in CSS from the track width, the gap and the slides per view, so cards have their size before JavaScript runs.",
-      "<code>--aero-slide-aspect</code> sets each card's height from its width.",
-    ],
-  },
-
-  "ex-responsive": {
-    group: "layout",
-    title: "Responsive breakpoints",
-    lead: "Use it when the number of slides in view should change with the screen width.",
-    sliders: [
-      { id: "responsive", label: "Responsive slides", nav: true, dots: true, slides: numbered(6) },
-    ],
-    css: responsiveCss,
-    notes: [
       "The slider re-reads <code>--aero-slides-per-view</code> whenever the track or a slide changes size, so a media query takes effect with no JavaScript breakpoint config.",
-      "<code>--aero-slide-gap</code> and <code>--aero-slide-aspect</code> are plain CSS and can change in the same media queries.",
-      "Resize the window to watch it switch between one, two and three slides.",
-    ],
-  },
-
-  "ex-alignment": {
-    group: "layout",
-    title: "Alignment",
-    lead: "Use it when the active slide should rest against the start or end edge instead of the center.",
-    layout: "row",
-    sliders: (["start", "center", "end"] as const).map((alignment) => ({
-      id: `align-${alignment}`,
-      label: `Aligned ${alignment}`,
-      name: alignment,
-      caption: alignment,
-      vars: { "--aero-slides-per-view": "1.5", "--aero-slide-gap": "12px" },
-      config: { alignment, loop: true },
-      slides: plates(["A", "B", "C", "D"]),
-    })),
-    notes: [
-      "<code>center</code> is the default.",
-      "The values are logical. <code>start</code> is the left edge here, the right edge in a right-to-left slider and the top edge in a vertical one.",
-      "Without <code>loop</code>, the first and last slides cannot reach the alignment point. The track stops at its end, and <code>currentIndex</code> still reports the slide in focus.",
+      "Card widths are worked out in CSS from the track width, the gap and the slides per view, so cards have their size before JavaScript runs.",
+      "<code>--aero-slide-aspect: auto</code> lets a card take the height of its content. Leave it out to give every slide one shape.",
+      "The slider stretches each direct child of a slide to fill it. Put a card's image, text and button inside one wrapper, as here, and lay them out in that.",
+      "<code>noDrag</code> names what a mouse drag must not start on, so the link and the button click as usual. A press anywhere else on the card still drags, and touch is not affected.",
+      "Without <code>noDrag</code>, a drag that starts on a link or button swallows the click that ends it.",
+      "<code>perMove</code> sets how far the arrows, the arrow keys and autoplay go. Dragging still lands on any card.",
     ],
   },
 
@@ -293,74 +351,44 @@ export const examples: Record<ExampleId, Example> = {
     ],
   },
 
-  "ex-direction": {
+  "ex-mobile-only": {
     group: "layout",
-    title: "Right-to-left and vertical",
-    lead: "Use it for right-to-left languages, or when slides should stack and scroll vertically.",
-    layout: "row",
-    sliders: [
-      {
-        id: "rtl",
-        label: "Right-to-left slides",
-        name: "rtl",
-        caption: 'dir="rtl"',
-        attrs: { dir: "rtl" },
-        vars: { "--aero-slide-gap": "12px" },
-        nav: true,
-        dots: true,
-        slides: plates([..."אבגד"]),
-      },
-      {
-        id: "vertical",
-        label: "Vertical slides",
-        name: "vertical",
-        caption: "vertical",
-        vars: { "--aero-slide-gap": "12px" },
-        config: { vertical: true },
-        dots: true,
-        slides: numbered(4),
-      },
-    ],
-    notes: [
-      'A horizontal slider follows the text direction of the page, so a right-to-left site needs no option. Here <code>dir="rtl"</code> sits on the container only to show it beside a left-to-right page.',
-      "Arrow keys, the drag axis and the scroll axis all follow the direction. A vertical slider moves with the up and down keys.",
-      "A vertical slider takes its height from <code>--aero-slide-aspect</code>. <code>--aero-slides-per-view</code> and <code>--aero-slide-gap</code> work along the vertical axis.",
-    ],
-  },
-
-  "ex-no-shift": {
-    group: "layout",
-    title: "Loop without layout shift",
-    lead: "Use it when a looping slider shows on first paint and must not move when JavaScript starts.",
+    title: "Slider on phones, grid on desktop",
+    lead: "Use it when a set of tiles should swipe on a phone and sit in a plain grid on wider screens.",
     html: true,
-    layout: "row",
     sliders: [
       {
-        id: "no-shift-before",
-        label: "Without the attribute",
-        caption: "Without the attribute",
-        sample: false,
-        vars: { "--aero-slides-per-view": "1.5", "--aero-slide-gap": "12px" },
-        config: { loop: true },
-        slides: numbered(5),
-      },
-      {
-        id: "no-shift",
-        label: "With the attribute",
-        caption: "With data-aero-defer-visibility",
-        attrs: { "data-aero-defer-visibility": "" },
-        vars: { "--aero-slides-per-view": "1.5", "--aero-slide-gap": "12px" },
-        config: { loop: true },
-        slides: numbered(5),
+        id: "collections",
+        label: "Collections",
+        manual: true,
+        slides: ["Watches", "Outerwear", "Eyewear", "Bags", "Gloves", "Instruments"].map((num) => ({
+          num,
+          label: "Collection",
+        })),
       },
     ],
+    css: mobileOnlyCss,
+    js: {
+      body: `const el = document.getElementById("collections");
+const phone = matchMedia("(max-width: 767px)");
+let slider;
+
+function sync() {
+  if (phone.matches) {
+    slider ??= createSlider(el);
+  } else {
+    slider?.destroy();
+    slider = undefined;
+  }
+}
+phone.addEventListener("change", sync);
+sync();`,
+    },
     notes: [
-      "A loop puts copies of the last slides in front of the first, so you can scroll back from slide 1. Until JavaScript adds them, slide 1 sits at the start of the track, then moves.",
-      "<code>data-aero-defer-visibility</code> reserves that space in CSS from the first paint. The slider removes the attribute when it starts.",
-      'The space is worked out for center alignment. With another <code>alignment</code>, repeat it in the HTML as <code>data-aero-alignment="start"</code> or <code>"end"</code>.',
-      "Set <code>--aero-slides-per-view</code> and <code>--aero-slide-gap</code> in CSS. The reserved space is computed from them.",
-      "Use it only with <code>loop</code>. Without loop nothing is added in front, so there is nothing to reserve.",
-      "Replay start-up removes both sliders and starts them again after a pause, which is what a page load looks like.",
+      "<code>destroy()</code> removes the slider's listeners, clones and classes and leaves your markup, so the same elements can be laid out as a grid and started again later.",
+      "The library's classes are still in your markup, so the track keeps its flex row until your own CSS replaces it. That is the one rule in the media query.",
+      "Keep the breakpoint in the script and the one in the stylesheet the same.",
+      "Resize the window across 768px to watch it switch.",
     ],
   },
 
@@ -368,19 +396,33 @@ export const examples: Record<ExampleId, Example> = {
     group: "motion",
     title: "Hero banner with autoplay",
     lead: "Use it when a banner should move through its slides on its own and step aside as soon as someone interacts.",
+    html: true,
     sliders: [
       {
         id: "hero-banner",
-        label: "Flight phases",
-        vars: { "--aero-slide-aspect": "21 / 9", "--aero-slide-gap": "12px" },
+        label: "Featured",
+        attrs: { "data-aero-defer-visibility": "" },
+        vars: {
+          "--aero-slides-per-view": "1.2",
+          "--aero-slide-aspect": "21 / 9",
+          "--aero-slide-gap": "12px",
+        },
         config: { autoplay: true, autoplayInterval: 4000, loop: true },
         nav: true,
         dots: true,
         slides: [
-          { num: "Ascent", label: "01 / 04", text: "Clear the field, climb to cruise." },
-          { num: "Orbit", label: "02 / 04", text: "Hold the line, trim for the long haul." },
-          { num: "Descent", label: "03 / 04", text: "Plan the arrival, step down on profile." },
-          { num: "Landing", label: "04 / 04", text: "Stable on final, wheels on the numbers." },
+          { num: "Autumn", label: "New season", text: "Field jackets and wool layers, in now." },
+          {
+            num: "Watches",
+            label: "Back in stock",
+            text: "The Field Watch returns in three colours.",
+          },
+          {
+            num: "Travel",
+            label: "Collection",
+            text: "Duffels and cases built for the overhead bin.",
+          },
+          { num: "Gifts", label: "Under $50", text: "Small things that get used every day." },
         ],
       },
     ],
@@ -391,17 +433,19 @@ export const examples: Record<ExampleId, Example> = {
       "<code>pause()</code> and <code>resume()</code> hold it from code, on top of those pauses.",
       "Without <code>loop</code> it returns to the first slide after the last.",
       "Autoplay that runs for more than five seconds needs a pause control. Wire your own button to <code>pause()</code> and <code>resume()</code>.",
+      "A loop puts copies of the last slides in front of the first. Where the neighbours show, as here, slide 1 would start at the edge and jump to the centre when JavaScript runs. <code>data-aero-defer-visibility</code> reserves that space in CSS from the first paint, and the slider removes the attribute when it starts.",
+      'The reserved space is worked out from <code>--aero-slides-per-view</code> and <code>--aero-slide-gap</code> for center alignment. With another <code>alignment</code>, repeat it in the HTML as <code>data-aero-alignment="start"</code> or <code>"end"</code>.',
     ],
   },
 
   "ex-ticker": {
     group: "motion",
     title: "Logo ticker",
-    lead: "Use it for a strip of logos or announcements that drifts steadily and never stops on a slide.",
+    lead: "Use it for a strip of logos or press mentions that drifts steadily and never stops on a slide.",
     sliders: [
       {
         id: "ticker",
-        label: "Customers",
+        label: "As seen in",
         vars: {
           "--aero-slides-per-view": "4",
           "--aero-slide-gap": "12px",
@@ -430,115 +474,30 @@ export const examples: Record<ExampleId, Example> = {
     ],
   },
 
-  "ex-snap": {
+  "ex-announcement": {
     group: "motion",
-    title: "Snap modes",
-    lead: "Use it when snapping on every slide feels abrupt under a trackpad, or when the track should rest wherever it stops.",
-    layout: "stack",
-    sliders: [
-      {
-        id: "snap-settle",
-        label: "Settle snap",
-        name: "settle",
-        caption: 'snap: "settle"',
-        vars: { "--aero-slides-per-view": "3", "--aero-slide-gap": "12px" },
-        config: { loop: true, snap: "settle", scrollDuration: 550 },
-        slides: numbered(8),
-      },
-      {
-        id: "snap-none",
-        label: "Free scroll",
-        name: "free",
-        caption: 'snap: "none"',
-        vars: { "--aero-slides-per-view": "3", "--aero-slide-gap": "12px" },
-        config: { snap: "none" },
-        slides: numbered(8),
-      },
-    ],
-    notes: [
-      'The default, <code>"native"</code>, is CSS scroll snapping.',
-      '<code>"settle"</code> scrolls freely under a drag, swipe or trackpad, then eases onto the nearest slide once scrolling stops, using <code>scrollDuration</code> and <code>scrollEasing</code>. Try a slow trackpad scroll on the first slider.',
-      '<code>"none"</code> rests wherever the track stops, and a mouse drag coasts on its release speed.',
-      "Both add <code>aero-slider--free</code> to the container, which turns CSS snapping off.",
-    ],
-  },
-
-  "ex-per-move": {
-    group: "motion",
-    title: "Page by page",
-    lead: "Use it when the arrows should turn a whole page of slides at a time.",
-    sliders: [
-      {
-        id: "per-move",
-        label: "Paged slides",
-        vars: { "--aero-slides-per-view": "3", "--aero-slide-gap": "12px" },
-        config: { alignment: "start", perMove: 3 },
-        nav: true,
-        slides: numbered(12),
-      },
-    ],
-    notes: [
-      "<code>perMove</code> sets how far <code>next()</code> and <code>prev()</code> go. The arrows, the arrow keys and autoplay all use them.",
-      "Dragging and <code>goTo()</code> still land on any slide.",
-      'With <code>alignment: "start"</code> and a whole number of slides in view, the last stop is the last full page.',
-    ],
-  },
-
-  "ex-arrows-dots": {
-    group: "controls",
-    title: "Arrows and dots",
-    lead: "Arrows and dots are markup, not JavaScript options. Put the elements inside the slider and it finds them and wires them up.",
-    html: true,
-    layout: "row",
-    sliders: [
-      {
-        id: "with-arrows",
-        label: "Slides with arrows",
-        name: "arrows",
-        caption: "Arrows",
-        vars: { "--aero-slide-gap": "12px" },
-        nav: true,
-        slides: numbered(3),
-      },
-      {
-        id: "with-dots",
-        label: "Slides with dots",
-        name: "dots",
-        caption: "Dots",
-        vars: { "--aero-slide-gap": "12px" },
-        dots: true,
-        slides: numbered(3),
-      },
-    ],
-    notes: [
-      "Put the buttons before the track, so keyboard users reach them before the slide content.",
-      "The dot is one template. The slider clones it for each position it can scroll to and marks the current one with <code>aero-slider__dot--active</code>.",
-      "Without <code>loop</code>, the slider disables the arrow at an end it cannot pass.",
-      'Give each button an <code>aria-label</code>. Make the dot a <code>&lt;button type="button"&gt;</code> too: a <code>&lt;span&gt;</code> cannot be reached by keyboard. <code>{index}</code> in its <code>aria-label</code> becomes the slide number of each dot.',
-      'The library has no styles for the arrows or the dots. See <a href="#ex-styling">Style the arrows, dots and states</a>.',
-    ],
-  },
-
-  "ex-max-dots": {
-    group: "controls",
-    title: "Many slides, few dots",
-    lead: "Use it when there are more positions than dots that fit, and the dots should scroll along with the active slide.",
+    title: "Announcement bar",
+    lead: "Use it for the strip above a store's header: short messages that roll up one at a time.",
     html: true,
     sliders: [
       {
-        id: "max-dots",
-        label: "Many slides",
-        vars: { "--aero-slides-per-view": "2.5", "--aero-slide-gap": "12px" },
-        config: { maxDots: 5 },
-        nav: true,
-        dots: true,
-        slides: numbered(12),
+        id: "announcement",
+        label: "Announcements",
+        className: "aero-slider--vertical",
+        config: { vertical: true, autoplay: true, autoplayInterval: 3500, loop: true },
+        slides: [
+          "Free shipping on orders over $50",
+          "Free returns within 30 days",
+          "New: the Autumn field collection",
+        ].map((text) => ({ kind: "message" as const, text })),
       },
     ],
+    css: announcementCss,
     notes: [
-      "With more positions than <code>maxDots</code>, the dots sit in a window that slides to keep the active one in view.",
-      "Dots at the window's edges get <code>aero-slider__dot--edge</code> and <code>aero-slider__dot--near-edge</code>, which the library's CSS shrinks.",
-      "<code>0</code>, the default, shows every dot.",
+      "<code>vertical: true</code> scrolls top to bottom, whatever the text direction of the page. The up and down arrow keys, the drag axis and a swipe all follow.",
+      "A vertical slider gets its height from its viewport. Give the viewport a <code>height</code>, as here, or let it follow <code>--aero-slide-aspect</code>.",
+      "The slider adds <code>aero-slider--vertical</code> itself. Putting the class in the markup as well lays the bar out before JavaScript runs.",
+      "The autoplay rules from the hero banner apply: it pauses on hover and focus, and does not run under <code>prefers-reduced-motion</code>.",
     ],
   },
 
@@ -594,43 +553,147 @@ export const examples: Record<ExampleId, Example> = {
     ],
   },
 
-  "ex-no-drag": {
+  "ex-variants": {
+    group: "layout",
+    title: "Gallery that follows the variant",
+    lead: "Use it when a product's images change with the colour or flavour picked: each variant shows its own images plus the ones every variant shares.",
+    html: variantHtml,
+    layout: "stack",
+    sliders: [
+      {
+        id: "variant-gallery",
+        label: "Product images",
+        name: "main",
+        vars: { "--aero-slide-aspect": "16 / 9", "--aero-slide-gap": "12px" },
+        nav: true,
+        slides: variantSlides,
+      },
+      {
+        id: "variant-thumbs",
+        label: "Product image thumbnails",
+        thumbs: true,
+        name: "thumbs",
+        chrome: "aero-slider--thumbnails",
+        vars: {
+          "--aero-slides-per-view": "4",
+          "--aero-slide-gap": "8px",
+          "--aero-slide-aspect": "16 / 9",
+        },
+        config: { alignment: "center" },
+        slides: variantSlides,
+      },
+    ],
+    js: {
+      imports: ["syncThumbnails"],
+      after: `syncThumbnails(main, thumbs);
+
+// Hold on to every slide, in the track or out of it, so each image loads once.
+const galleries = [main, thumbs].map((slider) => ({
+  slider,
+  track: slider.element.querySelector(".aero-slider__track"),
+  slides: [...slider.element.querySelectorAll("[data-aero-slider-index]")],
+}));
+
+function show(variant) {
+  for (const { slider, track, slides } of galleries) {
+    // A slide with no data-variant belongs to every variant.
+    track.replaceChildren(
+      ...slides.filter((slide) => (slide.dataset.variant ?? variant) === variant)
+    );
+    slider.refresh();
+  }
+  main.goTo(0, { instant: true }); // leave this out to stay on the same index
+}
+
+show("graphite");
+document.getElementById("swatches").addEventListener("click", (event) => {
+  const variant = event.target.closest("button")?.dataset.variant;
+  if (variant) show(variant);
+});`,
+    },
+    notes: [
+      "<code>refresh()</code> re-reads the slides from the track, so the slider becomes whatever elements are in it. Change the track first, then call it.",
+      "Take slides out of the track to hide them. One hidden with CSS still counts as a slide, with its own stop and dot.",
+      "<code>refresh()</code> rests on the same index as before. <code>goTo(0, { instant: true })</code> after it starts the new set from its first image. The swap and the jump happen before the browser paints, so nothing flashes in between. The switch above the gallery turns that jump on and off.",
+      "Find slides by <code>data-aero-slider-index</code>, as here, and not by their place in the track. A looping track also holds copies of its slides, and the thumbnail strip loops.",
+      "Reusing the same elements keeps the images they have already loaded.",
+      "No <code>slideChange</code> fires when the set changes under the same index. Update a counter or caption yourself after the swap.",
+      'Slides named "2 of 5" in the markup need their names rewritten when the count changes.',
+    ],
+  },
+
+  "ex-max-dots": {
     group: "controls",
-    title: "Buttons and links inside slides",
-    lead: "Use it when slides hold buttons, links or form fields that must work with a mouse.",
+    title: "Many slides, few dots",
+    lead: "Use it when there are more positions than dots that fit, and the dots should scroll along with the active slide.",
     html: true,
     sliders: [
       {
-        id: "no-drag",
-        label: "Radio settings",
-        vars: {
-          "--aero-slides-per-view": "1.5",
-          "--aero-slide-gap": "12px",
-          "--aero-slide-aspect": "2 / 1",
-        },
-        config: { noDrag: "a, button, input" },
+        id: "max-dots",
+        label: "Many slides",
+        vars: { "--aero-slides-per-view": "2.5", "--aero-slide-gap": "12px" },
+        config: { maxDots: 5 },
+        nav: true,
         dots: true,
-        slides: [
-          { kind: "form", title: "Callsign", field: "Callsign", action: "Save" },
-          { kind: "form", title: "Squawk code", field: "Squawk", action: "Set" },
-          { kind: "form", title: "Frequency", field: "MHz", action: "Tune" },
-        ],
+        slides: numbered(12),
       },
     ],
     notes: [
-      "A mouse or pen press that starts on an element matching <code>noDrag</code> does not start a drag. The button clicks and the field selects text as usual.",
-      "Form fields and media controls are left out by default. This example sets its own list to add links and buttons, and a list you set replaces the default.",
-      "A press anywhere else on the slide still drags.",
-      "Touch is not affected. A swipe scrolls natively wherever it starts.",
-      "Arrow keys typed in a text field move the caret, not the slider.",
-      "Without <code>noDrag</code>, a drag that starts on a link or button swallows the click that ends it.",
+      "With more positions than <code>maxDots</code>, the dots sit in a window that slides to keep the active one in view.",
+      "Dots at the window's edges get <code>aero-slider__dot--edge</code> and <code>aero-slider__dot--near-edge</code>, which the library's CSS shrinks.",
+      "<code>0</code>, the default, shows every dot.",
+    ],
+  },
+
+  "ex-counter": {
+    group: "controls",
+    title: "Counter and progress bar",
+    lead: "Use it when a gallery should say “2 / 5” or fill a bar in place of dots, as most product pages do on a phone.",
+    html: true,
+    htmlAfter: `<p id="gallery-count">1 / 5</p>
+<div class="progress"><div id="gallery-bar"></div></div>`,
+    css: `.progress {
+  height: 2px;
+  background: #2d3036;
+}
+#gallery-bar {
+  height: 100%;
+  background: #6aa5ff;
+  transition: width 0.25s;
+}`,
+    sliders: [
+      {
+        id: "counted",
+        label: "Product images",
+        vars: { "--aero-slide-aspect": "16 / 9", "--aero-slide-gap": "12px" },
+        nav: true,
+        slides: plates([1, 2, 3, 4, 5], { label: "View" }),
+      },
+    ],
+    js: {
+      after: `const count = document.getElementById("gallery-count");
+const bar = document.getElementById("gallery-bar");
+
+function show() {
+  const position = slider.currentIndex + 1;
+  count.textContent = \`\${position} / \${slider.slideCount}\`;
+  bar.style.width = \`\${(position / slider.slideCount) * 100}%\`;
+}
+slider.element.addEventListener("aero:slideChange", show);
+show(); // no slideChange fires for the starting slide`,
+    },
+    notes: [
+      "<code>aero:slideChange</code> fires on the container as soon as the new slide is known, before the scroll lands, so the counter keeps up with a drag.",
+      "Read <code>currentIndex</code> and <code>slideCount</code> from the instance, or the index from <code>event.detail.index</code>.",
+      "The counter and bar are your own elements, anywhere on the page. Leave the pagination element out of the slider and it makes no dots.",
+      "Call the function again after you change the slides and <code>refresh()</code>.",
     ],
   },
 
   "ex-styling": {
     group: "controls",
-    title: "Style the arrows, dots and states",
-    lead: "Use it when you style the controls yourself. The library ships layout only: no look for the arrows and no size or colour for the dots.",
+    title: "Arrows, dots and their states",
+    lead: "Arrows and dots are markup, not options: put the elements inside the slider and it wires them up. The library lays them out and nothing more, so their look is yours.",
     html: true,
     sliders: [
       {
@@ -650,35 +713,16 @@ export const examples: Record<ExampleId, Example> = {
     ],
     css: styledCss,
     notes: [
+      "Put the arrow buttons before the track, so keyboard users reach them before the slide content.",
+      "The dot is one template. The slider clones it for each position it can scroll to.",
+      'Give each button an <code>aria-label</code>. Make the dot a <code>&lt;button type="button"&gt;</code> too: a <code>&lt;span&gt;</code> cannot be reached by keyboard. <code>{index}</code> in its <code>aria-label</code> becomes the slide number of each dot.',
       "The viewport is <code>position: relative</code>, so arrows inside it can be placed with <code>position: absolute</code>.",
       "The slider sets <code>disabled</code> on an arrow that cannot go further, so <code>:disabled</code> styles the end state. With <code>loop</code> no arrow is ever disabled.",
       'The current dot gets <code>aero-slider__dot--active</code> and <code>aria-current="true"</code>.',
-      "The classes below are what the slider sets, for styling any other state.",
+      'Every class the slider sets is listed under <a href="#api-states">States in the API</a>.',
     ],
   },
 };
-
-/** Classes the slider sets on the controls, listed beside the container's state classes. */
-export const controlStates: RefEntry[] = [
-  {
-    name: "aero-slider__dot--active",
-    description: "The dot for the current position",
-  },
-  {
-    name: ":disabled",
-    description:
-      "Set on <code>aero-slider__nav--prev</code> or <code>--next</code> when it cannot go further. Never with <code>loop</code>",
-  },
-  {
-    name: "aero-slider__dot--edge",
-    description:
-      "With <code>maxDots</code>: the outermost dot of the window when more dots lie beyond it. <code>aero-slider__dot--near-edge</code> marks the next one in, and <code>aero-slider__dot--hidden</code> the dots outside the window",
-  },
-  {
-    name: "aero-slider__thumb--active",
-    description: "Set by <code>syncThumbnails</code> on the thumbnail of the current slide",
-  },
-];
 
 // ── Code samples ─────────────────────────────────────────────────────────
 
@@ -688,8 +732,6 @@ export function styleOf(vars: CssVars = {}): string | undefined {
   const entries = Object.entries(vars);
   return entries.length ? entries.map(([key, value]) => `${key}: ${value}`).join("; ") : undefined;
 }
-
-const sampled = (example: Example) => example.sliders.filter((slider) => slider.sample !== false);
 
 const attrSource = (attrs: Record<string, string>) =>
   Object.entries(attrs)
@@ -706,14 +748,19 @@ export function sliderRole(slider: DemoSlider): Record<string, string> {
 function slideSample(slider: DemoSlider, slide: DemoSlide, n: number, indent: string): string[] {
   if (slider.thumbs) return [`${indent}<button${attrSource(thumbRole(n))}>Thumbnail ${n}</button>`];
   const role = attrSource(slideRole(n, slider.slides.length));
-  if (slide.kind === "form") {
+  if (slide.kind === "product") {
+    const slug = slide.name.toLowerCase().replace(/\W+/g, "-");
     return [
       `${indent}<div${role}>`,
-      `${indent}  <input type="text" aria-label="${slide.field}" />`,
-      `${indent}  <button type="button">${slide.action}</button>`,
+      `${indent}  <article class="card">`,
+      `${indent}    <img src="${slug}.jpg" alt="" />`,
+      `${indent}    <a href="/products/${slug}">${slide.name}</a>`,
+      `${indent}    <button type="button">Add to cart</button>`,
+      `${indent}  </article>`,
       `${indent}</div>`,
     ];
   }
+  if (slide.kind === "message") return [`${indent}<div${role}>${slide.text}</div>`];
   return [`${indent}<div${role}>Slide ${n}</div>`];
 }
 
@@ -751,7 +798,8 @@ function sliderHtml(slider: DemoSlider): string[] {
 }
 
 function html(example: Example): string {
-  const sliders = sampled(example);
+  if (typeof example.html === "string") return example.html;
+  const sliders = example.sliders;
   return sliders
     .map((slider) => {
       const lines = sliderHtml(slider);
@@ -759,11 +807,12 @@ function html(example: Example): string {
         ? [`<!-- ${slider.caption} -->`, ...lines].join("\n")
         : lines.join("\n");
     })
+    .concat(example.htmlAfter ?? [])
     .join("\n\n");
 }
 
 function css(example: Example): string {
-  const rules = sampled(example)
+  const rules = example.sliders
     .filter((slider) => slider.vars)
     .map((slider) => {
       const lines = Object.entries(slider.vars!).map(([key, value]) => `  ${key}: ${value};`);
@@ -789,12 +838,14 @@ function js(example: Example): string {
   const lines = [
     `import { ${imports} } from "aero-slider";`,
     ``,
-    ...sampled(example).map(
-      (slider) =>
-        `const ${slider.name ?? "slider"} = createSlider(document.getElementById("${slider.id}")${configSource(slider.config)});`
-    ),
+    ...(example.js?.body
+      ? [example.js.body]
+      : example.sliders.map(
+          (slider) =>
+            `const ${slider.name ?? "slider"} = createSlider(document.getElementById("${slider.id}")${configSource(slider.config)});`
+        )),
   ];
-  if (example.js) lines.push(``, example.js.after);
+  if (example.js?.after) lines.push(``, example.js.after);
   return lines.join("\n");
 }
 

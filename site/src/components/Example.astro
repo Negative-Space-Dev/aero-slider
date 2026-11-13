@@ -35,6 +35,7 @@ const css = example.css;
     <div class:list={["ex__sliders", multi && `ex__sliders--${example.layout ?? "row"}`]}>
       {example.sliders.map((slider) => <ExampleSlider slider={slider} />)}
     </div>
+    <slot name="below" />
   </div>
 
   <div class="ex__more">
@@ -53,6 +54,4 @@ const css = example.css;
       )
     }
   </div>
-
-  <slot name="after" />
 </article>

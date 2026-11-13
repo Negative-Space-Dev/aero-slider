@@ -57,15 +57,15 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     default: '"center"',
     description:
       "Where the active slide rests in the viewport. The values are logical: <code>start</code> is the left edge, the right edge in a right-to-left slider and the top in a vertical one. At the ends of a non-looping track the scroll clamps, but <code>currentIndex</code> still names the focused slide.",
-    example: "ex-alignment",
+    example: "ex-edge-to-edge",
   },
   vertical: {
     group: "Layout",
     type: "boolean",
     default: "false",
     description:
-      'Scrolls top to bottom. A horizontal slider follows the text direction of the page: <code>dir="rtl"</code> on the slider or any ancestor makes it right-to-left. The direction is read when the slider starts, so call <code>refresh()</code> after changing it.',
-    example: "ex-direction",
+      'Scrolls top to bottom, whatever the text direction of the page. Without it, the slider is horizontal and follows the text direction: <code>dir="rtl"</code> on the slider or any ancestor makes it right-to-left. That direction is read when the slider starts, so call <code>refresh()</code> after changing <code>dir</code>.',
+    example: "ex-announcement",
   },
   perMove: {
     group: "Layout",
@@ -73,7 +73,7 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     default: "1",
     description:
       "Stops advanced by each <code>next()</code> and <code>prev()</code>, and so by the arrows, the arrow keys and autoplay. Without <code>loop</code>, slides that rest at the same place near an end share one stop.",
-    example: "ex-per-move",
+    example: "ex-product-row",
   },
   autoplay: {
     group: "Autoplay",
@@ -111,7 +111,7 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     default: "form fields and media controls",
     description:
       'A selector for elements inside slides where a mouse drag should not start. The default is <code>"input, textarea, select, [contenteditable], audio[controls], video[controls]"</code>, so text fields, range inputs and media scrubbers work as usual. Links and buttons are left out so that a slide that is a link can still be dragged. Your value replaces the default.',
-    example: "ex-no-drag",
+    example: "ex-product-row",
   },
   snap: {
     group: "Motion",
@@ -119,7 +119,6 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     default: '"native"',
     description:
       'How the track comes to rest. <code>"native"</code> uses CSS scroll snapping. <code>"settle"</code> scrolls freely, then eases onto the nearest slide. <code>"none"</code> stops wherever the scroll ends.',
-    example: "ex-snap",
   },
   scrollDuration: {
     group: "Motion",
@@ -127,7 +126,6 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     default: "0",
     description:
       "Length in ms of the scroll that <code>next()</code>, <code>prev()</code> and <code>goTo()</code> run, eased by <code>scrollEasing</code>, so it moves the same in every browser. <code>0</code> uses native smooth scrolling. Reduced motion makes every scroll instant.",
-    example: "ex-snap",
   },
   scrollEasing: {
     group: "Motion",
@@ -185,19 +183,7 @@ export const instanceMembers: Record<keyof SliderInstance, Doc<InstanceGroup>> =
     group: "Change",
     name: ".refresh()",
     description:
-      "Re-reads the slides from the DOM and rebuilds. Call it after changing the track yourself.",
-  },
-  add: {
-    group: "Change",
-    name: ".add(slides, index?)",
-    description:
-      "Inserts one element or an array of them before slide <code>index</code>, or at the end, then rebuilds.",
-  },
-  remove: {
-    group: "Change",
-    name: ".remove(index)",
-    description:
-      "Removes the slide at <code>index</code>, or each slide in an array of indexes, then rebuilds.",
+      "Re-reads the slides from the track and rebuilds, resting on the same index. Call it after you add, remove or replace slides. A slide hidden with CSS still counts, so take it out of the track.",
   },
   element: {
     group: "Read state",
@@ -224,97 +210,6 @@ export const instanceMembers: Record<keyof SliderInstance, Doc<InstanceGroup>> =
       "Fires <code>aero:destroy</code>, then removes its listeners, clones and classes and deletes <code>element.aeroSlider</code>. Your markup stays, so <code>createSlider</code> can start it again.",
   },
 };
-
-/** What a button in the control demo works with. */
-export interface ControlContext {
-  /** The latest instance; destroyed once `slider.destroy()` has run. */
-  slider: SliderInstance;
-  el: HTMLElement;
-  config: SliderConfig;
-  createSlider: (element: HTMLElement, config?: SliderConfig) => SliderInstance;
-  /** A new slide element, built like the others. */
-  slide: () => HTMLElement;
-}
-
-export interface ControlAction {
-  group: InstanceGroup;
-  /** The call the button runs, shown as its label. */
-  label: string;
-  /** Whether the button needs a live slider or a destroyed one. */
-  needs: "live" | "destroyed";
-  /** Fewest slides the call leaves the demo usable with. */
-  minSlides?: number;
-  /** Returns the new instance when the call creates one. */
-  run: (ctx: ControlContext) => SliderInstance | void;
-}
-
-// The control demo renders a button per row and runs `run` on click, so a
-// label can't drift from what it does.
-export const controlActions: ControlAction[] = [
-  { group: "Navigate", label: "slider.prev()", needs: "live", run: ({ slider }) => slider.prev() },
-  { group: "Navigate", label: "slider.next()", needs: "live", run: ({ slider }) => slider.next() },
-  {
-    group: "Navigate",
-    label: "slider.goTo(3)",
-    needs: "live",
-    run: ({ slider }) => slider.goTo(3),
-  },
-  {
-    group: "Navigate",
-    label: "slider.goTo(0, { instant: true })",
-    needs: "live",
-    run: ({ slider }) => slider.goTo(0, { instant: true }),
-  },
-  {
-    group: "Autoplay",
-    label: "slider.pause()",
-    needs: "live",
-    run: ({ slider }) => slider.pause(),
-  },
-  {
-    group: "Autoplay",
-    label: "slider.resume()",
-    needs: "live",
-    run: ({ slider }) => slider.resume(),
-  },
-  {
-    group: "Change",
-    label: "slider.add(slide)",
-    needs: "live",
-    run: ({ slider, slide }) => slider.add(slide()),
-  },
-  {
-    group: "Change",
-    label: "slider.remove(slider.slideCount - 1)",
-    needs: "live",
-    minSlides: 2,
-    run: ({ slider }) => slider.remove(slider.slideCount - 1),
-  },
-  {
-    group: "Change",
-    label: 'slider.update({ alignment: "start" })',
-    needs: "live",
-    run: ({ slider }) => slider.update({ alignment: "start" }),
-  },
-  {
-    group: "Change",
-    label: 'slider.update({ alignment: "center" })',
-    needs: "live",
-    run: ({ slider }) => slider.update({ alignment: "center" }),
-  },
-  {
-    group: "Lifecycle",
-    label: "slider.destroy()",
-    needs: "live",
-    run: ({ slider }) => slider.destroy(),
-  },
-  {
-    group: "Lifecycle",
-    label: "slider = createSlider(el, config)",
-    needs: "destroyed",
-    run: ({ el, config, createSlider }) => createSlider(el, config),
-  },
-];
 
 type EventGroup = (typeof eventGroups)[number];
 
@@ -388,7 +283,7 @@ el.addEventListener("aero:hidden", (event) => videoIn(event.detail.index)?.pause
     group: "Drag",
     type: "{ index: number }",
     description:
-      "A mouse or pen drag moved past a few pixels and took over the track. <code>index</code> is the slide it started from.",
+      "A mouse or pen drag moved past a few pixels and took over the track. <code>index</code> is the slide it started from. Touch fires no drag events: a finger swipe scrolls the track natively. To follow every way of moving, use <code>aero:slideChange</code>.",
     useFor: "Reacting to the first drag, such as removing a “drag to explore” hint.",
     snippet: recipe(`const hint = el.querySelector(".drag-hint");
 el.addEventListener("aero:dragStart", () => hint.remove(), { once: true });`),
@@ -397,9 +292,9 @@ el.addEventListener("aero:dragStart", () => hint.remove(), { once: true });`),
     group: "Drag",
     type: "{ index: number; fromIndex: number }",
     description:
-      "The drag was released and the slider chose where to settle. <code>fromIndex</code> is where it started, <code>index</code> where it is going.",
+      "The drag was released and the slider chose where to settle. <code>fromIndex</code> is where it started, <code>index</code> where it is going. Mouse and pen only, like <code>aero:dragStart</code>.",
     useFor:
-      "Logging swipes. You don't need it to block clicks: the slider already swallows the click that ends a drag.",
+      "Logging drags. You don't need it to block clicks: the slider already swallows the click that ends a drag.",
     snippet: recipe(`el.addEventListener("aero:dragEnd", (event) => {
   const { fromIndex, index } = event.detail;
   if (index !== fromIndex) console.log(\`dragged from \${fromIndex} to \${index}\`);
@@ -409,7 +304,7 @@ el.addEventListener("aero:dragStart", () => hint.remove(), { once: true });`),
     group: "Autoplay",
     type: "{}",
     description:
-      "Autoplay began running: at start, when <code>update()</code> turns it on, and each time a hover, focus, press or <code>pause()</code> lets go. Never under reduced motion.",
+      "Autoplay began running: at start, when <code>update()</code> turns it on, and each time a hover, focus, press or <code>pause()</code> lets go. Never under reduced motion. The first one fires inside <code>createSlider</code>, before it returns, so listen before you create.",
     useFor: "A progress bar or a playing light that matches what autoplay is really doing.",
     snippet:
       recipe(`// <div class="autoplay-bar"> with transform-origin: left, inside the container.
@@ -476,15 +371,17 @@ createSlider(el);`),
     group: "Lifecycle",
     type: "{}",
     description:
-      "<code>createSlider</code> finished setting up. It fires before <code>createSlider</code> returns, so only listeners added beforehand hear it.",
+      "<code>createSlider</code> finished setting up. It fires before <code>createSlider</code> returns, so a listener added afterwards never hears it. To check later, read <code>el.aeroSlider</code>: the instance is there from the moment <code>aero:ready</code> fires until <code>destroy()</code>. The container also gets the <code>aero-slider--ready</code> class, for CSS.",
     useFor:
       "Setup that needs the instance when other code creates the slider, such as a framework component or a CMS block.",
-    snippet: recipe(`// Add this before the code that calls createSlider runs.
-document.addEventListener("aero:ready", (event) => {
-  const slider = event.target.aeroSlider;
-  const counter = event.target.querySelector(".slide-counter");
+    snippet: recipe(`// Works whether this runs before or after createSlider.
+function setUp(slider) {
+  const counter = slider.element.querySelector(".slide-counter");
   if (counter) counter.textContent = \`\${slider.currentIndex + 1} / \${slider.slideCount}\`;
-});`),
+}
+
+if (el.aeroSlider) setUp(el.aeroSlider);
+else el.addEventListener("aero:ready", () => setUp(el.aeroSlider), { once: true });`),
   },
   destroy: {
     group: "Lifecycle",
@@ -523,7 +420,7 @@ export const cssVariables: RefEntry[] = [
     default: "1",
     description:
       "How many slides fit the viewport. Fractions such as <code>1.5</code> show a peek of the next slide.",
-    example: "ex-responsive",
+    example: "ex-product-row",
   },
   { name: "--aero-slide-gap", default: "0px", description: "Space between slides." },
   {
@@ -545,14 +442,14 @@ export const attributes: RefEntry[] = [
     name: "data-aero-defer-visibility",
     description:
       "Reserves the space that loop clones will take before the slider starts, so a looping slider doesn't shift when JavaScript runs. Removed once it starts.",
-    example: "ex-no-shift",
+    example: "ex-autoplay",
   },
   {
     name: "data-aero-alignment",
     type: '"start" | "center" | "end"',
     description:
       "The slider sets this from <code>alignment</code>. Write it in your HTML too when you use a non-center alignment, so snapping and the reserved space match before JavaScript runs.",
-    example: "ex-no-shift",
+    example: "ex-autoplay",
   },
 ];
 
@@ -581,6 +478,28 @@ export const stateClasses: RefEntry[] = [
       '<code>snap</code> is <code>"settle"</code> or <code>"none"</code>. Turns CSS scroll snapping off',
   },
   { name: "aero-slider--vertical", description: "<code>vertical</code> is on" },
+];
+
+/** Classes the slider sets on the controls, listed beside the container's state classes. */
+export const controlStates: RefEntry[] = [
+  {
+    name: "aero-slider__dot--active",
+    description: "The dot for the current position",
+  },
+  {
+    name: ":disabled",
+    description:
+      "Set on <code>aero-slider__nav--prev</code> or <code>--next</code> when it cannot go further. Never with <code>loop</code>",
+  },
+  {
+    name: "aero-slider__dot--edge",
+    description:
+      "With <code>maxDots</code>: the outermost dot of the window when more dots lie beyond it. <code>aero-slider__dot--near-edge</code> marks the next one in, and <code>aero-slider__dot--hidden</code> the dots outside the window",
+  },
+  {
+    name: "aero-slider__thumb--active",
+    description: "Set by <code>syncThumbnails</code> on the thumbnail of the current slide",
+  },
 ];
 
 /** Groups a registry in the given group order; `display` maps a key to its shown name. */

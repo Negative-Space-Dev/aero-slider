@@ -13,6 +13,24 @@ const showing = (page: Page) =>
       ?.textContent;
   });
 
+/** Edits the track's real slides in the page, then refreshes the slider. */
+const edit = (page: Page, id: string, change: "prepend" | "append" | number | "all") =>
+  page.evaluate(
+    ([id, change]) => {
+      const track = document.querySelector<HTMLElement>(`#${id} .aero-slider__track`)!;
+      if (change === "all") track.replaceChildren();
+      else if (typeof change === "number")
+        track.querySelector(`[data-aero-slider-index="${change}"]`)!.remove();
+      else {
+        const slide = document.createElement("div");
+        slide.innerHTML = "<div>new</div>";
+        track[change](slide);
+      }
+      window.sliders[id]!.refresh();
+    },
+    [id, change] as const
+  );
+
 test.describe("on slide 2 of 5", () => {
   test.beforeEach(async ({ page }) => {
     await mount(page, slider("s", 5));
@@ -21,47 +39,63 @@ test.describe("on slide 2 of 5", () => {
     await recordEvents(page, "s");
   });
 
-  test("remove(0) keeps the same slide in view", async ({ page }) => {
-    await page.evaluate(() => window.sliders.s!.remove(0));
-    expect(await state(page, "s")).toEqual({ index: 1, position: 600 });
-    expect(await showing(page)).toBe("2");
-    expect(await takeEvents(page, "s")).toContain("slideChange:1");
-  });
-
-  test("add(slide, 0) keeps the same slide in view", async ({ page }) => {
-    await page.evaluate(() => {
-      const slide = document.createElement("div");
-      slide.innerHTML = "<div>new</div>";
-      window.sliders.s!.add(slide, 0);
+  for (const [change, label] of [
+    [0, "3"],
+    ["prepend", "1"],
+    ["append", "2"],
+    [2, "3"],
+  ] as const) {
+    test(`refresh() after ${change} rests on the same index`, async ({ page }) => {
+      await edit(page, "s", change);
+      expect(await state(page, "s")).toEqual({ index: 2, position: 1200 });
+      expect(await showing(page)).toBe(label);
+      expect(await takeEvents(page, "s")).not.toContainEqual(expect.stringMatching(/slideChange/));
     });
-    expect(await state(page, "s")).toEqual({ index: 3, position: 1800 });
-    expect(await showing(page)).toBe("2");
-    expect(await takeEvents(page, "s")).toContain("slideChange:3");
-  });
-
-  test("appending a slide leaves the index alone", async ({ page }) => {
-    await page.evaluate(() => {
-      const slide = document.createElement("div");
-      slide.innerHTML = "<div>new</div>";
-      window.sliders.s!.add(slide);
-    });
-    expect(await state(page, "s")).toEqual({ index: 2, position: 1200 });
-    expect(await takeEvents(page, "s")).not.toContainEqual(expect.stringMatching(/slideChange/));
-  });
-
-  test("removing the slide in view shows the one that takes its place", async ({ page }) => {
-    await page.evaluate(() => window.sliders.s!.remove(2));
-    expect(await state(page, "s")).toEqual({ index: 2, position: 1200 });
-    expect(await showing(page)).toBe("3");
-  });
+  }
 });
+
+for (const loop of [false, true]) {
+  test(`replacing every slide${loop ? " in a loop" : ""} rests on the same index`, async ({
+    page,
+  }) => {
+    await mount(page, slider("s", 6));
+    await create(page, "s", { loop });
+    await page.evaluate(() => window.sliders.s!.goTo(3, { instant: true }));
+    await settled(page, "s");
+    const swap = (toStart: boolean) =>
+      page.evaluate((toStart) => {
+        const track = document.querySelector<HTMLElement>("#s .aero-slider__track")!;
+        const slides = ["a", "b", "c", "d", "e"].map((label) => {
+          const slide = document.createElement("div");
+          slide.innerHTML = `<div>${label}</div>`;
+          return slide;
+        });
+        track.replaceChildren(...slides);
+        window.sliders.s!.refresh();
+        if (toStart) window.sliders.s!.goTo(0, { instant: true });
+        // Read in the same task, before the browser can paint anything in between.
+        const left = track.getBoundingClientRect().left;
+        return Array.from(track.children).find(
+          (slide) => Math.abs(slide.getBoundingClientRect().left - left) < 2
+        )?.textContent;
+      }, toStart);
+
+    expect(await swap(false)).toBe("d");
+    expect(await page.evaluate(() => window.sliders.s!.slideCount)).toBe(5);
+    await expect(page.locator("#s .aero-slider__track > [data-aero-slider-index]")).toHaveCount(5);
+    expect(await swap(true)).toBe("a");
+    await settled(page, "s");
+    expect((await state(page, "s")).index).toBe(0);
+    expect(await showing(page)).toBe("a");
+  });
+}
 
 test("removing the last slide while on it announces the new index", async ({ page }) => {
   await mount(page, slider("s", 5));
   await create(page, "s");
   await page.evaluate(() => window.sliders.s!.goTo(4, { instant: true }));
   await recordEvents(page, "s");
-  await page.evaluate(() => window.sliders.s!.remove(4));
+  await edit(page, "s", 4);
   expect(await state(page, "s")).toEqual({ index: 3, position: 1800 });
   expect(await takeEvents(page, "s")).toContain("slideChange:3");
   await expect(page.locator("#s .aero-slider__nav--next")).toBeDisabled();
@@ -90,11 +124,32 @@ test("synced thumbnails follow a slide removed from both", async ({ page }) => {
   await page.evaluate(() => {
     window.syncThumbnails(window.sliders.s!, window.sliders.thumbs!);
     window.sliders.s!.goTo(2, { instant: true });
-    window.sliders.thumbs!.remove(0);
-    window.sliders.s!.remove(0);
+    for (const id of ["thumbs", "s"]) {
+      document.querySelector(`#${id} [data-aero-slider-index="0"]`)!.remove();
+      window.sliders[id]!.refresh();
+    }
   });
-  await expect(page.locator("#thumbs .aero-slider__thumb--active")).toHaveText("2");
-  expect(await page.evaluate(() => window.sliders.thumbs!.currentIndex)).toBe(1);
+  await expect(page.locator("#thumbs .aero-slider__thumb--active")).toHaveText("3");
+  expect(await page.evaluate(() => window.sliders.thumbs!.currentIndex)).toBe(2);
+});
+
+test("synced thumbnails mark the current one after every slide is replaced", async ({ page }) => {
+  await mount(page, slider("s", 5) + slider("thumbs", 5, { style: "--aero-slides-per-view:5" }));
+  await create(page, "s");
+  await create(page, "thumbs");
+  await page.evaluate(() => {
+    window.syncThumbnails(window.sliders.s!, window.sliders.thumbs!);
+    for (const id of ["thumbs", "s"]) {
+      const slides = ["a", "b", "c"].map((label) => {
+        const slide = document.createElement("div");
+        slide.innerHTML = `<div>${label}</div>`;
+        return slide;
+      });
+      document.querySelector(`#${id} .aero-slider__track`)!.replaceChildren(...slides);
+      window.sliders[id]!.refresh();
+    }
+  });
+  await expect(page.locator("#thumbs .aero-slider__thumb--active[aria-current]")).toHaveText("a");
 });
 
 for (const loop of [false, true]) {
@@ -105,7 +160,7 @@ for (const loop of [false, true]) {
     page.on("pageerror", (error) => errors.push(error));
     await mount(page, slider("s", 4));
     await create(page, "s", { loop });
-    await page.evaluate(() => window.sliders.s!.remove([0, 1, 2, 3]));
+    await edit(page, "s", "all");
     await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => setTimeout(done))));
     expect(errors).toEqual([]);
     await expect(page.locator("#s .aero-slider__track > *")).toHaveCount(0);
@@ -120,7 +175,8 @@ for (const loop of [false, true]) {
         slide.innerHTML = `<div>${label}</div>`;
         return slide;
       };
-      window.sliders.s!.add([make("a"), make("b"), make("c")]);
+      document.querySelector("#s .aero-slider__track")!.append(make("a"), make("b"), make("c"));
+      window.sliders.s!.refresh();
     });
     await expect(page.locator("#s .aero-slider__dot:visible")).toHaveCount(3);
     await page.evaluate(() => window.sliders.s!.next());

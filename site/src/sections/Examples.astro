@@ -1,9 +1,7 @@
 ---
 import Example from "../components/Example.astro";
-import RefList from "../components/RefList.astro";
 import { exampleIds } from "../data/anchors";
-import { stateClasses } from "../data/api";
-import { controlStates, exampleGroups, examples } from "../data/examples";
+import { exampleGroups, examples, variantOptions } from "../data/examples";
 import "../styles/examples.css";
 
 const indexOf = (id: (typeof exampleIds)[number]) => exampleIds.indexOf(id) + 1;
@@ -45,23 +43,38 @@ const groups = exampleGroups.map((group) => ({
                 </div>
               </div>
             </Example>
-          ) : id === "ex-no-shift" ? (
+          ) : id === "ex-variants" ? (
             <Example id={id} index={indexOf(id)}>
               <div slot="controls" class="ex-controls">
-                <button id="no-shift-replay" type="button" class="btn">
-                  Replay start-up
-                </button>
+                <span class="caption">Colour</span>
+                <div id="swatches" class="segmented" role="group" aria-label="Colour">
+                  {variantOptions.map(({ key, label }, i) => (
+                    <button type="button" data-variant={key} data-active={i === 0 ? "" : undefined}>
+                      <span class="ex-swatch" data-variant={key} />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <span class="caption">On switch</span>
+                <div id="variant-rest" class="segmented" role="group" aria-label="After a colour switch">
+                  <button type="button" data-rest="first" data-active>
+                    First slide
+                  </button>
+                  <button type="button" data-rest="same">
+                    Same index
+                  </button>
+                </div>
               </div>
             </Example>
-          ) : id === "ex-styling" ? (
+          ) : id === "ex-counter" ? (
             <Example id={id} index={indexOf(id)}>
-              <div slot="after" class="ex-states">
-                <RefList
-                  groups={[
-                    { title: "Container states", entries: stateClasses },
-                    { title: "Control states", entries: controlStates },
-                  ]}
-                />
+              <div slot="below" class="ex-progress">
+                <p id="gallery-count" class="ex-progress__count">
+                  1 / 5
+                </p>
+                <div class="ex-progress__track">
+                  <div id="gallery-bar" />
+                </div>
               </div>
             </Example>
           ) : (

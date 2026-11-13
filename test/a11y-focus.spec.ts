@@ -33,7 +33,10 @@ test("focus goes to the container when both nav buttons disable", async ({ page 
   await mount(page, slider("s", 2, { dots: false }));
   await create(page, "s");
   await page.getByRole("button", { name: "Next" }).focus();
-  await page.evaluate(() => window.sliders.s!.remove(1));
+  await page.evaluate(() => {
+    document.querySelector('#s [data-aero-slider-index="1"]')!.remove();
+    window.sliders.s!.refresh();
+  });
   await expect(page.locator("#s")).toBeFocused();
 });
 

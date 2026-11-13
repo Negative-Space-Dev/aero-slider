@@ -49,156 +49,6 @@
   }
 }
 
-/* Reference groups pair up side by side on wide screens. */
-@media (min-width: 1024px) {
-  .api-ref-columns .ref-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 2.5rem 3rem;
-    align-items: start;
-  }
-}
-
-/* ── Control demo ───────────────────────────────────────────────────────
-   One framed console: the slider, a strip of live readouts, then the calls
-   grouped like the reference below it. */
-.api-console {
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 1rem;
-  background: var(--surface);
-}
-.api-console__stage {
-  padding: 0.75rem;
-}
-.api-console__slider {
-  --aero-slides-per-view: 1.25;
-  --aero-slide-gap: 10px;
-  --aero-slide-aspect: 16 / 10;
-}
-@media (min-width: 640px) {
-  .api-console__stage {
-    padding: 1.25rem;
-  }
-  .api-console__slider {
-    --aero-slides-per-view: 2.4;
-    --aero-slide-gap: 14px;
-  }
-}
-.api-console:not([data-live]) .api-console__slider {
-  opacity: 0.35;
-  transition: opacity 0.2s;
-}
-
-/* Readouts: mono labels over values, hairlines between, like an instrument row. */
-.api-readouts {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  border-top: 1px solid var(--line);
-}
-.api-readouts > div {
-  min-width: 0;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--line);
-}
-.api-readouts > div:nth-child(odd):not(.api-readouts__wide) {
-  border-right: 1px solid var(--line);
-}
-.api-readouts__wide {
-  grid-column: 1 / -1;
-}
-.api-readouts dt {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  font-weight: 400;
-  letter-spacing: 0;
-  color: var(--faint);
-}
-.api-readouts dd {
-  margin-top: 0.125rem;
-  font-family: var(--font-mono);
-  font-size: 0.875rem;
-  font-weight: 400;
-  letter-spacing: 0;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-.api-readouts dd[data-readout="last"] {
-  color: var(--accent);
-}
-@media (min-width: 640px) {
-  .api-readouts {
-    grid-template-columns: repeat(3, minmax(0, 0.7fr)) minmax(0, 1.6fr);
-  }
-  .api-readouts > div,
-  .api-readouts > div:nth-child(odd):not(.api-readouts__wide) {
-    border-right: 1px solid var(--line);
-  }
-  .api-readouts > div:last-child {
-    border-right: 0;
-  }
-  .api-readouts__wide {
-    grid-column: auto;
-  }
-}
-
-.api-console__actions {
-  display: grid;
-}
-.api-console__group {
-  display: grid;
-  gap: 0.5rem;
-  padding: 0.875rem 1rem;
-  border-bottom: 1px solid var(--line);
-}
-.api-console__group:last-child {
-  border-bottom: 0;
-}
-@media (min-width: 640px) {
-  .api-console__group {
-    grid-template-columns: 7rem minmax(0, 1fr);
-    align-items: baseline;
-    gap: 1rem;
-  }
-}
-.api-console__buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-/* A button whose label is the call it makes. */
-.api-call {
-  min-height: 2rem;
-  max-width: 100%;
-  padding: 0.3125rem 0.625rem;
-  border: 1px solid var(--line-strong);
-  border-radius: 0.375rem;
-  background: var(--paper);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 400;
-  letter-spacing: 0;
-  text-align: left;
-  color: var(--ink);
-  overflow-wrap: anywhere;
-  cursor: pointer;
-  transition:
-    border-color 0.15s,
-    color 0.15s;
-}
-.api-call:hover {
-  border-color: var(--faint);
-}
-.api-call:active {
-  border-color: var(--accent);
-}
-.api-call:disabled {
-  border-color: var(--line);
-  color: var(--faint);
-  cursor: default;
-}
-
 .api-event__label {
   margin-right: 0.375rem;
   font-family: var(--font-mono);
@@ -208,16 +58,19 @@
   text-transform: uppercase;
   color: var(--faint);
 }
-/* Gotchas: three cells of a drafting sheet, side by side on wide screens. */
+/* Notes: cells of a drafting sheet, side by side on wide screens. */
 @media (min-width: 1024px) {
   .api-gotchas {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .api-gotchas > .draft-cell + .draft-cell {
     border-top-width: 0;
     border-left-width: 1px;
   }
+}
+.api-gotchas .draft-cell > .code {
+  margin-top: 1.25rem;
 }
 .api-gotchas .draft-cell > h4 {
   margin-top: 1.25rem;

@@ -118,3 +118,28 @@ test.describe("a page that turns right-to-left after creation", () => {
     expect(await state(page, "s")).toEqual({ index: 2, position: -1220 });
   });
 });
+
+test("a vertical slider on a right-to-left page still scrolls top to bottom", async ({ page }) => {
+  await mount(page, slider("s", 5, { style: "height:300px" }), rtl);
+  await create(page, "s", { vertical: true });
+  const offsets = () =>
+    page.evaluate(() => {
+      const track = document.querySelector<HTMLElement>("#s .aero-slider__track")!;
+      return {
+        top: track.scrollTop,
+        left: track.scrollLeft,
+        index: window.sliders.s!.currentIndex,
+      };
+    });
+
+  await page.evaluate(() => window.sliders.s!.next());
+  await settled(page, "s");
+  const first = await offsets();
+  expect(first).toEqual({ top: expect.any(Number), left: 0, index: 1 });
+  expect(first.top).toBeGreaterThan(100);
+
+  await page.locator("#s").focus();
+  await page.keyboard.press("ArrowDown");
+  await settled(page, "s");
+  expect(await offsets()).toEqual({ top: first.top * 2, left: 0, index: 2 });
+});

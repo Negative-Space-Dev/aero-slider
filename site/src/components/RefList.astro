@@ -19,7 +19,7 @@ const { groups } = Astro.props;
           {group.entries.map((entry) => (
             <li class="ref-row">
               <div class="ref-row__head">
-                <span class="ref-row__name">{entry.name}</span>
+                <h5 class="ref-row__name">{entry.name}</h5>
                 {entry.type && (
                   <span class="ref-chip">
                     <span class="sr-only">Type: </span>

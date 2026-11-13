@@ -1,19 +1,15 @@
 /** Ids of the example entries, so other sections can link to them by a checked name. */
 export const exampleIds = [
-  "ex-card-row",
-  "ex-responsive",
-  "ex-alignment",
+  "ex-variants",
   "ex-edge-to-edge",
-  "ex-direction",
-  "ex-no-shift",
+  "ex-mobile-only",
   "ex-autoplay",
   "ex-ticker",
-  "ex-snap",
-  "ex-per-move",
-  "ex-arrows-dots",
-  "ex-max-dots",
+  "ex-announcement",
   "ex-gallery",
-  "ex-no-drag",
+  "ex-product-row",
+  "ex-max-dots",
+  "ex-counter",
   "ex-styling",
 ] as const;
 

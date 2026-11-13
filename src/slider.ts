@@ -838,22 +838,6 @@ export function createSlider(
     if (!destroyed) rebuild();
   }
 
-  function add(newSlides: HTMLElement | HTMLElement[], index?: number): void {
-    if (destroyed) return;
-    const added = ([] as HTMLElement[]).concat(newSlides);
-    const before = index === undefined ? null : (slides[index] ?? null);
-    for (const slide of added) track.insertBefore(slide, before);
-    // Inserting at or ahead of the slide in view pushes it along; follow it.
-    rebuild(before && index! <= current ? current + added.length : current);
-  }
-
-  function remove(indices: number | number[]): void {
-    if (destroyed) return;
-    const removed = new Set(([] as number[]).concat(indices).filter((index) => slides[index]));
-    for (const index of removed) slides[index]!.remove();
-    rebuild(current - [...removed].filter((index) => index < current).length);
-  }
-
   function destroy(): void {
     if (destroyed) return;
     emit("destroy", {});
@@ -899,8 +883,6 @@ export function createSlider(
     resume: () => play.release("api"),
     update,
     refresh,
-    add,
-    remove,
     destroy,
   };
 
@@ -991,8 +973,8 @@ export function createSlider(
     settleTimer = window.setTimeout(onSettle, WHEEL_SETTLE_MS);
   };
   // Fingers are counted in the capture phase on window, so content that stops touchstart can't
-  // hide one. The release is also heard on the touched element itself: if a rebuild or remove()
-  // detaches it mid-touch, its touchend no longer reaches window.
+  // hide one. The release is also heard on the touched element itself: if the page detaches it
+  // mid-touch, its touchend no longer reaches window.
   addEventListener(
     "touchstart",
     (event) => {

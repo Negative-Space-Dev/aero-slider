@@ -88,7 +88,7 @@ CSS variables on the slider or any ancestor. Change them in media or container q
 | ------------------ | -------------- | --------------------------------------------------------------------------------------------------- |
 | `loop`             | `false`        | Turns itself off when every slide already fits in view.                                             |
 | `alignment`        | `"center"`     | `"start"`, `"center"`, `"end"`. Logical: `"start"` is the right edge in RTL, the top when vertical. |
-| `vertical`         | `false`        | Scrolls top to bottom. Horizontal sliders follow `dir`; call `refresh()` after changing it.         |
+| `vertical`         | `false`        | Scrolls top to bottom, ignoring `dir`. Horizontal sliders follow `dir`; `refresh()` if it changes.  |
 | `perMove`          | `1`            | Stops advanced by `next()`, `prev()`, the arrows, the arrow keys and autoplay.                      |
 | `snap`             | `"native"`     | `"settle"` scrolls freely, then eases onto a slide. `"none"` rests anywhere.                        |
 | `draggable`        | `true`         | Mouse drag. Touch always scrolls natively.                                                          |
@@ -106,16 +106,15 @@ Autoplay pauses on hover, on keyboard focus inside, during a press or drag and w
 
 ## Instance
 
-| Member                                  | Use                                                                |
-| --------------------------------------- | ------------------------------------------------------------------ |
-| `currentIndex`, `slideCount`, `element` | Read-only state.                                                   |
-| `next()`, `prev()`                      | Move by `perMove`.                                                 |
-| `goTo(index, { instant })`              | Go to a slide index. `instant: true` skips the animation.          |
-| `pause()`, `resume()`                   | Hold and release autoplay from code.                               |
-| `update(options)`                       | Change options in place.                                           |
-| `refresh()`                             | Re-measure after you change the DOM or a CSS variable from script. |
-| `add(slides, index?)`, `remove(index)`  | Insert or remove slides. The slide in view stays in view.          |
-| `destroy()`                             | Remove listeners and clones and restore the markup.                |
+| Member                                  | Use                                                            |
+| --------------------------------------- | -------------------------------------------------------------- |
+| `currentIndex`, `slideCount`, `element` | Read-only state.                                               |
+| `next()`, `prev()`                      | Move by `perMove`.                                             |
+| `goTo(index, { instant })`              | Go to a slide index. `instant: true` skips the animation.      |
+| `pause()`, `resume()`                   | Hold and release autoplay from code.                           |
+| `update(options)`                       | Change options in place.                                       |
+| `refresh()`                             | Rebuild after you change the track's slides or a CSS variable. |
+| `destroy()`                             | Remove listeners and clones and restore the markup.            |
 
 - Without `loop`, slides that rest at the same position near an end share one stop and one dot. Indexes are still slide indexes.
 - Calling `createSlider` again on the same element replaces the old instance.
@@ -142,7 +141,7 @@ Build on the instance and the events. Do not patch the library or move the track
 - **Custom controls** (any element, anywhere): call `next()`, `prev()` or `goTo(i)` from your own handlers.
 - **Derived UI** (counter, progress bar, caption, analytics): listen for `aero:slideChange` and read `detail.index` and `slider.slideCount`.
 - **Work per visible slide** (play a video, load data, animate in): use `aero:visible` and `aero:hidden`.
-- **Dynamic content**: `add()` and `remove()`, or edit the track's children and call `refresh()`. Rewrite the slide names ("2 of 5") when the count changes.
+- **Dynamic content**: edit the track's children and call `refresh()`. It rests on the same index; follow with `goTo(0, { instant: true })` to start over. To swap the whole set (variant images): `track.replaceChildren(...slides); slider.refresh()`. A slide hidden with CSS still counts, so remove it from the track. A looping track also holds clones (`data-aero-slider-clone`); find a slide by `[data-aero-slider-index="N"]`, not by child position. Rewrite the slide names ("2 of 5") when the count changes.
 - **Frameworks**: create the slider once the slides are in the DOM (mount effect) and call `destroy()` on unmount. After the framework re-renders the slides, call `refresh()`.
 - **Thumbnails**: two sliders and `syncThumbnails`.
 

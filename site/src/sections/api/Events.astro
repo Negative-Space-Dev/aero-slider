@@ -15,31 +15,30 @@ const listen: CodeTab[] = [
   },
 ];
 
-const gotchas = [
+const notes: { kind: string; title: string; body: string; code?: CodeTab[] }[] = [
   {
-    title: "Listen before you create",
-    body: "<code>aero:ready</code> fires inside <code>createSlider</code>, before it returns, and so does the first <code>aero:autoplayStart</code>. A listener added afterwards never hears them.",
-  },
-  {
-    title: "Touch fires no drag events",
-    body: "A finger swipe scrolls the track natively, so <code>aero:dragStart</code> and <code>aero:dragEnd</code> come from a mouse or pen only. To follow every way of moving, use <code>aero:slideChange</code>.",
-  },
-  {
+    kind: "Gotcha",
     title: "One listener for every slider",
     body: "Events bubble, so a listener on <code>document</code> hears every slider on the page. <code>event.target</code> is the container and <code>event.target.aeroSlider</code> its instance. If sliders nest, check <code>event.target === el</code>.",
   },
-];
-
-const typed: CodeTab[] = [
   {
-    label: "TypeScript",
-    lang: "typescript",
-    code: `import type { SliderEventData } from "aero-slider";
+    kind: "TypeScript",
+    title: "Typing event data",
+    body: "<code>addEventListener</code> types these events as a plain <code>Event</code>. Cast to <code>CustomEvent</code> with the exported <code>SliderEventData</code> to type <code>detail</code>.",
+    code: [
+      {
+        label: "TypeScript",
+        lang: "typescript",
+        code: `import type { SliderEventData } from "aero-slider";
+
+type DragEnd = CustomEvent<SliderEventData<"dragEnd">>;
 
 el.addEventListener("aero:dragEnd", (event) => {
-  const { detail } = event as CustomEvent<SliderEventData<"dragEnd">>;
+  const { detail } = event as DragEnd;
   console.log(detail.fromIndex, detail.index);
 });`,
+      },
+    ],
   },
 ];
 ---
@@ -60,33 +59,21 @@ el.addEventListener("aero:dragEnd", (event) => {
     <CodeTabs tabs={listen} />
   </div>
 
-  <div class="api-ref-columns">
-    <ApiEventList groups={eventEntryGroups} />
-  </div>
+  <ApiEventList groups={eventEntryGroups} />
 
   <div class="draft-sheet api-gotchas">
     {
-      gotchas.map((gotcha, i) => (
+      notes.map((note, i) => (
         <div class="draft-cell">
           <div class="draft-cell__meta">
             <span>Note {String(i + 1).padStart(2, "0")}</span>
-            <span>Gotcha</span>
+            <span>{note.kind}</span>
           </div>
-          <h4>{gotcha.title}</h4>
-          <p set:html={gotcha.body} />
+          <h4>{note.title}</h4>
+          <p set:html={note.body} />
+          {note.code && <CodeTabs tabs={note.code} />}
         </div>
       ))
     }
-  </div>
-
-  <div class="api-split">
-    <div class="copy">
-      <p>
-        <strong>TypeScript.</strong> <code>addEventListener</code> types these events as a plain
-        <code>Event</code>. Cast to <code>CustomEvent</code> with the exported
-        <code>SliderEventData</code> to type <code>detail</code>.
-      </p>
-    </div>
-    <CodeTabs tabs={typed} />
   </div>
 </Entry>

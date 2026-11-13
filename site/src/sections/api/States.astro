@@ -1,0 +1,20 @@
+---
+import Entry from "../../components/Entry.astro";
+import RefList from "../../components/RefList.astro";
+import { controlStates, stateClasses } from "../../data/api";
+
+const groups = [
+  { title: "Container states", entries: stateClasses },
+  { title: "Control states", entries: controlStates },
+];
+---
+
+<Entry tag="CSS" title="States" id="api-states">
+  <div class="copy">
+    <p>
+      The slider marks what it is doing with classes on the container and on its controls. Style
+      against them; see <a href="#ex-styling">arrows, dots and their states</a> for a worked example.
+    </p>
+  </div>
+  <RefList groups={groups} />
+</Entry>

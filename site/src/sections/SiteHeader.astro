@@ -16,20 +16,14 @@ interface NavLink {
 const links: NavLink[] = [
   { id: "playground", label: "Playground" },
   { id: "start", label: "Get started" },
-  {
-    id: "examples",
-    label: "Examples",
-    children: [
-      { id: "examples-layout", label: "Layout" },
-      { id: "examples-motion", label: "Motion" },
-      { id: "examples-controls", label: "Controls" },
-    ],
-  },
+  { id: "examples", label: "Examples" }, // its groups are the headings in the menu
+
   {
     id: "api",
     label: "API",
     children: [
       { id: "api-options", label: "Options" },
+      { id: "api-states", label: "States" },
       { id: "api-methods", label: "Methods" },
       { id: "api-events", label: "Events" },
     ],
@@ -68,7 +62,7 @@ const links: NavLink[] = [
                 <div id="examples-menu" class="nav-menu__panel">
                   <div class="nav-menu__intro">
                     <p class="caption">Examples</p>
-                    <p>Fifteen live sliders, each with the code that runs it.</p>
+                    <p>Eleven live examples, each with the code that runs it.</p>
                     <a href="#examples">Browse them all</a>
                   </div>
                   <ExampleLinks />

@@ -69,8 +69,14 @@ export function syncThumbnails(
     { signal }
   );
 
+  // refresh() renumbers the slides without a slideChange when the index stays put, and the
+  // thumbnail that now holds that index may be a new element.
+  const renumbered = new MutationObserver(() => mark(primary.currentIndex));
+  renumbered.observe(track, { subtree: true, attributeFilter: [SLIDE_INDEX_ATTR] });
+
   const teardown = (): void => {
     controller.abort();
+    renumbered.disconnect();
     track.style.cursor = "";
     if (!track.getAttribute("style")) track.removeAttribute("style");
     mark(-1);

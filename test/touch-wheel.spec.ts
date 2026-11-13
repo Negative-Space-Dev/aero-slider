@@ -142,7 +142,7 @@ test("snap: settle waits for a finger that panned the track and stays down", asy
   await expect.poll(offCentre).toBeLessThan(1.5);
 });
 
-// If remove() detaches the touched slide, its touchend no longer reaches window.
+// If the page detaches the touched slide, its touchend no longer reaches window.
 test("snap: settle still settles after a finger whose slide was removed lifts", async ({
   page,
 }) => {
@@ -150,7 +150,10 @@ test("snap: settle still settles after a finger whose slide was removed lifts", 
   const touch = await finger(page);
   const box = (await page.locator("#s .aero-slider__track").boundingBox())!;
   await touch.down(box.x + 300, box.y + 60);
-  await page.evaluate(() => window.sliders.s!.remove(0));
+  await page.evaluate(() => {
+    document.querySelector('#s [data-aero-slider-index="0"]')!.remove();
+    window.sliders.s!.refresh();
+  });
   await touch.up();
   await settled(page, "s");
 

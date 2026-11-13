@@ -1,109 +1,18 @@
 ---
-import CodeTabs from "../../components/CodeTabs.astro";
-import Disclosure from "../../components/Disclosure.astro";
 import Entry from "../../components/Entry.astro";
-import Pagination from "../../components/Pagination.astro";
 import RefList from "../../components/RefList.astro";
-import Slides from "../../components/Slides.astro";
-import { controlActions, instanceGroups, instanceRefGroups } from "../../data/api";
-import type { CodeTab } from "../../lib/code";
-
-const actionGroups = instanceGroups
-  .map((title) => ({
-    title,
-    actions: controlActions
-      .map((action, index) => ({ ...action, index }))
-      .filter((action) => action.group === title),
-  }))
-  .filter((group) => group.actions.length > 0);
-
-const setup: CodeTab[] = [
-  {
-    label: "Setup",
-    lang: "javascript",
-    code: `import { createSlider } from "aero-slider";
-
-const el = document.querySelector("#control-demo");
-const config = { loop: true, autoplay: true, autoplayInterval: 2500 };
-let slider = createSlider(el, config);
-
-// For slider.add(slide): any element becomes a slide.
-const slide = document.createElement("div");`,
-  },
-];
+import { instanceRefGroups } from "../../data/api";
 ---
 
-<Entry tag="Instance" title="Control it from code" id="api-methods">
+<Entry tag="Instance" title="Methods" id="api-methods">
   <div class="copy">
     <p>
       <code>createSlider</code> returns an instance with methods to move, pause, change and tear down
-      the slider. Each button below runs the call on its label against the live slider, which has
-      autoplay on.
+      the slider.
     </p>
   </div>
 
-  <div class="api-console" id="api-console" data-live>
-    <div class="api-console__stage">
-      <div
-        id="api-control-slider"
-        class="aero-slider api-console__slider"
-        role="region"
-        aria-roledescription="carousel"
-        aria-label="Control demo"
-      >
-        <div class="aero-slider__viewport">
-          <div class="aero-slider__track">
-            <Slides items={6} />
-          </div>
-        </div>
-        <Pagination />
-      </div>
-    </div>
-
-    <dl class="api-readouts" aria-live="polite">
-      <div>
-        <dt>slider.currentIndex</dt>
-        <dd data-readout="index">0</dd>
-      </div>
-      <div>
-        <dt>slider.slideCount</dt>
-        <dd data-readout="count">6</dd>
-      </div>
-      <div>
-        <dt>autoplay</dt>
-        <dd data-readout="autoplay">–</dd>
-      </div>
-      <div class="api-readouts__wide">
-        <dt>last call</dt>
-        <dd data-readout="last">–</dd>
-      </div>
-    </dl>
-
-    <div class="api-console__actions">
-      {
-        actionGroups.map((group) => (
-          <div class="api-console__group" role="group" aria-label={group.title}>
-            <span class="caption">{group.title}</span>
-            <div class="api-console__buttons">
-              {group.actions.map((action) => (
-                <button type="button" class="api-call" data-action={action.index}>
-                  {action.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))
-      }
-    </div>
-  </div>
-
-  <Disclosure label="Show setup code">
-    <CodeTabs tabs={setup} />
-  </Disclosure>
-
-  <div class="api-ref-columns">
-    <RefList groups={instanceRefGroups} />
-  </div>
+  <RefList groups={instanceRefGroups} />
 
   <p class="note">
     The instance is also on the container as <code>element.aeroSlider</code>, so code that only has
