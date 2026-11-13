@@ -110,7 +110,7 @@ toggle.addEventListener("click", () => {
 });
 ```
 
-Text inside a slide can't be selected while a mouse drag would move the slider; list it in `noDrag` (for example `noDrag: "p, h2"`) to keep it selectable.
+Text inside a slide can't be selected while a mouse drag would move the slider; list it in `noDrag` (for example `noDrag: "p, h2"`) to keep it selectable. `noDrag` defaults to `"input, textarea, select, [contenteditable]"`, and your value replaces it. Video and audio with native controls are safe to drag, because browsers keep a press on the control bar inside their own controls. Firefox does not let a mouse drag a video with `controls` at all.
 
 ## TypeScript
 
@@ -124,6 +124,12 @@ el.addEventListener("aero:slideChange", (e) => console.log(e.detail.index));
 
 type SlideChange = SliderEventMap["slideChange"]; // { index: number }
 ```
+
+## Upgrading from 1.0
+
+1.1 needs no changes to your markup or CSS. One default is different:
+
+- **`noDrag`** no longer lists `audio[controls]` and `video[controls]`, so a mouse drag can start on the picture of a video with native controls. Add them back (`noDrag: "input, textarea, select, [contenteditable], audio[controls], video[controls]"`) if a press on a video must not drag.
 
 ## Upgrading from a beta
 

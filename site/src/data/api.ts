@@ -108,9 +108,9 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
   noDrag: {
     group: "Interaction",
     type: "string",
-    default: "form fields and media controls",
+    default: "form fields",
     description:
-      'A selector for elements inside slides where a mouse drag should not start. The default is <code>"input, textarea, select, [contenteditable], audio[controls], video[controls]"</code>, so text fields, range inputs and media scrubbers work as usual. Links and buttons are left out so that a slide that is a link can still be dragged. Your value replaces the default.',
+      'A selector for elements inside slides where a mouse drag should not start. The default is <code>"input, textarea, select, [contenteditable]"</code>, so text fields and range inputs work as usual. Links and buttons are left out so that a slide that is a link can still be dragged. Video and audio with native controls are safe to drag, because browsers keep a press on the control bar inside their own controls: the picture drags the slider and the scrubber still scrubs. Firefox does not let a mouse drag a video with <code>controls</code> at all. Your value replaces the default.',
     example: "ex-product-row",
   },
   snap: {
@@ -161,7 +161,7 @@ export const instanceMembers: Record<keyof SliderInstance, Doc<InstanceGroup>> =
     group: "Navigate",
     name: ".goTo(index, options?)",
     description:
-      "Scrolls to slide <code>index</code>. Out-of-range indexes wrap on a loop and clamp otherwise. <code>{ instant: true }</code> jumps there with no animation.",
+      "Scrolls to slide <code>index</code>. Out-of-range indexes wrap on a loop and clamp otherwise. <code>{ instant: true }</code> jumps there with no animation. It reads no layout, so it is cheap to call from an <code>aero:slideChange</code> handler, as a synced thumbnail strip does. Move the track with it rather than by scrolling the track yourself: the slider keeps its own record of the scroll offset.",
   },
   pause: {
     group: "Autoplay",
@@ -183,7 +183,7 @@ export const instanceMembers: Record<keyof SliderInstance, Doc<InstanceGroup>> =
     group: "Change",
     name: ".refresh()",
     description:
-      "Re-reads the slides from the track and rebuilds, resting on the same index. Call it after you add, remove or replace slides. A slide hidden with CSS still counts, so take it out of the track.",
+      "Re-reads the slides from the track and rebuilds, resting on the same index. Call it after you add, remove or replace slides, and after you change a CSS variable from script. A slide hidden with CSS still counts, so take it out of the track.",
   },
   element: {
     group: "Read state",
@@ -343,7 +343,7 @@ createSlider(el, { autoplay: true, loop: true });`),
     group: "Layout",
     type: "{}",
     description:
-      "The track or a slide changed size, from a window resize or a CSS variable such as <code>--aero-slides-per-view</code>. Fires before the slider re-measures and moves the slides back into place.",
+      "The slider or one of its slides changed size: the window resized, the page layout gave the container a new width, an image loaded, or a CSS variable such as <code>--aero-slides-per-view</code> changed. A new gap between slides of a fixed width resizes nothing, so it fires once the track comes to rest. Fires before the slider re-measures and moves the slides back into place.",
     useFor: "Hiding anything pinned to where a slide was, before the slider moves it.",
     snippet: recipe(`// A tooltip pinned to a slide would point at the wrong spot once slides move.
 const tip = document.querySelector(".slide-tip");

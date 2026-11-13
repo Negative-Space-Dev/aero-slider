@@ -55,3 +55,36 @@ test("a noDrag of your own replaces the default", async ({ page }) => {
   expect(await index(page)).toBeGreaterThan(0); // a fast drag can carry two slides
   expect(await range(page)).toBe("50");
 });
+
+test("by default a drag on the picture of a video with controls moves the slider", async ({
+  page,
+  browserName,
+}) => {
+  // Firefox's video controls keep every mouse press on the video, with any noDrag.
+  test.skip(browserName === "firefox");
+  const video = `<video controls muted playsinline preload="auto" src="/test/assets/clip.webm" style="display:block;width:100%;height:300px;background:#000"></video>`;
+  await mount(page, slider("s", 3, { inner: (i) => video.replace("<video", `<video id="v${i}"`) }));
+  await create(page, "s");
+  const played: string[] = [];
+  await page.exposeFunction("played", (id: string) => played.push(id));
+  await page.evaluate(() => {
+    for (const el of document.querySelectorAll("#s video")) {
+      el.addEventListener("play", () =>
+        (window as unknown as Window & { played(id: string): void }).played(el.id)
+      );
+    }
+  });
+
+  // The upper half, clear of the control bar along the bottom edge.
+  const box = (await page.locator("#v0").boundingBox())!;
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 4;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  for (let step = 1; step <= 10; step++) await page.mouse.move(x - step * 12, y);
+  await page.mouse.up();
+  await settled(page, "s");
+
+  expect(await index(page)).toBeGreaterThan(0); // a fast drag can carry two slides
+  expect(played).toEqual([]); // the click that ends the drag is not a click on the video
+});

@@ -12,8 +12,12 @@ const groups = [
 <Entry tag="CSS" title="Variables and attributes" id="api-css">
   <div class="copy">
     <p>
-      Size and spacing live in CSS, set on the container. Change them in media queries and the slider
-      re-measures on its own.
+      Size and spacing live in CSS, set on the container. The slider re-measures on its own whenever
+      it changes size: when the window resizes, when the page layout gives the container a new
+      width, or when a media query changes a variable. It also re-measures when any slide changes
+      size, as when an image loads. After you change a variable from script, call
+      <code>refresh()</code>: a new gap between slides of a fixed width resizes nothing, so the
+      slider only finds it the next time the track comes to rest.
     </p>
   </div>
   <RefList groups={groups} />

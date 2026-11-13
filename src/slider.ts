@@ -26,8 +26,9 @@ const DEFAULTS: Config = {
   draggable: true,
   alignment: "center",
   maxDots: 0,
-  // Controls that are themselves dragged: a text selection, a range thumb, a media scrubber.
-  noDrag: "input, textarea, select, [contenteditable], audio[controls], video[controls]",
+  // Fields that are themselves dragged: a text selection, a range thumb. Media with controls is
+  // left out: a browser keeps a press on its control bar to itself, so only the picture drags.
+  noDrag: "input, textarea, select, [contenteditable]",
   perMove: 1,
   vertical: false,
   snap: "native",
@@ -80,6 +81,15 @@ const FLICK_VELOCITY = 0.3; // px per ms
 const FLICK_PROJECTION_MS = 250;
 const SETTLE_FALLBACK_MS = 150; // for browsers without the scrollend event
 const WHEEL_SETTLE_MS = 200; // Firefox can skip scrollend after wheel scrolling
+
+/**
+ * What a re-measure follows, which decides where the track goes. `resize`: the layout changed under
+ * the track, which rests on the same slide at its new position. `scroll`: a user's scroll ended on
+ * positions since found stale, so the index becomes the slide the track rests on. `move`: a goTo()
+ * ended there, so the index stays and the track eases the rest of the way onto that slide.
+ * `input`: a press, touch or wheel took over since, so the track and the index are left to it.
+ */
+type Remeasure = "resize" | "scroll" | "move" | "input";
 
 /** What the UI features (nav, dots, keyboard, autoplay) need from the core. */
 export interface SliderCore {
@@ -144,6 +154,10 @@ export function createSlider(
   let clonesBefore = 0; // loop clones prepended ahead of the real slides
   let slideStride = 0; // distance between neighbouring snap positions; 0 until laid out
   let firstSnapPosition = 0; // snap position of track.children[0]
+  // Snap position of every track child, clones included. Slides can differ in width, so nothing
+  // derives these from the stride. Moving the track reads them and never the DOM: a read there
+  // would force a layout of the page whenever a slideChange handler had just changed it.
+  let snaps: number[] = [];
   let maxScroll = 0;
   let paddingStart = 0; // track padding doubles as scroll-padding (see slider.css)
   let paddingEnd = 0;
@@ -157,12 +171,18 @@ export function createSlider(
 
   // Scroll state
   let programmaticScroll = false; // a goTo() animation is in flight
+  let moveSmooth = true; // how that move scrolls, which a move correcting it keeps
+  let coasting = false; // that move is a free drag's release coasting on, not a goTo()
   let scrollTarget = 0; // where that animation is headed
   let dragging = false;
   let suppressNextClick = false;
   let scrollFrame = 0;
   let settleTimer = 0;
   let easeFrame = 0; // a scrollDuration animation is in flight
+  let moveFrame = 0; // a smooth move is waiting for the next frame to start
+  // The scroll offset as last read, until something can have moved the track. Reading it lays the
+  // page out if anything changed since the last frame, as it has in most slideChange handlers.
+  let knownPosition: number | undefined;
   let fallbackSettle = false; // a wheel or touch moved the track and scrollend may never come
   const pressed = new Set<number>(); // mouse and pen pointers down on the track
   // Fingers on the track, from touch events: a pan turns the pointer stream into pointercancel
@@ -203,16 +223,30 @@ export function createSlider(
   // every direction. RTL maps onto the negative scrollLeft browsers use.
 
   function scrollPosition(): number {
-    if (isVertical()) return track.scrollTop;
-    return isRtl() ? -track.scrollLeft : track.scrollLeft;
+    if (knownPosition === undefined) {
+      knownPosition = isVertical()
+        ? track.scrollTop
+        : isRtl()
+          ? -track.scrollLeft
+          : track.scrollLeft;
+    }
+    return knownPosition;
   }
+  const forgetPosition = () => (knownPosition = undefined);
 
   function nativeScrollTo(position: number, behavior: ScrollBehavior): void {
     if (isVertical()) track.scrollTo({ top: position, behavior });
     else track.scrollTo({ left: isRtl() ? -position : position, behavior });
+    forgetPosition();
+    // The browser clamps and rounds the offset. It has just laid the page out, so reading it back
+    // costs nothing, and the next goTo() need not.
+    if (behavior === "instant") scrollPosition();
   }
 
+  /** Drops a scripted move the browser has not been handed yet: one waiting to start, or easing. */
   function cancelEase(): void {
+    cancelAnimationFrame(moveFrame);
+    moveFrame = 0;
     if (!easeFrame) return;
     cancelAnimationFrame(easeFrame);
     easeFrame = 0;
@@ -221,12 +255,24 @@ export function createSlider(
 
   /** Smooth scrolls honour prefers-reduced-motion, and use scrollDuration's easing when set. */
   function scrollTo(position: number, smooth = false): void {
-    if (!smooth || reducedMotion.matches || config.scrollDuration <= 0) {
+    if (!smooth || reducedMotion.matches) {
       cancelEase();
-      return nativeScrollTo(position, smooth && !reducedMotion.matches ? "smooth" : "instant");
+      return nativeScrollTo(position, "instant");
+    }
+    if (config.scrollDuration <= 0) {
+      cancelEase();
+      // Scrolling lays the page out first, and goTo() often runs in a slideChange handler that has
+      // just changed it. A frame on, that layout is done, and the move looks no different.
+      moveFrame = requestAnimationFrame(() => {
+        moveFrame = 0;
+        nativeScrollTo(position, reducedMotion.matches ? "instant" : "smooth");
+      });
+      return;
     }
     // Snapping stays off from one eased move into the next: restoring it in between would let
     // the browser snap the track to a slide before this move reads where it starts.
+    cancelAnimationFrame(moveFrame);
+    moveFrame = 0;
     cancelAnimationFrame(easeFrame);
     track.style.scrollSnapType = "none"; // mandatory snapping would pull every frame to a slide
     const from = scrollPosition();
@@ -242,29 +288,75 @@ export function createSlider(
     easeFrame = requestAnimationFrame(step);
   }
 
-  /** Scroll position at which `el` rests on its snap point, honouring alignment and scroll-padding. */
-  function snapPositionOf(el: Element): number {
-    const rect = el.getBoundingClientRect();
+  /**
+   * Reads, for every track child, the scroll position at which it rests on its snap point,
+   * honouring alignment and scroll-padding. Only measure() and relayout() read the DOM this way.
+   */
+  function readSnaps(): number[] {
     const trackRect = track.getBoundingClientRect();
-    const [axisStart, axisSize, elStart, elEnd] = isVertical()
-      ? [trackRect.top + track.clientTop, track.clientHeight, rect.top, rect.bottom]
+    const [axisStart, axisSize] = isVertical()
+      ? [trackRect.top + track.clientTop, track.clientHeight]
       : isRtl() // mirror x so "start" is the right edge
-        ? [
-            -(trackRect.left + track.clientLeft + track.clientWidth),
-            track.clientWidth,
-            -rect.right,
-            -rect.left,
-          ]
-        : [trackRect.left + track.clientLeft, track.clientWidth, rect.left, rect.right];
+        ? [-(trackRect.left + track.clientLeft + track.clientWidth), track.clientWidth]
+        : [trackRect.left + track.clientLeft, track.clientWidth];
     const snapportStart = axisStart + paddingStart;
     const snapportEnd = axisStart + axisSize - paddingEnd;
-    const delta =
-      config.alignment === "start"
-        ? elStart - snapportStart
-        : config.alignment === "end"
-          ? elEnd - snapportEnd
-          : (elStart + elEnd - snapportStart - snapportEnd) / 2;
-    return scrollPosition() + delta;
+    const position = scrollPosition();
+    return Array.from(track.children, (el) => {
+      const rect = el.getBoundingClientRect();
+      const [elStart, elEnd] = isVertical()
+        ? [rect.top, rect.bottom]
+        : isRtl()
+          ? [-rect.right, -rect.left]
+          : [rect.left, rect.right];
+      const delta =
+        config.alignment === "start"
+          ? elStart - snapportStart
+          : config.alignment === "end"
+            ? elEnd - snapportEnd
+            : (elStart + elEnd - snapportStart - snapportEnd) / 2;
+      return position + delta;
+    });
+  }
+
+  // The track's size and scroll range along its axis, which scrolling may read every frame.
+  const extent = () =>
+    isVertical()
+      ? `${track.clientHeight},${track.scrollHeight}`
+      : `${track.clientWidth},${track.scrollWidth}`;
+  let seenExtent = ""; // the extent the layout was measured at
+  /**
+   * True while the track's extent differs from the one measured. A resize can move the scroll
+   * offset before the observer re-measures, so the caller leaves the index alone until a
+   * re-measure places it.
+   */
+  function extentChanged(): boolean {
+    if (extent() === seenExtent) return false;
+    forgetPosition(); // a narrower track clamps its offset
+    return true;
+  }
+
+  let remeasureQueued = false;
+  // A press, touch or wheel on the track sets "input": a re-measure queued before it must not move
+  // the track out from under the input.
+  let remeasureAfter: Remeasure = "scroll";
+  /**
+   * Re-measures after a change no observer reports: a new gap between fixed-width slides resizes
+   * no element, and only the track's scroll range shows it. Called once the track rests, so it
+   * never moves the track under a scroll.
+   */
+  function remeasureUnobserved(after: Remeasure): void {
+    remeasureAfter = after;
+    if (remeasureQueued) return;
+    remeasureQueued = true;
+    // The observer delivers after layout, which a settle can precede. Two frames on it has had
+    // its turn, and whatever it re-measured no longer differs.
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        remeasureQueued = false;
+        if (!destroyed && extent() !== seenExtent) resized(remeasureAfter);
+      })
+    );
   }
 
   function readSlidesPerView(): void {
@@ -273,6 +365,7 @@ export function createSlider(
   }
 
   function measure(): void {
+    forgetPosition();
     const style = getComputedStyle(track);
     if (isVertical()) {
       paddingStart = parseFloat(style.paddingTop);
@@ -281,10 +374,11 @@ export function createSlider(
       paddingStart = parseFloat(isRtl() ? style.paddingRight : style.paddingLeft);
       paddingEnd = parseFloat(isRtl() ? style.paddingLeft : style.paddingRight);
     }
-    const [first, second] = track.children;
     const axisSize = isVertical() ? track.clientHeight : track.clientWidth;
-    firstSnapPosition = first ? snapPositionOf(first) : 0;
-    slideStride = second ? snapPositionOf(second) - firstSnapPosition : axisSize; // 0 under display: none
+    snaps = readSnaps();
+    seenExtent = extent();
+    firstSnapPosition = snaps[0] ?? 0;
+    slideStride = snaps.length > 1 ? snaps[1]! - firstSnapPosition : axisSize; // 0 under display: none
     maxScroll = isVertical()
       ? track.scrollHeight - track.clientHeight
       : track.scrollWidth - track.clientWidth;
@@ -304,7 +398,23 @@ export function createSlider(
   // "DOM index" counts track children including clones; "index" is the
   // logical slide number the public API speaks in.
 
-  const domIndexAt = (position: number) => Math.round((position - firstSnapPosition) / slideStride);
+  /**
+   * The DOM index resting nearest `position`. Slides can differ in width, so it is looked up and
+   * not divided out. A position past either end of the track (a drag or a flick can project one)
+   * counts on from that end in strides.
+   */
+  function domIndexAt(position: number): number {
+    const last = snaps.length - 1;
+    if (!(position > snaps[0]!)) return Math.round((position - firstSnapPosition) / slideStride);
+    if (!(position < snaps[last]!))
+      return last + Math.round((position - snaps[last]!) / slideStride);
+    let nearest = 0;
+    for (let i = 1; i <= last; i++) {
+      // On a tie the later one wins, as rounding a half up would have it.
+      if (Math.abs(snaps[i]! - position) <= Math.abs(snaps[nearest]! - position)) nearest = i;
+    }
+    return nearest;
+  }
   const isRealDomIndex = (domIndex: number) =>
     domIndex >= clonesBefore && domIndex < clonesBefore + slideCount;
   const indexOfDom = (domIndex: number) =>
@@ -326,9 +436,7 @@ export function createSlider(
 
   /** Where the real copy of slide `index` rests. */
   function restPositionOf(index: number): number {
-    const slide = track.children[clonesBefore + index];
-    if (!slide) return 0; // every slide removed
-    const position = snapPositionOf(slide);
+    const position = snaps[clonesBefore + index] ?? 0; // every slide removed
     return loop() ? position : clamp(position, 0, maxScroll);
   }
 
@@ -346,9 +454,7 @@ export function createSlider(
   // identical so the jump is invisible.
 
   function shiftToRealCopy(domIndex: number): number {
-    const clone = track.children[domIndex];
-    const real = track.children[clonesBefore + wrap(domIndex - clonesBefore)];
-    return clone && real ? snapPositionOf(real) - snapPositionOf(clone) : 0;
+    return snaps[clonesBefore + wrap(domIndex - clonesBefore)]! - snaps[domIndex]! || 0;
   }
 
   function teleportToRealSlides(): void {
@@ -359,9 +465,7 @@ export function createSlider(
 
   /** One lap of real slides on a loop: the distance from a slide to its next copy. */
   function cycleWidth(): number {
-    const first = track.children[clonesBefore];
-    const twin = track.children[clonesBefore + slideCount];
-    return first && twin ? snapPositionOf(twin) - snapPositionOf(first) : 0;
+    return snaps[clonesBefore + slideCount]! - snaps[clonesBefore]! || 0;
   }
 
   /**
@@ -369,6 +473,8 @@ export function createSlider(
    * clamped too; otherwise onSettle() would wait forever for a spot the track can't reach.
    */
   function startMove(target: number, smooth = true): void {
+    moveSmooth = smooth;
+    coasting = false;
     programmaticScroll = true;
     scrollTarget = clamp(target, 0, maxScroll);
     scrollTo(scrollTarget, smooth);
@@ -393,6 +499,9 @@ export function createSlider(
 
   /** With several slides in view, the outermost clones rest past the scrollable range. */
   const reachable = (position: number) => position >= -1 && position <= maxScroll + 1;
+  /** Where each copy of slide `index` the track can reach rests. */
+  const copiesOf = (index: number) =>
+    snaps.filter((position, domIndex) => indexOfDom(domIndex) === index && reachable(position));
 
   /**
    * Steps queued faster than the track moves can run a lap or more past the reachable clones. Head for the
@@ -402,17 +511,15 @@ export function createSlider(
    * snapping would pull the hop, so snapping stays off until the move settles.
    */
   function headFor(index: number, dir: number): number {
-    const copies = () =>
-      Array.from(track.children, (child, domIndex) =>
-        indexOfDom(domIndex) === index ? snapPositionOf(child) : NaN
-      ).filter(reachable);
     // No direction (a zero step onto an unreachable copy): the nearest reachable copy will do.
     if (!dir) {
       const position = scrollPosition();
-      return copies().reduce((a, b) => (Math.abs(b - position) < Math.abs(a - position) ? b : a));
+      return copiesOf(index).reduce((a, b) =>
+        Math.abs(b - position) < Math.abs(a - position) ? b : a
+      );
     }
     const copiesAhead = (position: number) =>
-      copies().filter((p) => (dir > 0 ? p > position + 1 : p < position - 1));
+      copiesOf(index).filter((p) => (dir > 0 ? p > position + 1 : p < position - 1));
     let ahead = copiesAhead(scrollPosition());
     if (!ahead.length) {
       cancelEase();
@@ -444,8 +551,7 @@ export function createSlider(
       const forward = wrap(logical - indexOfDom(fromDom));
       const back = forward * 2 > slideCount || (forward * 2 === slideCount && towards < 0);
       const steps = back ? forward - slideCount : forward;
-      const queued = track.children[fromDom + steps];
-      const queuedAt = queued ? snapPositionOf(queued) : NaN;
+      const queuedAt = snaps[fromDom + steps] ?? NaN;
       target = reachable(queuedAt) ? queuedAt : headFor(logical, Math.sign(steps));
     } else {
       target = restPositionOf(logical);
@@ -454,7 +560,7 @@ export function createSlider(
       // Already there, but a move started a moment ago may still be headed elsewhere: stop it.
       if (programmaticScroll) scrollTo(target);
       programmaticScroll = false;
-      return onSettle();
+      return onSettle(false);
     }
     startMove(target, !options.instant);
   }
@@ -471,13 +577,14 @@ export function createSlider(
   // ── Scroll tracking ──────────────────────────────────────────────────
 
   function onScroll(): void {
+    forgetPosition();
     play.scrolled();
     if (!programmaticScroll && !scrollFrame) {
       scrollFrame = requestAnimationFrame(() => {
         scrollFrame = 0;
         // A goTo() since this frame was queued (a drag's release) has already set the index. A
         // resize can clamp the offset before the observer re-measures; relayout() places it then.
-        if (programmaticScroll || observedSize() !== measuredSize) return;
+        if (programmaticScroll || extentChanged()) return;
         const position = scrollPosition();
         // Several slides can share a stop; a scroll that stays on it keeps the one that was asked for.
         if (loop() || Math.abs(position - stopPositions[stopOf(current)]!) > 1) {
@@ -494,7 +601,13 @@ export function createSlider(
     }
   }
 
-  function onSettle(): void {
+  /** `scrolled` is false when goTo() found the track already in place: nothing there may read layout. */
+  function settleSoon(): void {
+    clearTimeout(settleTimer);
+    settleTimer = window.setTimeout(onSettle, WHEEL_SETTLE_MS);
+  }
+
+  function onSettle(scrolled = true): void {
     if (dragging) return;
     clearTimeout(settleTimer);
     fallbackSettle = false;
@@ -504,6 +617,11 @@ export function createSlider(
       settleDeferred = true;
       return;
     }
+    // A resize can settle before the observer re-measures: the re-measure then places the track
+    // and the index, which the stale positions here would get wrong.
+    const stale = scrolled && extentChanged();
+    // A coast is the user's scroll carried on, so it is followed like one.
+    if (stale) remeasureUnobserved(programmaticScroll && !coasting ? "move" : "scroll");
     // A scrollend from an instant scroll issued just before goTo() lands mid-animation; wait for ours.
     if (programmaticScroll && Math.abs(scrollPosition() - scrollTarget) > 1) return;
     const userScroll = !programmaticScroll;
@@ -511,14 +629,14 @@ export function createSlider(
     track.style.scrollSnapType = "";
     // Native snapping normally has the track on a slide by now, and settleNear() then does
     // nothing. WebKit doesn't re-snap when an interrupted eased move restores snapping.
-    if (userScroll && snapMode() !== "none" && settleNear(scrollPosition())) return;
-    teleportToRealSlides();
+    if (userScroll && !stale && snapMode() !== "none" && settleNear(scrollPosition())) return;
+    // Stale positions can take a real slide for a clone; the re-measure rests on the real copy.
+    if (!stale) teleportToRealSlides();
     const position = scrollPosition();
     const landed = indexAt(position);
-    // A clamped edge can park several indices at one spot; keep the requested one there. A resize
-    // can settle before the observer re-measures: relayout() places the index then, not stale stops.
+    // A clamped edge can park several indices at one spot; keep the requested one there.
     const moved = loop() || Math.abs(position - restPositionOf(current)) > 1;
-    if (landed !== current && moved && observedSize() === measuredSize) setCurrent(landed);
+    if (landed !== current && moved && !stale) setCurrent(landed);
     play.settled();
   }
 
@@ -528,7 +646,7 @@ export function createSlider(
    * first jumps by the same distance, which looks identical, so nothing visibly flies across.
    */
   function settleOnto(domIndex: number): void {
-    let target = snapPositionOf(track.children[domIndex]!);
+    let target = snaps[domIndex]!;
     if (target < -1 || target > maxScroll + 1) {
       const shift = shiftToRealCopy(domIndex);
       scrollTo(scrollPosition() + shift);
@@ -555,7 +673,7 @@ export function createSlider(
       return true;
     }
     const domIndex = clamp(domIndexAt(position), 0, track.children.length - 1);
-    if (Math.abs(snapPositionOf(track.children[domIndex]!) - scrollPosition()) <= 1) return false;
+    if (Math.abs(snaps[domIndex]! - scrollPosition()) <= 1) return false;
     settleOnto(domIndex);
     return true;
   }
@@ -575,10 +693,12 @@ export function createSlider(
   function onPointerDown(event: PointerEvent): void {
     suppressNextClick = false;
     programmaticScroll = false; // a press takes over from any goTo() animation
+    remeasureAfter = "input";
     // Fingers are counted from touch events (see touchstart below).
     if (event.pointerType !== "touch") pressed.add(event.pointerId);
-    // A wheel settle that was still pending waits for the pointer or finger to lift.
-    if (fallbackSettle || easeFrame) settleDeferred = true;
+    // A wheel settle that was still pending waits for the pointer or finger to lift. So does the
+    // settle a move owes when the press stops it short, or before it starts.
+    if (fallbackSettle || easeFrame || moveFrame) settleDeferred = true;
     fallbackSettle = false;
     clearTimeout(settleTimer);
     cancelEase();
@@ -662,8 +782,10 @@ export function createSlider(
             scrollTo(position + shift);
             rest += shift;
           }
-          if (Math.abs(rest - scrollPosition()) > 1) startMove(rest);
-          else onSettle();
+          if (Math.abs(rest - scrollPosition()) > 1) {
+            startMove(rest);
+            coasting = true;
+          } else onSettle();
         }
         emit("dragEnd", { index: current, fromIndex });
         play.release("drag");
@@ -708,22 +830,34 @@ export function createSlider(
 
   // ── Observers ────────────────────────────────────────────────────────
 
-  // Sizes the layout was last measured at. The first callback after observe() may already carry a
-  // change (no frame ran in between), so compare rather than skip it.
-  let measuredSize = "";
-  // Computed sizes keep their fractions, which clientWidth rounds away: a 0.4px change to each of
-  // 100 slides moves the last one 40px.
-  const observedSize = () =>
-    [track, track.firstElementChild]
-      .map((el) => el && [getComputedStyle(el).width, getComputedStyle(el).height])
-      .join();
-  const resizeObserver = new ResizeObserver(() => {
-    if (destroyed || observedSize() === measuredSize) return;
-    measuredSize = observedSize();
-    emit("resize", {});
-    relayout();
-    emit("resized", {});
+  // The size of the track and of every track child when the layout was last measured. The first
+  // callback after observe() may already carry a change (no frame ran in between), so compare
+  // rather than skip it. Computed sizes keep their fractions, which clientWidth rounds away: a
+  // 0.4px change to each of 100 slides moves the last one 40px.
+  const measuredSizes = new Map<Element, string>();
+  const sizeOf = (el: Element) => {
+    const style = getComputedStyle(el);
+    return `${style.width},${style.height}`;
+  };
+  // The observer calls back after layout, so the reads here and in relayout() force nothing.
+  const resizeObserver = new ResizeObserver((entries) => {
+    if (destroyed) return;
+    let changed = false;
+    for (const { target } of entries) {
+      const size = sizeOf(target);
+      // A rebuild earlier in this delivery may have dropped the target.
+      if (!measuredSizes.has(target) || measuredSizes.get(target) === size) continue;
+      measuredSizes.set(target, size);
+      changed = true;
+    }
+    if (changed) resized();
   });
+
+  function resized(after: Remeasure = "resize"): void {
+    emit("resize", {});
+    relayout(after);
+    emit("resized", {});
+  }
 
   let intersectionObserver: IntersectionObserver | undefined;
   const intersecting = new Map<Element, boolean>();
@@ -743,10 +877,14 @@ export function createSlider(
   }
 
   function observe(): void {
+    // A later slide can change size alone (an image loads, a font swaps), and the track's own box
+    // stays the same when it does: the track scrolls, so only its scroll width grows.
     resizeObserver.disconnect();
-    measuredSize = observedSize();
-    resizeObserver.observe(track);
-    if (track.firstElementChild) resizeObserver.observe(track.firstElementChild);
+    measuredSizes.clear();
+    for (const el of [track, ...track.children]) {
+      measuredSizes.set(el, sizeOf(el));
+      resizeObserver.observe(el);
+    }
 
     intersectionObserver?.disconnect();
     intersecting.clear();
@@ -759,18 +897,17 @@ export function createSlider(
 
   // ── Layout ───────────────────────────────────────────────────────────
 
-  /** Cheap path for size changes: re-measure and keep the current slide in place. */
-  function relayout(): void {
+  /** Cheap path for size changes: re-measure and keep the current slide in place (see Remeasure). */
+  function relayout(after: Remeasure = "resize"): void {
     const previousStops = stops.join();
     let index = current;
     // The index doesn't follow a continuous drift, so keep the slide that's actually showing.
     // Its box includes the drift, so the slide resting nearest the scroll offset is the one on screen.
     if (play.drifting()) {
-      const children = Array.from(track.children);
       const position = scrollPosition();
-      const distance = (el: Element) => Math.abs(snapPositionOf(el) - position);
-      const showing = children.reduce((best, el) => (distance(el) < distance(best) ? el : best));
-      index = indexOfDom(children.indexOf(showing));
+      const distances = readSnaps().map((snap) => Math.abs(snap - position));
+      index = indexOfDom(distances.indexOf(Math.min(...distances)));
+      after = "resize";
     }
     play.reset(); // continuous autoplay's transforms would skew every measurement
     readSlidesPerView();
@@ -779,7 +916,32 @@ export function createSlider(
     if (stops.join() !== previousStops) dots.build();
     else dots.measure();
     nav.refresh();
-    rest(index);
+    if (after === "move") {
+      // The move that ended short is over, even if native snapping stopped it short of its target.
+      // Going to the same slide again eases the rest of the way, as that move would have.
+      programmaticScroll = false;
+      goTo(index, { instant: !moveSmooth });
+      return play.start();
+    }
+    if (after === "input") {
+      // The input's settle places the index. A press that never moves the track has none to come,
+      // so one is owed on its release, or now if it has already lifted.
+      if (pressed.size || touches.size) settleDeferred = true;
+      else settleSoon();
+      return play.start();
+    }
+    // A coast whose target a narrower track no longer reaches never settled: it ends here.
+    if (after === "scroll" && coasting) programmaticScroll = coasting = false;
+    const follow = after === "scroll" && !programmaticScroll;
+    const position = scrollPosition();
+    // A clamped edge can park several indices at one spot; keep the current one there.
+    if (follow && (loop() || Math.abs(position - restPositionOf(index)) > 1))
+      index = indexAt(position);
+    if (follow && snapMode() === "none") {
+      // Free scrolling rests wherever a scroll stops: keep that offset, on a loop's real slides.
+      teleportToRealSlides();
+      setCurrent(index);
+    } else rest(index);
     play.start();
   }
 
@@ -934,7 +1096,7 @@ export function createSlider(
     () => reducedMotion.matches && programmaticScroll && scrollTo(scrollTarget),
     { signal }
   );
-  track.addEventListener("scrollend", onSettle, { signal });
+  track.addEventListener("scrollend", () => onSettle(), { signal });
   // A wheel along the track takes over from any goTo() animation; one mostly across it is the page
   // scrolling past. Touch and mouse take over in onPointerDown.
   track.addEventListener(
@@ -948,11 +1110,10 @@ export function createSlider(
           : [deltaX, deltaY];
       if (Math.abs(along) <= Math.abs(across)) return;
       programmaticScroll = false;
+      remeasureAfter = "input";
       fallbackSettle = true;
       cancelEase();
-      // A wheel too small to scroll sends no scroll event to settle after.
-      clearTimeout(settleTimer);
-      settleTimer = window.setTimeout(onSettle, WHEEL_SETTLE_MS);
+      settleSoon(); // a wheel too small to scroll sends no scroll event to settle after
     },
     { passive: true, signal }
   );
@@ -971,8 +1132,7 @@ export function createSlider(
     if (pressed.size || touches.size || !settleDeferred) return;
     settleDeferred = false;
     fallbackSettle = true;
-    clearTimeout(settleTimer);
-    settleTimer = window.setTimeout(onSettle, WHEEL_SETTLE_MS);
+    settleSoon();
   };
   // Fingers are counted in the capture phase on window, so content that stops touchstart can't
   // hide one. The release is also heard on the touched element itself: if the page detaches it
@@ -983,6 +1143,7 @@ export function createSlider(
       const target = event.target as Node;
       if (!track.contains(target)) return;
       for (const touch of (event as TouchEvent).changedTouches) touches.add(touch.identifier);
+      remeasureAfter = "input";
       for (const type of ["touchend", "touchcancel"]) {
         target.addEventListener(type, onRelease, { once: true, passive: true, signal });
       }

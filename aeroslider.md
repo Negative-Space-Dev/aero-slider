@@ -75,7 +75,7 @@ CSS variables on the slider or any ancestor, except `--aero-layout-width`, which
 }
 ```
 
-- Resizes re-measure on their own. After changing a variable from script, call `slider.refresh()`.
+- The slider re-measures on its own when it changes size (the window resizes, the page layout gives the container a new width), and when any slide changes size (an image loads, a font swaps in). After changing a variable from script, call `slider.refresh()`: a new gap between fixed-width slides resizes nothing, so the slider cannot see it happen. Without `refresh()`, it measures the new gap the next time the track comes to rest.
 - The variables stop at a slide's content. Set them again on a nested slider.
 - Breakout (track runs off both window edges, active slide lines up with the content column): add `aero-slider--breakout`, make the container full-bleed, set `--aero-layout-width` on the slider to the column width.
 - With `loop`, add `data-aero-defer-visibility` to the container to avoid a layout shift before init. If alignment is not centred, also write `data-aero-alignment="start"` or `"end"` in the HTML.
@@ -101,7 +101,7 @@ CSS variables on the slider or any ancestor, except `--aero-layout-width`, which
 | `scrollDuration`   | `0`            | Milliseconds for scripted moves. `0` uses native smooth scrolling.                                  |
 | `scrollEasing`     | ease-out cubic | `(progress) => eased`, used with `scrollDuration`.                                                  |
 
-`noDrag` defaults to `"input, textarea, select, [contenteditable], audio[controls], video[controls]"`: controls that are dragged themselves. Links and buttons are left out, so a slide that is a link still drags. Add them if a slide's links must never start a drag.
+`noDrag` defaults to `"input, textarea, select, [contenteditable]"`: fields that are dragged themselves. Links and buttons are left out, so a slide that is a link still drags. Add them if a slide's links must never start a drag. Video and audio with native controls are safe to drag, because browsers keep a press on the control bar inside their own controls: the picture drags the slider and the scrubber still scrubs. Firefox does not let a mouse drag a video with `controls` at all.
 
 Autoplay pauses on hover, on keyboard focus inside, during a press or drag and while the tab is hidden. It never runs under `prefers-reduced-motion`.
 

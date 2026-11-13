@@ -38,3 +38,29 @@ test("a shift+wheel over the slider takes over from an eased move", async ({ pag
   await settled(page, "s");
   expect((await state(page, "s")).index).toBeLessThan(3);
 });
+
+// A native smooth move starts a frame after goTo(), so input can arrive before it does.
+for (const input of ["wheel", "press"] as const) {
+  test(`a ${input} in the frame goTo() was called in takes over from the move`, async ({
+    page,
+  }) => {
+    await mount(page, slider("s", 5));
+    await page.evaluate(() => {
+      window.sliders.s = window.createSlider(document.getElementById("s")!);
+    });
+    await settled(page, "s");
+    await page.evaluate((input) => {
+      const track = document.querySelector("#s .aero-slider__track")!;
+      window.sliders.s!.goTo(3);
+      if (input === "wheel") track.dispatchEvent(new WheelEvent("wheel", { deltaX: 1 }));
+      else {
+        const press = { pointerId: 7, pointerType: "mouse", button: 0, bubbles: true };
+        track.dispatchEvent(new PointerEvent("pointerdown", press));
+        track.dispatchEvent(new PointerEvent("pointerup", press));
+      }
+    }, input);
+    await page.waitForTimeout(400); // past the settle that follows a wheel or a release
+    await settled(page, "s");
+    expect(await state(page, "s")).toEqual({ index: 0, position: 0 });
+  });
+}
