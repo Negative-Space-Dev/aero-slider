@@ -337,10 +337,9 @@ export function createSlider(
   }
 
   let remeasureQueued = false;
+  // A press, touch or wheel on the track sets "input": a re-measure queued before it must not move
+  // the track out from under the input.
   let remeasureAfter: Remeasure = "scroll";
-  // Set by a press, touch or wheel on the track. A re-measure queued before it must not move the
-  // track out from under the input.
-  let takenOver = false;
   /**
    * Re-measures after a change no observer reports: a new gap between fixed-width slides resizes
    * no element, and only the track's scroll range shows it. Called once the track rests, so it
@@ -348,7 +347,6 @@ export function createSlider(
    */
   function remeasureUnobserved(after: Remeasure): void {
     remeasureAfter = after;
-    takenOver = false;
     if (remeasureQueued) return;
     remeasureQueued = true;
     // The observer delivers after layout, which a settle can precede. Two frames on it has had
@@ -356,7 +354,7 @@ export function createSlider(
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
         remeasureQueued = false;
-        if (!destroyed && extent() !== seenExtent) resized(takenOver ? "input" : remeasureAfter);
+        if (!destroyed && extent() !== seenExtent) resized(remeasureAfter);
       })
     );
   }
@@ -501,6 +499,11 @@ export function createSlider(
 
   /** With several slides in view, the outermost clones rest past the scrollable range. */
   const reachable = (position: number) => position >= -1 && position <= maxScroll + 1;
+  /** Where each copy of slide `index` the track can reach rests. */
+  const copiesOf = (index: number) =>
+    snaps.filter((position, domIndex) => indexOfDom(domIndex) === index && reachable(position));
+  const nearest = (positions: number[], to: number) =>
+    positions.reduce((a, b) => (Math.abs(b - to) < Math.abs(a - to) ? b : a));
 
   /**
    * Steps queued faster than the track moves can run a lap or more past the reachable clones. Head for the
@@ -510,15 +513,10 @@ export function createSlider(
    * snapping would pull the hop, so snapping stays off until the move settles.
    */
   function headFor(index: number, dir: number): number {
-    const copies = () =>
-      snaps.filter((position, domIndex) => indexOfDom(domIndex) === index && reachable(position));
     // No direction (a zero step onto an unreachable copy): the nearest reachable copy will do.
-    if (!dir) {
-      const position = scrollPosition();
-      return copies().reduce((a, b) => (Math.abs(b - position) < Math.abs(a - position) ? b : a));
-    }
+    if (!dir) return nearest(copiesOf(index), scrollPosition());
     const copiesAhead = (position: number) =>
-      copies().filter((p) => (dir > 0 ? p > position + 1 : p < position - 1));
+      copiesOf(index).filter((p) => (dir > 0 ? p > position + 1 : p < position - 1));
     let ahead = copiesAhead(scrollPosition());
     if (!ahead.length) {
       cancelEase();
@@ -601,6 +599,11 @@ export function createSlider(
   }
 
   /** `scrolled` is false when goTo() found the track already in place: nothing there may read layout. */
+  function settleSoon(): void {
+    clearTimeout(settleTimer);
+    settleTimer = window.setTimeout(onSettle, WHEEL_SETTLE_MS);
+  }
+
   function onSettle(scrolled = true): void {
     if (dragging) return;
     clearTimeout(settleTimer);
@@ -687,7 +690,7 @@ export function createSlider(
   function onPointerDown(event: PointerEvent): void {
     suppressNextClick = false;
     programmaticScroll = false; // a press takes over from any goTo() animation
-    takenOver = true;
+    remeasureAfter = "input";
     // Fingers are counted from touch events (see touchstart below).
     if (event.pointerType !== "touch") pressed.add(event.pointerId);
     // A wheel settle that was still pending waits for the pointer or finger to lift. So does the
@@ -915,10 +918,7 @@ export function createSlider(
       // The input's settle places the index. A press that never moves the track has none to come,
       // so one is owed on its release, or now if it has already lifted.
       if (pressed.size || touches.size) settleDeferred = true;
-      else {
-        clearTimeout(settleTimer);
-        settleTimer = window.setTimeout(onSettle, WHEEL_SETTLE_MS);
-      }
+      else settleSoon();
       return play.start();
     }
     // A coast whose target a narrower track no longer reaches never settled: it ends here.
@@ -942,13 +942,7 @@ export function createSlider(
    */
   function glideTo(index: number): void {
     const position = scrollPosition();
-    const copies = loop()
-      ? snaps.filter((snap, domIndex) => indexOfDom(domIndex) === index && reachable(snap))
-      : [restPositionOf(index)];
-    const target = copies.reduce(
-      (a, b) => (Math.abs(b - position) < Math.abs(a - position) ? b : a),
-      copies[0] ?? position
-    );
+    const target = nearest(loop() ? copiesOf(index) : [restPositionOf(index)], position);
     play.start();
     if (Math.abs(target - position) > 1) return startMove(target, moveSmooth);
     // Native snapping may have put the track there already, short of where the move was headed,
@@ -1122,12 +1116,10 @@ export function createSlider(
           : [deltaX, deltaY];
       if (Math.abs(along) <= Math.abs(across)) return;
       programmaticScroll = false;
-      takenOver = true;
+      remeasureAfter = "input";
       fallbackSettle = true;
       cancelEase();
-      // A wheel too small to scroll sends no scroll event to settle after.
-      clearTimeout(settleTimer);
-      settleTimer = window.setTimeout(onSettle, WHEEL_SETTLE_MS);
+      settleSoon(); // a wheel too small to scroll sends no scroll event to settle after
     },
     { passive: true, signal }
   );
@@ -1146,8 +1138,7 @@ export function createSlider(
     if (pressed.size || touches.size || !settleDeferred) return;
     settleDeferred = false;
     fallbackSettle = true;
-    clearTimeout(settleTimer);
-    settleTimer = window.setTimeout(onSettle, WHEEL_SETTLE_MS);
+    settleSoon();
   };
   // Fingers are counted in the capture phase on window, so content that stops touchstart can't
   // hide one. The release is also heard on the touched element itself: if the page detaches it
@@ -1158,7 +1149,7 @@ export function createSlider(
       const target = event.target as Node;
       if (!track.contains(target)) return;
       for (const touch of (event as TouchEvent).changedTouches) touches.add(touch.identifier);
-      takenOver = true;
+      remeasureAfter = "input";
       for (const type of ["touchend", "touchcancel"]) {
         target.addEventListener(type, onRelease, { once: true, passive: true, signal });
       }
