@@ -105,6 +105,7 @@ for (const loop of [false, true]) {
 
     for (const [move, index] of [
       ["goTo", 3],
+      ["goTo", 3], // already there
       ["next", 4],
       ["prev", 3],
     ] as const) {

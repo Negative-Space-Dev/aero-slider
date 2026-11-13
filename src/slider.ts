@@ -517,7 +517,7 @@ export function createSlider(
       // Already there, but a move started a moment ago may still be headed elsewhere: stop it.
       if (programmaticScroll) scrollTo(target);
       programmaticScroll = false;
-      return onSettle();
+      return onSettle(false);
     }
     startMove(target, !options.instant);
   }
@@ -558,7 +558,8 @@ export function createSlider(
     }
   }
 
-  function onSettle(): void {
+  /** `scrolled` is false when goTo() found the track already in place: nothing there may read layout. */
+  function onSettle(scrolled = true): void {
     if (dragging) return;
     clearTimeout(settleTimer);
     fallbackSettle = false;
@@ -577,7 +578,7 @@ export function createSlider(
     // nothing. WebKit doesn't re-snap when an interrupted eased move restores snapping.
     // A resize can settle before the observer re-measures: relayout() then places the track and
     // the index, which the stale positions here would get wrong.
-    const stale = extentChanged();
+    const stale = scrolled && extentChanged();
     if (userScroll && !stale && snapMode() !== "none" && settleNear(scrollPosition())) return;
     teleportToRealSlides();
     const position = scrollPosition();
@@ -1012,7 +1013,7 @@ export function createSlider(
     () => reducedMotion.matches && programmaticScroll && scrollTo(scrollTarget),
     { signal }
   );
-  track.addEventListener("scrollend", onSettle, { signal });
+  track.addEventListener("scrollend", () => onSettle(), { signal });
   // A wheel along the track takes over from any goTo() animation; one mostly across it is the page
   // scrolling past. Touch and mouse take over in onPointerDown.
   track.addEventListener(
