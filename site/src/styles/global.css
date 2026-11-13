@@ -976,13 +976,9 @@ body {
     border-right-width: 1px;
   }
 
-  /* Anatomy: the drawing on the left, three layers stacked beside it. */
-  .draft-sheet--anatomy > .draft-cell:first-child {
-    grid-row: span 3;
-    border-right-width: 1px;
-  }
-  .draft-sheet--anatomy > .draft-cell:nth-child(2) {
-    border-top-width: 0;
+  /* Anatomy: the drawing across the top, the three layers in a row beneath it. */
+  .draft-sheet--anatomy > .draft-cell:nth-child(n + 3) {
+    border-left-width: 1px;
   }
 }
 
@@ -1032,29 +1028,45 @@ body {
 .draft-cell code {
   white-space: nowrap;
 }
+/* On a phone the drawing runs to the cell's edges, which keeps its labels near 10px. */
 .draft-fig.draft-fig--anatomy {
-  margin-block: auto;
-  max-width: 26rem;
-  padding-block: 1.5rem 1.75rem;
+  width: calc(100% + 2.5rem);
+  max-width: none;
+  margin: 1rem -1.25rem;
 }
 .draft-fig.draft-fig--anatomy text {
-  font-size: 11px;
+  font-size: 10.5px;
   dominant-baseline: central;
 }
-/* The wide cell draws it larger, so its labels shrink to stay near 13px. */
-@media (min-width: 1024px) {
+/* A wider cell draws it larger, so its labels shrink to stay near 13px. */
+@media (min-width: 640px) {
   .draft-fig.draft-fig--anatomy {
-    max-width: 33rem;
-    padding-block: 2rem;
+    width: 100%;
+    max-width: 40rem;
+    margin: 1.5rem auto;
   }
   .draft-fig.draft-fig--anatomy text {
-    font-size: 9px;
+    font-size: 8px;
   }
 }
-.draft-cell__note {
-  font-size: 0.875rem;
-  line-height: 1.6;
-  color: var(--faint);
+/* Containers are never seen, so they are drawn dashed and dim. The parts a visitor sees are
+   solid and bright, and a dot that isn't the current one is only dimmer. */
+.draft-fig .dr-box {
+  stroke: var(--faint);
+  stroke-dasharray: 3 3;
+  opacity: 0.7;
+}
+.draft-fig .dr-part {
+  stroke: var(--ink);
+}
+.draft-fig.draft-fig--anatomy .dr-dot {
+  stroke: none;
+  fill: var(--faint);
+  opacity: 0.6;
+}
+.draft-fig.draft-fig--anatomy .dr-dot--active {
+  fill: var(--ink);
+  opacity: 1;
 }
 .draft-cell a {
   color: var(--ink);
