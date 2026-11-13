@@ -268,3 +268,48 @@ for (const [snap, loop] of [
     ).toBe(true);
   });
 }
+
+test('an instant goTo() after a new gap stays instant to the end, with snap: "none"', async ({
+  page,
+}) => {
+  await mount(page, mixed(8));
+  await create(page, "s", { alignment: "start", snap: "none" });
+  await settled(page, "s");
+  const record = await recordScroll(page, "s", 1000);
+  await page.evaluate(() => {
+    document.getElementById("s")!.style.setProperty("--aero-slide-gap", "200px");
+    window.sliders.s!.goTo(4, { instant: true });
+  });
+  const samples = await record();
+  expect(await offsetOf(page, 4)).toBe(0);
+  // The old target was 800px and the new one 1600px: nothing in between is ever shown.
+  expect(
+    samples.filter((p) => p > 802 && p < 1598),
+    samples.join()
+  ).toEqual([]);
+});
+
+// The re-measure waits two frames after the move settles. A press in between owns the track.
+test("a press after a move settles on a new gap keeps the track still", async ({ page }) => {
+  await mount(page, mixed(8));
+  await create(page, "s", { alignment: "start", snap: "none" });
+  await settled(page, "s");
+  await page.evaluate(() => {
+    const track = document.querySelector("#s .aero-slider__track")!;
+    // Added after the slider's own listener, so it runs right after the move settles.
+    track.addEventListener(
+      "scrollend",
+      () => {
+        const press = { pointerId: 7, pointerType: "mouse", button: 0, bubbles: true };
+        track.dispatchEvent(new PointerEvent("pointerdown", press));
+      },
+      { once: true }
+    );
+    document.getElementById("s")!.style.setProperty("--aero-slide-gap", "40px");
+    window.sliders.s!.goTo(3);
+  });
+  await settled(page, "s");
+  // goTo(3) headed for the old 600px; held there, the track must not glide to the new 720px.
+  const record = await recordScroll(page, "s", 500);
+  expect(new Set(await record())).toEqual(new Set([600]));
+});

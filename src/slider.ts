@@ -87,8 +87,9 @@ const WHEEL_SETTLE_MS = 200; // Firefox can skip scrollend after wheel scrolling
  * the track, which rests on the same slide at its new position. `scroll`: a user's scroll ended on
  * positions since found stale, so the index becomes the slide the track rests on. `move`: a goTo()
  * ended there, so the index stays and the track eases the rest of the way onto that slide.
+ * `input`: a press, touch or wheel took over since, so the track and the index are left to it.
  */
-type Remeasure = "resize" | "scroll" | "move";
+type Remeasure = "resize" | "scroll" | "move" | "input";
 
 /** What the UI features (nav, dots, keyboard, autoplay) need from the core. */
 export interface SliderCore {
@@ -170,6 +171,7 @@ export function createSlider(
 
   // Scroll state
   let programmaticScroll = false; // a goTo() animation is in flight
+  let moveSmooth = true; // how that move scrolls, which a move correcting it keeps
   let scrollTarget = 0; // where that animation is headed
   let dragging = false;
   let suppressNextClick = false;
@@ -335,6 +337,9 @@ export function createSlider(
 
   let remeasureQueued = false;
   let remeasureAfter: Remeasure = "scroll";
+  // Set by a press, touch or wheel on the track. A re-measure queued before it must not move the
+  // track out from under the input.
+  let takenOver = false;
   /**
    * Re-measures after a change no observer reports: a new gap between fixed-width slides resizes
    * no element, and only the track's scroll range shows it. Called once the track rests, so it
@@ -342,6 +347,7 @@ export function createSlider(
    */
   function remeasureUnobserved(after: Remeasure): void {
     remeasureAfter = after;
+    takenOver = false;
     if (remeasureQueued) return;
     remeasureQueued = true;
     // The observer delivers after layout, which a settle can precede. Two frames on it has had
@@ -349,7 +355,7 @@ export function createSlider(
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
         remeasureQueued = false;
-        if (!destroyed && extent() !== seenExtent) resized(remeasureAfter);
+        if (!destroyed && extent() !== seenExtent) resized(takenOver ? "input" : remeasureAfter);
       })
     );
   }
@@ -468,6 +474,7 @@ export function createSlider(
    * clamped too; otherwise onSettle() would wait forever for a spot the track can't reach.
    */
   function startMove(target: number, smooth = true): void {
+    moveSmooth = smooth;
     programmaticScroll = true;
     scrollTarget = clamp(target, 0, maxScroll);
     scrollTo(scrollTarget, smooth);
@@ -677,6 +684,7 @@ export function createSlider(
   function onPointerDown(event: PointerEvent): void {
     suppressNextClick = false;
     programmaticScroll = false; // a press takes over from any goTo() animation
+    takenOver = true;
     // Fingers are counted from touch events (see touchstart below).
     if (event.pointerType !== "touch") pressed.add(event.pointerId);
     // A wheel settle that was still pending waits for the pointer or finger to lift. So does the
@@ -898,6 +906,7 @@ export function createSlider(
     else dots.measure();
     nav.refresh();
     if (after === "move") return glideTo(index);
+    if (after === "input") return play.start(); // the input's own settle places the track
     const follow = after === "scroll" && !programmaticScroll;
     const position = scrollPosition();
     // A clamped edge can park several indices at one spot; keep the current one there.
@@ -925,7 +934,7 @@ export function createSlider(
       copies[0] ?? position
     );
     play.start();
-    if (Math.abs(target - position) > 1) return startMove(target);
+    if (Math.abs(target - position) > 1) return startMove(target, moveSmooth);
     // Native snapping may have put the track there already, short of where the move was headed,
     // so the move never settled. As goTo() does when the track is in place, settle it now.
     programmaticScroll = false;
@@ -1097,6 +1106,7 @@ export function createSlider(
           : [deltaX, deltaY];
       if (Math.abs(along) <= Math.abs(across)) return;
       programmaticScroll = false;
+      takenOver = true;
       fallbackSettle = true;
       cancelEase();
       // A wheel too small to scroll sends no scroll event to settle after.
@@ -1132,6 +1142,7 @@ export function createSlider(
       const target = event.target as Node;
       if (!track.contains(target)) return;
       for (const touch of (event as TouchEvent).changedTouches) touches.add(touch.identifier);
+      takenOver = true;
       for (const type of ["touchend", "touchcancel"]) {
         target.addEventListener(type, onRelease, { once: true, passive: true, signal });
       }
