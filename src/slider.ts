@@ -911,7 +911,16 @@ export function createSlider(
     else dots.measure();
     nav.refresh();
     if (after === "move") return glideTo(index);
-    if (after === "input") return play.start(); // the input's own settle places the track
+    if (after === "input") {
+      // The input's settle places the index. A press that never moves the track has none to come,
+      // so one is owed on its release, or now if it has already lifted.
+      if (pressed.size || touches.size) settleDeferred = true;
+      else {
+        clearTimeout(settleTimer);
+        settleTimer = window.setTimeout(onSettle, WHEEL_SETTLE_MS);
+      }
+      return play.start();
+    }
     const follow = after === "scroll" && !programmaticScroll;
     const position = scrollPosition();
     // A clamped edge can park several indices at one spot; keep the current one there.

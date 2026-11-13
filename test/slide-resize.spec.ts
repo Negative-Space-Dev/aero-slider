@@ -337,3 +337,28 @@ test('a drag that coasts after a new gap stays where it stops, with snap: "none"
   const end = samples.at(-1)!;
   expect(await page.evaluate(() => window.sliders.s!.currentIndex)).toBe(Math.round(end / 240));
 });
+
+test("a press that holds still after a move settles on a new gap leaves the index on its slide", async ({
+  page,
+}) => {
+  await mount(page, mixed(8));
+  await create(page, "s", { alignment: "start", snap: "none" });
+  await settled(page, "s");
+  await page.evaluate(() => {
+    const track = document.querySelector("#s .aero-slider__track")!;
+    const press = { pointerId: 7, pointerType: "mouse", button: 0, bubbles: true };
+    track.addEventListener(
+      "scrollend",
+      () => {
+        track.dispatchEvent(new PointerEvent("pointerdown", press));
+        setTimeout(() => track.dispatchEvent(new PointerEvent("pointerup", press)), 100);
+      },
+      { once: true }
+    );
+    document.getElementById("s")!.style.setProperty("--aero-slide-gap", "200px");
+    window.sliders.s!.goTo(4);
+  });
+  await settled(page, "s");
+  // goTo(4) headed for the old 800px, where slide 2 now rests. The press kept the track there.
+  await expect.poll(() => state(page, "s")).toEqual({ index: 2, position: 800 });
+});
