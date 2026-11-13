@@ -167,6 +167,10 @@ export function createSlider(
   let scrollFrame = 0;
   let settleTimer = 0;
   let easeFrame = 0; // a scrollDuration animation is in flight
+  let moveFrame = 0; // a smooth move is waiting for the next frame to start
+  // The scroll offset as last read, until something can have moved the track. Reading it lays the
+  // page out if anything changed since the last frame, as it has in most slideChange handlers.
+  let knownPosition: number | undefined;
   let fallbackSettle = false; // a wheel or touch moved the track and scrollend may never come
   const pressed = new Set<number>(); // mouse and pen pointers down on the track
   // Fingers on the track, from touch events: a pan turns the pointer stream into pointercancel
@@ -207,13 +211,24 @@ export function createSlider(
   // every direction. RTL maps onto the negative scrollLeft browsers use.
 
   function scrollPosition(): number {
-    if (isVertical()) return track.scrollTop;
-    return isRtl() ? -track.scrollLeft : track.scrollLeft;
+    if (knownPosition === undefined) {
+      knownPosition = isVertical()
+        ? track.scrollTop
+        : isRtl()
+          ? -track.scrollLeft
+          : track.scrollLeft;
+    }
+    return knownPosition;
   }
+  const forgetPosition = () => (knownPosition = undefined);
 
   function nativeScrollTo(position: number, behavior: ScrollBehavior): void {
     if (isVertical()) track.scrollTo({ top: position, behavior });
     else track.scrollTo({ left: isRtl() ? -position : position, behavior });
+    forgetPosition();
+    // The browser clamps and rounds the offset. It has just laid the page out, so reading it back
+    // costs nothing, and the next goTo() need not.
+    if (behavior === "instant") scrollPosition();
   }
 
   function cancelEase(): void {
@@ -225,9 +240,22 @@ export function createSlider(
 
   /** Smooth scrolls honour prefers-reduced-motion, and use scrollDuration's easing when set. */
   function scrollTo(position: number, smooth = false): void {
-    if (!smooth || reducedMotion.matches || config.scrollDuration <= 0) {
+    // Any scroll takes over from a smooth move still waiting for its frame.
+    cancelAnimationFrame(moveFrame);
+    moveFrame = 0;
+    if (!smooth || reducedMotion.matches) {
       cancelEase();
-      return nativeScrollTo(position, smooth && !reducedMotion.matches ? "smooth" : "instant");
+      return nativeScrollTo(position, "instant");
+    }
+    if (config.scrollDuration <= 0) {
+      cancelEase();
+      // Scrolling lays the page out first, and goTo() often runs in a slideChange handler that has
+      // just changed it. A frame on, that layout is done, and the move looks no different.
+      moveFrame = requestAnimationFrame(() => {
+        moveFrame = 0;
+        nativeScrollTo(position, reducedMotion.matches ? "instant" : "smooth");
+      });
+      return;
     }
     // Snapping stays off from one eased move into the next: restoring it in between would let
     // the browser snap the track to a slide before this move reads where it starts.
@@ -293,6 +321,7 @@ export function createSlider(
   function extentChanged(): boolean {
     const now = extent();
     if (now === seenExtent) return false;
+    forgetPosition(); // a narrower track clamps its offset
     if (now !== awaitedExtent) {
       awaitedExtent = now;
       // The observer delivers after layout, which a frame queued from a scroll event precedes.
@@ -311,6 +340,7 @@ export function createSlider(
   }
 
   function measure(): void {
+    forgetPosition();
     const style = getComputedStyle(track);
     if (isVertical()) {
       paddingStart = parseFloat(style.paddingTop);
@@ -501,6 +531,7 @@ export function createSlider(
   // ── Scroll tracking ──────────────────────────────────────────────────
 
   function onScroll(): void {
+    forgetPosition();
     play.scrolled();
     if (!programmaticScroll && !scrollFrame) {
       scrollFrame = requestAnimationFrame(() => {
@@ -892,6 +923,7 @@ export function createSlider(
     intersectionObserver?.disconnect();
     clearTimeout(settleTimer);
     cancelAnimationFrame(scrollFrame);
+    cancelAnimationFrame(moveFrame);
     cancelEase();
     for (const clone of track.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
     for (const slide of slides) {
