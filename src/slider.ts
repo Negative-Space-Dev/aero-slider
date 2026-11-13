@@ -232,7 +232,10 @@ export function createSlider(
     if (behavior === "instant") scrollPosition();
   }
 
+  /** Drops a scripted move the browser has not been handed yet: one waiting to start, or easing. */
   function cancelEase(): void {
+    cancelAnimationFrame(moveFrame);
+    moveFrame = 0;
     if (!easeFrame) return;
     cancelAnimationFrame(easeFrame);
     easeFrame = 0;
@@ -241,9 +244,6 @@ export function createSlider(
 
   /** Smooth scrolls honour prefers-reduced-motion, and use scrollDuration's easing when set. */
   function scrollTo(position: number, smooth = false): void {
-    // Any scroll takes over from a smooth move still waiting for its frame.
-    cancelAnimationFrame(moveFrame);
-    moveFrame = 0;
     if (!smooth || reducedMotion.matches) {
       cancelEase();
       return nativeScrollTo(position, "instant");
@@ -260,6 +260,8 @@ export function createSlider(
     }
     // Snapping stays off from one eased move into the next: restoring it in between would let
     // the browser snap the track to a slide before this move reads where it starts.
+    cancelAnimationFrame(moveFrame);
+    moveFrame = 0;
     cancelAnimationFrame(easeFrame);
     track.style.scrollSnapType = "none"; // mandatory snapping would pull every frame to a slide
     const from = scrollPosition();
@@ -641,8 +643,9 @@ export function createSlider(
     programmaticScroll = false; // a press takes over from any goTo() animation
     // Fingers are counted from touch events (see touchstart below).
     if (event.pointerType !== "touch") pressed.add(event.pointerId);
-    // A wheel settle that was still pending waits for the pointer or finger to lift.
-    if (fallbackSettle || easeFrame) settleDeferred = true;
+    // A wheel settle that was still pending waits for the pointer or finger to lift. So does the
+    // settle a move owes when the press stops it short, or before it starts.
+    if (fallbackSettle || easeFrame || moveFrame) settleDeferred = true;
     fallbackSettle = false;
     clearTimeout(settleTimer);
     cancelEase();
@@ -924,7 +927,6 @@ export function createSlider(
     intersectionObserver?.disconnect();
     clearTimeout(settleTimer);
     cancelAnimationFrame(scrollFrame);
-    cancelAnimationFrame(moveFrame);
     cancelEase();
     for (const clone of track.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
     for (const slide of slides) {
