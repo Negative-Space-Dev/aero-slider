@@ -161,7 +161,7 @@ export const instanceMembers: Record<keyof SliderInstance, Doc<InstanceGroup>> =
     group: "Navigate",
     name: ".goTo(index, options?)",
     description:
-      "Scrolls to slide <code>index</code>. Out-of-range indexes wrap on a loop and clamp otherwise. <code>{ instant: true }</code> jumps there with no animation.",
+      "Scrolls to slide <code>index</code>. Out-of-range indexes wrap on a loop and clamp otherwise. <code>{ instant: true }</code> jumps there with no animation. It reads no layout, so it is cheap to call from an <code>aero:slideChange</code> handler, as a synced thumbnail strip does. Move the track with it rather than by scrolling the track yourself: the slider keeps its own record of the scroll offset.",
   },
   pause: {
     group: "Autoplay",
@@ -183,7 +183,7 @@ export const instanceMembers: Record<keyof SliderInstance, Doc<InstanceGroup>> =
     group: "Change",
     name: ".refresh()",
     description:
-      "Re-reads the slides from the track and rebuilds, resting on the same index. Call it after you add, remove or replace slides. A slide hidden with CSS still counts, so take it out of the track.",
+      "Re-reads the slides from the track and rebuilds, resting on the same index. Call it after you add, remove or replace slides, and after you change a CSS variable from script. A slide hidden with CSS still counts, so take it out of the track.",
   },
   element: {
     group: "Read state",
@@ -343,7 +343,7 @@ createSlider(el, { autoplay: true, loop: true });`),
     group: "Layout",
     type: "{}",
     description:
-      "The track or a slide changed size, from a window resize or a CSS variable such as <code>--aero-slides-per-view</code>. Fires before the slider re-measures and moves the slides back into place.",
+      "The track or any slide changed size, from a window resize, an image loading or a CSS variable such as <code>--aero-slides-per-view</code>. A new gap between slides of a fixed width resizes nothing, so it fires once the track comes to rest. Fires before the slider re-measures and moves the slides back into place.",
     useFor: "Hiding anything pinned to where a slide was, before the slider moves it.",
     snippet: recipe(`// A tooltip pinned to a slide would point at the wrong spot once slides move.
 const tip = document.querySelector(".slide-tip");

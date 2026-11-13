@@ -14,7 +14,9 @@ const groups = [
     <p>
       Size and spacing live in CSS, set on the container. Change them in media queries and the slider
       re-measures on its own. It also re-measures when any slide changes size, as when an image
-      loads.
+      loads. After you change a variable from script, call <code>refresh()</code>: a new gap between
+      slides of a fixed width resizes nothing, so the slider only finds it the next time the track
+      comes to rest.
     </p>
   </div>
   <RefList groups={groups} />

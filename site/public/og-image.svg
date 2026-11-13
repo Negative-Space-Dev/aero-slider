@@ -43,7 +43,7 @@
   <text id="name" class="name" x="114" y="70">Aero Slider</text>
   <g id="version">
     <rect id="version-box" y="44" height="34" rx="17" fill="#15171b" stroke="#2d3036" x="272.5000305175781" width="89.203125"></rect>
-    <text id="version-text" class="mono" y="67" style="font-size:16px" x="286.0000305175781">v1.0.0</text>
+    <text id="version-text" class="mono" y="67" style="font-size:16px" x="286.0000305175781">v1.1.0</text>
   </g>
   <text class="mono" x="1140" y="67" text-anchor="end">aeroslider.com</text>
 
@@ -79,22 +79,22 @@
     <rect class="muted" x="86.5" y="46.5" width="131" height="61" rx="3"></rect>
     <path class="strong" d="M0 120.5H320"></path><path class="strong" d="M-7.5 116V125"></path><path class="strong" d="M56.5 116V125"></path><path class="faint" d="M120.5 116V125"></path><path class="faint" d="M184.5 116V125"></path><path class="strong" d="M248.5 116V125"></path><path class="strong" d="M312.5 116V125"></path>
     <text x="4" y="138">snap points</text>
-    <text x="316" y="138" text-anchor="end">track</text></svg><text class="cell-title" x="810" y="356">9.5 KB gzipped</text>
+    <text x="316" y="138" text-anchor="end">track</text></svg><text class="cell-title" x="810" y="356">10.0 KB gzipped</text>
       <svg class="fig" x="810" y="409.125" width="300" height="136.875" viewBox="0 0 320 146"><defs>
       <pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path class="strong" d="M0 0V5"></path></pattern>
       <pattern id="hatch-dense" width="2.5" height="2.5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path class="faint" d="M0 0V2.5"></path></pattern>
     </defs>
-    <text x="12" y="40">js 8.3 KB</text>
+    <text x="12" y="40">js 8.8 KB</text>
     <text x="312" y="40" text-anchor="end">css 1.2 KB</text>
     <path class="strong" d="M12.5 44V50M311.5 44V50"></path>
-    <rect x="12.5" y="52.5" width="262.2831914222643" height="22" fill="url(#hatch)"></rect>
-    <rect x="274.7831914222643" y="52.5" width="36.716808577735726" height="22" fill="url(#hatch-dense)"></rect>
+    <rect x="12.5" y="52.5" width="263.9469453376206" height="22" fill="url(#hatch)"></rect>
+    <rect x="276.4469453376206" y="52.5" width="35.053054662379424" height="22" fill="url(#hatch-dense)"></rect>
     <rect class="faint" x="12.5" y="52.5" width="299" height="22" rx="1"></rect>
-    <path class="faint" d="M274.7831914222643 52.5V74.5"></path>
+    <path class="faint" d="M276.4469453376206 52.5V74.5"></path>
     <path class="accent" d="M12.5 82V94M311.5 82V94M12.5 88.5H122M202 88.5H311.5"></path>
-    <text x="162" y="92" text-anchor="middle" class="accent-text">9.5 KB gzip</text>
-    <path class="strong" d="M12.5 120V128M44.0357931251971 120V128M12.5 124.5H44.0357931251971"></path>
-    <text x="51.5357931251971" y="128">1 KB</text>
+    <text x="162" y="92" text-anchor="middle" class="accent-text">10.0 KB gzip</text>
+    <path class="strong" d="M12.5 120V128M42.64469453376206 120V128M12.5 124.5H42.64469453376206"></path>
+    <text x="50.14469453376206" y="128">1 KB</text>
     <text x="312" y="128" text-anchor="end" class="value">0 dependencies</text></svg>
   <use href="#mark" x="60" y="300"></use><use href="#mark" x="60" y="570"></use><use href="#mark" x="420" y="300"></use><use href="#mark" x="420" y="570"></use><use href="#mark" x="780" y="300"></use><use href="#mark" x="780" y="570"></use><use href="#mark" x="1140" y="300"></use><use href="#mark" x="1140" y="570"></use>
 </svg>
