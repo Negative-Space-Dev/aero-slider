@@ -27,6 +27,40 @@
     format("woff2-variations");
 }
 
+/* Local fonts resized to take the same space as the web fonts, so the page keeps
+   its height when they arrive. Without them the page is ~400px taller until the
+   fonts load, and Safari, which has no scroll anchoring, restores a reload's
+   scroll position against that taller page and then jumps. Liberation fonts
+   share Arial's and Courier New's metrics. Numbers from @capsizecss/core, except
+   Manrope's size-adjust: Capsize gives 99.48% for regular text, but the site sets
+   most text at 500 and up, where Manrope widens and Arial does not. 104% keeps the
+   page height within a line in Safari; ascent and descent are rescaled to match. */
+@font-face {
+  font-family: "Manrope Fallback";
+  src: local("Arial"), local("ArialMT"), local("Liberation Sans");
+  ascent-override: 102.5%;
+  descent-override: 28.8461%;
+  line-gap-override: 0%;
+  size-adjust: 104%;
+}
+
+@font-face {
+  font-family: "Sora Fallback";
+  src: local("Arial"), local("ArialMT"), local("Liberation Sans");
+  ascent-override: 85.2913%;
+  descent-override: 25.4995%;
+  line-gap-override: 0%;
+  size-adjust: 113.7279%;
+}
+
+@font-face {
+  font-family: "Geist Mono Fallback";
+  src: local("Courier New"), local("CourierNewPSMT"), local("Liberation Mono");
+  ascent-override: 100.5164%;
+  descent-override: 29.5048%;
+  size-adjust: 99.9837%;
+}
+
 /* ── Tokens ─────────────────────────────────────────────────────────────
    Every colour on the site resolves to one of these. The Tailwind palette is
    reset below, so an off-palette class such as bg-indigo-500 generates
@@ -70,9 +104,12 @@
 
 @theme {
   --color-*: initial;
-  --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: "Sora", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-sans:
+    "Manrope", "Manrope Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display:
+    "Sora", "Sora Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:
+    "Geist Mono", "Geist Mono Fallback", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
 @theme inline {
