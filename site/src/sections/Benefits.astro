@@ -126,7 +126,7 @@ const inFrame = (x: number) => x >= 86 && x + 56 <= 218;
     </article>
 
     <article class="draft-cell lg:col-span-7">
-      <h3>~{Math.round(bundleSize.total)} KB, zero dependencies</h3>
+      <h3>{kb(bundleSize.total)} KB, zero dependencies</h3>
       <p>
         {kb(bundleSize.js)} KB of JavaScript and {kb(bundleSize.css)} KB of CSS, gzipped. Nothing else
         to install.

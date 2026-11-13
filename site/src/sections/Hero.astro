@@ -5,13 +5,14 @@ import { bundleSize } from "../lib/bundle-size";
 import { REPO } from "../lib/site";
 
 const packageManagers = ["bun", "npm", "yarn", "pnpm"];
+const kb = (value: number) => value.toFixed(1);
 ---
 
 <section class="container-page pt-12 text-center sm:pt-20">
   <div class="mb-6 flex flex-wrap items-center justify-center gap-3">
     <span class="caption inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5">
       <BoxIcon class="size-3.5 text-accent" />
-      ~{Math.round(bundleSize.total)} KB gzipped
+      {kb(bundleSize.total)} KB gzipped
     </span>
   </div>
 
@@ -73,7 +74,7 @@ const packageManagers = ["bun", "npm", "yarn", "pnpm"];
   <p class="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm text-muted">
     Building with an AI agent?
     <a href="/aeroslider.md" class="btn">
-      Agent guide
+      AI Guide
       <span class="font-mono text-xs font-normal text-faint">aeroslider.md</span>
     </a>
   </p>
