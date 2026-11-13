@@ -894,11 +894,16 @@ export function createSlider(
     if (stops.join() !== previousStops) dots.build();
     else dots.measure();
     nav.refresh();
+    const follow = atRest && !programmaticScroll;
     const position = scrollPosition();
     // A clamped edge can park several indices at one spot; keep the current one there.
-    if (atRest && !programmaticScroll && (loop() || Math.abs(position - restPositionOf(index)) > 1))
+    if (follow && (loop() || Math.abs(position - restPositionOf(index)) > 1))
       index = indexAt(position);
-    rest(index);
+    if (follow && snapMode() === "none") {
+      // Free scrolling rests wherever a scroll stops: keep that offset, on a loop's real slides.
+      teleportToRealSlides();
+      setCurrent(index);
+    } else rest(index);
     play.start();
   }
 

@@ -215,3 +215,23 @@ test("a scroll after a new gap keeps a looped track on the slide it reached", as
   await expect.poll(() => page.evaluate(() => window.sliders.s!.currentIndex)).toBe(5);
   expect(await offsetOf(page, 5)).toBe(0);
 });
+
+test('a scroll after a new gap stays where it stopped, with snap: "none"', async ({ page }) => {
+  await mount(page, mixed(8));
+  await create(page, "s", { alignment: "start", snap: "none" });
+  await settled(page, "s");
+  await page.evaluate(() => {
+    const el = document.getElementById("s")!;
+    el.addEventListener("aero:resized", () => (el.dataset.resized = "yes"));
+    el.style.setProperty("--aero-slide-gap", "200px");
+    el.querySelector(".aero-slider__track")!.scrollTo({ left: 950, behavior: "smooth" });
+  });
+  await settled(page, "s");
+  await expect(page.locator("#s")).toHaveAttribute("data-resized", "yes");
+  await settled(page, "s");
+  // Slides now rest every 400px, so 950px is nearest slide 2 at 800px.
+  expect(await page.evaluate(() => window.sliders.s!.currentIndex)).toBe(2);
+  expect(
+    await page.evaluate(() => document.querySelector("#s .aero-slider__track")!.scrollLeft)
+  ).toBe(950);
+});
