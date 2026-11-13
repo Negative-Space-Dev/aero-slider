@@ -87,14 +87,14 @@
     <text x="12" y="40">js 8.7 KB</text>
     <text x="312" y="40" text-anchor="end">css 1.2 KB</text>
     <path class="strong" d="M12.5 44V50M311.5 44V50"></path>
-    <rect x="12.5" y="52.5" width="263.82335148215367" height="22" fill="url(#hatch)"></rect>
-    <rect x="276.32335148215367" y="52.5" width="35.17664851784634" height="22" fill="url(#hatch-dense)"></rect>
+    <rect x="12.5" y="52.5" width="263.69890732496964" height="22" fill="url(#hatch)"></rect>
+    <rect x="276.19890732496964" y="52.5" width="35.30109267503035" height="22" fill="url(#hatch-dense)"></rect>
     <rect class="faint" x="12.5" y="52.5" width="299" height="22" rx="1"></rect>
-    <path class="faint" d="M276.32335148215367 52.5V74.5"></path>
+    <path class="faint" d="M276.19890732496964 52.5V74.5"></path>
     <path class="accent" d="M12.5 82V94M311.5 82V94M12.5 88.5H122M202 88.5H311.5"></path>
     <text x="162" y="92" text-anchor="middle" class="accent-text">9.9 KB gzip</text>
-    <path class="strong" d="M12.5 120V128M42.748033877797944 120V128M12.5 124.5H42.748033877797944"></path>
-    <text x="50.248033877797944" y="128">1 KB</text>
+    <path class="strong" d="M12.5 120V128M42.85208417644678 120V128M12.5 124.5H42.85208417644678"></path>
+    <text x="50.35208417644678" y="128">1 KB</text>
     <text x="312" y="128" text-anchor="end" class="value">0 dependencies</text></svg>
   <use href="#mark" x="60" y="300"></use><use href="#mark" x="60" y="570"></use><use href="#mark" x="420" y="300"></use><use href="#mark" x="420" y="570"></use><use href="#mark" x="780" y="300"></use><use href="#mark" x="780" y="570"></use><use href="#mark" x="1140" y="300"></use><use href="#mark" x="1140" y="570"></use>
 </svg>
