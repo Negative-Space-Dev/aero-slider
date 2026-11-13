@@ -22,9 +22,15 @@ export function syncThumbnails(
   const controller = new AbortController();
   const { signal } = controller;
 
-  // Drag would swallow clicks, and clicks alone drive the strip.
-  thumbnails.update({ draggable: false, loop: options.loop ?? true });
+  thumbnails.update({ loop: options.loop ?? true });
+  // A thumbnail is a click target, so the strip shows a pointer rather than a grab hand.
+  // Dragging the strip still shows the grabbing hand.
   track.style.cursor = "pointer";
+  const showCursor = (cursor: string) => (event: Event) => {
+    if (event.target === thumbnails.element) track.style.cursor = cursor;
+  };
+  thumbnails.element.addEventListener("aero:dragStart", showCursor("grabbing"), { signal });
+  thumbnails.element.addEventListener("aero:dragEnd", showCursor("pointer"), { signal });
 
   /** Slide index for any track child, loop clones included. */
   const indexOf = (child: Element): number => {

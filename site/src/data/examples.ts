@@ -557,7 +557,7 @@ sync();`,
     },
     notes: [
       "Both sliders need the same number of slides.",
-      "It turns dragging off on the strip, so a press always selects, and makes the strip loop. Pass <code>{ loop: false }</code> as the third argument to keep it from looping.",
+      "The strip can still be dragged; a click without a drag selects a thumbnail. It makes the strip loop. Pass <code>{ loop: false }</code> as the third argument to keep it from looping.",
       '<code>alignment: "center"</code> on the strip keeps the active thumbnail in the middle.',
       'Make each thumbnail a <code>&lt;button type="button"&gt;</code> with its own <code>aria-label</code>, so it can be reached and named.',
       'The active thumbnail gets <code>aero-slider__thumb--active</code> and <code>aria-current="true"</code>. Style it yourself.',
