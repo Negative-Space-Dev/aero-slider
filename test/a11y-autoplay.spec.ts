@@ -42,8 +42,8 @@ test("a rebuild drops status text that names the old slide count", async ({ page
   await expect(status(page)).toHaveText("2 of 3");
 
   await page.evaluate(() => {
-    const row = document.querySelector("#s .aero-slider__slides")!;
-    row.append(row.firstElementChild!.cloneNode(true));
+    const track = document.querySelector("#s .aero-slider__track")!;
+    track.append(track.firstElementChild!.cloneNode(true));
     window.sliders.s!.refresh();
   });
   await expect(status(page)).toHaveText("");

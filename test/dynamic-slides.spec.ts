@@ -7,7 +7,7 @@ const showing = (page: Page) =>
     const track = document.querySelector<HTMLElement>("#s .aero-slider__track")!;
     const left = track.getBoundingClientRect().left;
     const slides = Array.from(
-      track.querySelectorAll<HTMLElement>(".aero-slider__slides > :not([data-aero-slider-clone])")
+      track.querySelectorAll<HTMLElement>(":scope > :not([data-aero-slider-clone])")
     );
     return slides.find((slide) => Math.abs(slide.getBoundingClientRect().left - left) < 2)
       ?.textContent;
@@ -18,13 +18,13 @@ const edit = (page: Page, id: string, change: "prepend" | "append" | number | "a
   page.evaluate(
     ([id, change]) => {
       const track = document.querySelector<HTMLElement>(`#${id} .aero-slider__track`)!;
-      if (change === "all") track.querySelector(".aero-slider__slides")!.replaceChildren();
+      if (change === "all") track.replaceChildren();
       else if (typeof change === "number")
         track.querySelector(`[data-aero-slider-index="${change}"]`)!.remove();
       else {
         const slide = document.createElement("div");
         slide.innerHTML = "<div>new</div>";
-        track.querySelector(".aero-slider__slides")![change](slide);
+        track[change](slide);
       }
       window.sliders[id]!.refresh();
     },
@@ -70,19 +70,19 @@ for (const loop of [false, true]) {
           slide.innerHTML = `<div>${label}</div>`;
           return slide;
         });
-        track.querySelector(".aero-slider__slides")!.replaceChildren(...slides);
+        track.replaceChildren(...slides);
         window.sliders.s!.refresh();
         if (toStart) window.sliders.s!.goTo(0, { instant: true });
         // Read in the same task, before the browser can paint anything in between.
         const left = track.getBoundingClientRect().left;
-        return Array.from(track.querySelector(".aero-slider__slides")!.children).find(
+        return Array.from(track.children).find(
           (slide) => Math.abs(slide.getBoundingClientRect().left - left) < 2
         )?.textContent;
       }, toStart);
 
     expect(await swap(false)).toBe("d");
     expect(await page.evaluate(() => window.sliders.s!.slideCount)).toBe(5);
-    await expect(page.locator("#s .aero-slider__slides > [data-aero-slider-index]")).toHaveCount(5);
+    await expect(page.locator("#s .aero-slider__track > [data-aero-slider-index]")).toHaveCount(5);
     expect(await swap(true)).toBe("a");
     await settled(page, "s");
     expect((await state(page, "s")).index).toBe(0);
@@ -145,7 +145,7 @@ test("synced thumbnails mark the current one after every slide is replaced", asy
         slide.innerHTML = `<div>${label}</div>`;
         return slide;
       });
-      document.querySelector(`#${id} .aero-slider__slides`)!.replaceChildren(...slides);
+      document.querySelector(`#${id} .aero-slider__track`)!.replaceChildren(...slides);
       window.sliders[id]!.refresh();
     }
   });
@@ -163,7 +163,7 @@ for (const loop of [false, true]) {
     await edit(page, "s", "all");
     await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => setTimeout(done))));
     expect(errors).toEqual([]);
-    await expect(page.locator("#s .aero-slider__slides > *")).toHaveCount(0);
+    await expect(page.locator("#s .aero-slider__track > *")).toHaveCount(0);
     await expect(page.locator("#s .aero-slider__dot:visible")).toHaveCount(0);
     await expect(page.locator("#s .aero-slider__nav--prev")).toBeDisabled();
     await expect(page.locator("#s .aero-slider__nav--next")).toBeDisabled();
@@ -175,7 +175,7 @@ for (const loop of [false, true]) {
         slide.innerHTML = `<div>${label}</div>`;
         return slide;
       };
-      document.querySelector("#s .aero-slider__slides")!.append(make("a"), make("b"), make("c"));
+      document.querySelector("#s .aero-slider__track")!.append(make("a"), make("b"), make("c"));
       window.sliders.s!.refresh();
     });
     await expect(page.locator("#s .aero-slider__dot:visible")).toHaveCount(3);

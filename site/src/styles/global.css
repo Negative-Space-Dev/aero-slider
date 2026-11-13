@@ -906,7 +906,7 @@ body {
    One flat tonal plate per slide. data-tone picks the surface; type scales
    with the slide's own width through container units, so the same markup
    works from a thumbnail to the hero. */
-.aero-slider__slides > .slide {
+.aero-slider__track > .slide {
   align-items: stretch;
   container-type: inline-size;
   border-radius: var(--slide-radius);
@@ -916,7 +916,7 @@ body {
 }
 /* A faint dot grid in the slide's own foreground, fading out toward the corner
    that holds the numeral. */
-.aero-slider__slides > .slide::after {
+.aero-slider__track > .slide::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -994,28 +994,28 @@ body {
 .aero-slider--thumbnails .aero-slider__nav--next {
   inset-inline-end: 0.375rem;
 }
-.aero-slider--thumbnails .aero-slider__slides > .slide::after {
+.aero-slider--thumbnails .aero-slider__track > .slide::after {
   display: none;
 }
-.aero-slider--thumbnails .aero-slider__slides > * {
+.aero-slider--thumbnails .aero-slider__track > * {
   cursor: pointer;
   opacity: 0.45;
   transition: opacity 0.2s;
 }
-.aero-slider--thumbnails .aero-slider__slides > *:hover {
+.aero-slider--thumbnails .aero-slider__track > *:hover {
   opacity: 0.75;
 }
 /* The ring takes the slide's own foreground, so it reads on every tone. */
-.aero-slider--thumbnails .aero-slider__slides > .aero-slider__thumb--active {
+.aero-slider--thumbnails .aero-slider__track > .aero-slider__thumb--active {
   opacity: 1;
   box-shadow: inset 0 0 0 2px var(--slide-fg, var(--tone-1-fg));
 }
 .aero-slider--thumbnails:focus,
-.aero-slider--thumbnails .aero-slider__slides > *:focus {
+.aero-slider--thumbnails .aero-slider__track > *:focus {
   outline: none;
 }
 .aero-slider--thumbnails:focus-visible,
-.aero-slider--thumbnails .aero-slider__slides > *:focus-visible {
+.aero-slider--thumbnails .aero-slider__track > *:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }

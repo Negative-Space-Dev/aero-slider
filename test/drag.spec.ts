@@ -154,7 +154,7 @@ test("a press released off the track before the threshold doesn't drag on hover"
 // holding the pointer should end the gesture.
 test("content that captures the pointer on press still lets the slider drag", async ({ page }) => {
   await fiveSlides(page);
-  const content = page.locator("#s .aero-slider__slides > :first-child > div");
+  const content = page.locator("#s .aero-slider__track > :first-child > div");
   await content.evaluate((el: HTMLElement) =>
     el.addEventListener("pointerdown", (e) => {
       el.setPointerCapture(e.pointerId);

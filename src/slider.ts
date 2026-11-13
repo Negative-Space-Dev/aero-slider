@@ -85,10 +85,7 @@ const WHEEL_SETTLE_MS = 200; // Firefox can skip scrollend after wheel scrolling
 /** What the UI features (nav, dots, keyboard, autoplay) need from the core. */
 export interface SliderCore {
   container: HTMLElement;
-  /** The scroller. */
   track: HTMLElement;
-  /** The row inside it. Every child is a slide or a loop clone. */
-  row: HTMLElement;
   config: Config;
   signal: AbortSignal;
   reducedMotion: MediaQueryList;
@@ -116,13 +113,11 @@ export interface SliderCore {
   cycle(): { start: number; width: number } | null;
 }
 
-function requireParts(container: HTMLElement): [track: HTMLElement, row: HTMLElement] {
+function requireTrack(container: HTMLElement): HTMLElement {
   const track = container.querySelector<HTMLElement>(".aero-slider__track");
   if (!track) throw new Error("aero-slider: missing .aero-slider__track");
-  const row = track.querySelector<HTMLElement>(":scope > .aero-slider__slides");
-  if (!row) throw new Error("aero-slider: missing .aero-slider__slides inside the track");
-  if (!row.children.length) throw new Error("aero-slider: no slides found");
-  return [track, row];
+  if (!track.children.length) throw new Error("aero-slider: no slides found");
+  return track;
 }
 
 export function createSlider(
@@ -130,7 +125,7 @@ export function createSlider(
   userConfig: SliderConfig = {}
 ): SliderInstance {
   container.aeroSlider?.destroy();
-  const [track, row] = requireParts(container);
+  const track = requireTrack(container);
 
   const config = { ...DEFAULTS };
   configure(config, userConfig);
@@ -149,7 +144,7 @@ export function createSlider(
   let slidesPerView = 1;
   let clonesBefore = 0; // loop clones prepended ahead of the real slides
   let slideStride = 0; // distance between neighbouring snap positions; 0 until laid out
-  let firstSnapPosition = 0; // snap position of row.children[0]
+  let firstSnapPosition = 0; // snap position of track.children[0]
   // Snap position of every track child, clones included. Slides can differ in width, so nothing
   // derives these from the stride. Moving the track reads them and never the DOM: a read there
   // would force a layout of the page whenever a slideChange handler had just changed it.
@@ -296,7 +291,7 @@ export function createSlider(
     const snapportStart = axisStart + paddingStart;
     const snapportEnd = axisStart + axisSize - paddingEnd;
     const position = scrollPosition();
-    return Array.from(row.children, (el) => {
+    return Array.from(track.children, (el) => {
       const rect = el.getBoundingClientRect();
       const [elStart, elEnd] = isVertical()
         ? [rect.top, rect.bottom]
@@ -319,27 +314,34 @@ export function createSlider(
       ? `${track.clientHeight},${track.scrollHeight}`
       : `${track.clientWidth},${track.scrollWidth}`;
   let seenExtent = ""; // the extent the layout was measured at
-  let awaitedExtent = ""; // a newer one the observer has yet to re-measure
   /**
    * True while the track's extent differs from the one measured. A resize can move the scroll
-   * offset before the observer re-measures; the caller leaves the index alone until relayout()
-   * places it. A change the observer cannot see (a gap set from script, slides added without
-   * refresh()) is let through two frames on, so the index goes on following the scroll.
+   * offset before the observer re-measures, so the caller leaves the index alone until a
+   * re-measure places it.
    */
   function extentChanged(): boolean {
-    const now = extent();
-    if (now === seenExtent) return false;
+    if (extent() === seenExtent) return false;
     forgetPosition(); // a narrower track clamps its offset
-    if (now !== awaitedExtent) {
-      awaitedExtent = now;
-      // The observer delivers after layout, which a frame queued from a scroll event precedes.
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => {
-          if (awaitedExtent === now) seenExtent = now;
-        })
-      );
-    }
     return true;
+  }
+
+  let remeasureQueued = false;
+  /**
+   * Re-measures after a change no observer reports: a new gap between fixed-width slides resizes
+   * no element, and only the track's scroll range shows it. Called once the track rests, so it
+   * never moves the track under a scroll.
+   */
+  function remeasureUnobserved(): void {
+    if (remeasureQueued) return;
+    remeasureQueued = true;
+    // The observer delivers after layout, which a settle can precede. Two frames on it has had
+    // its turn, and whatever it re-measured no longer differs.
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        remeasureQueued = false;
+        if (!destroyed && extent() !== seenExtent) resized(true);
+      })
+    );
   }
 
   function readSlidesPerView(): void {
@@ -381,7 +383,23 @@ export function createSlider(
   // "DOM index" counts track children including clones; "index" is the
   // logical slide number the public API speaks in.
 
-  const domIndexAt = (position: number) => Math.round((position - firstSnapPosition) / slideStride);
+  /**
+   * The DOM index resting nearest `position`. Slides can differ in width, so it is looked up and
+   * not divided out. A position past either end of the track (a drag or a flick can project one)
+   * counts on from that end in strides.
+   */
+  function domIndexAt(position: number): number {
+    const last = snaps.length - 1;
+    if (!(position > snaps[0]!)) return Math.round((position - firstSnapPosition) / slideStride);
+    if (!(position < snaps[last]!))
+      return last + Math.round((position - snaps[last]!) / slideStride);
+    let nearest = 0;
+    for (let i = 1; i <= last; i++) {
+      // On a tie the later one wins, as rounding a half up would have it.
+      if (Math.abs(snaps[i]! - position) <= Math.abs(snaps[nearest]! - position)) nearest = i;
+    }
+    return nearest;
+  }
   const isRealDomIndex = (domIndex: number) =>
     domIndex >= clonesBefore && domIndex < clonesBefore + slideCount;
   const indexOfDom = (domIndex: number) =>
@@ -574,6 +592,10 @@ export function createSlider(
       settleDeferred = true;
       return;
     }
+    // A resize can settle before the observer re-measures: the re-measure then places the track
+    // and the index, which the stale positions here would get wrong.
+    const stale = scrolled && extentChanged();
+    if (stale) remeasureUnobserved();
     // A scrollend from an instant scroll issued just before goTo() lands mid-animation; wait for ours.
     if (programmaticScroll && Math.abs(scrollPosition() - scrollTarget) > 1) return;
     const userScroll = !programmaticScroll;
@@ -581,9 +603,6 @@ export function createSlider(
     track.style.scrollSnapType = "";
     // Native snapping normally has the track on a slide by now, and settleNear() then does
     // nothing. WebKit doesn't re-snap when an interrupted eased move restores snapping.
-    // A resize can settle before the observer re-measures: relayout() then places the track and
-    // the index, which the stale positions here would get wrong.
-    const stale = scrolled && extentChanged();
     if (userScroll && !stale && snapMode() !== "none" && settleNear(scrollPosition())) return;
     teleportToRealSlides();
     const position = scrollPosition();
@@ -595,7 +614,7 @@ export function createSlider(
   }
 
   /**
-   * Eases onto row.children[domIndex]. On a loop, a clone whose snap point lies off the runway
+   * Eases onto track.children[domIndex]. On a loop, a clone whose snap point lies off the runway
    * (fractional slides per view put the end clones there) is swapped for its real twin: the track
    * first jumps by the same distance, which looks identical, so nothing visibly flies across.
    */
@@ -626,7 +645,7 @@ export function createSlider(
       startMove(target);
       return true;
     }
-    const domIndex = clamp(domIndexAt(position), 0, row.children.length - 1);
+    const domIndex = clamp(domIndexAt(position), 0, track.children.length - 1);
     if (Math.abs(snaps[domIndex]! - scrollPosition()) <= 1) return false;
     settleOnto(domIndex);
     return true;
@@ -801,11 +820,14 @@ export function createSlider(
       measuredSizes.set(target, size);
       changed = true;
     }
-    if (!changed) return;
-    emit("resize", {});
-    relayout();
-    emit("resized", {});
+    if (changed) resized();
   });
+
+  function resized(atRest = false): void {
+    emit("resize", {});
+    relayout(atRest);
+    emit("resized", {});
+  }
 
   let intersectionObserver: IntersectionObserver | undefined;
   const intersecting = new Map<Element, boolean>();
@@ -813,7 +835,7 @@ export function createSlider(
 
   function onIntersection(entries: IntersectionObserverEntry[]): void {
     for (const entry of entries) intersecting.set(entry.target, entry.isIntersecting);
-    const children = Array.from(row.children);
+    const children = Array.from(track.children);
     const nowVisible = new Set<number>();
     for (const [el, isIn] of intersecting) {
       // The slide itself (or the one a clone copies), not the clamped index navigation would use.
@@ -825,12 +847,11 @@ export function createSlider(
   }
 
   function observe(): void {
-    // The track's own box stays the same when its content changes: it scrolls. The row is as long
-    // as its slides and gaps, so it shows a slide or a gap that changed. Each slide is watched as
-    // well, since two can trade width and leave the row as long as it was.
+    // A later slide can change size alone (an image loads, a font swaps), and the track's own box
+    // stays the same when it does: the track scrolls, so only its scroll width grows.
     resizeObserver.disconnect();
     measuredSizes.clear();
-    for (const el of [track, row, ...row.children]) {
+    for (const el of [track, ...track.children]) {
       measuredSizes.set(el, sizeOf(el));
       resizeObserver.observe(el);
     }
@@ -841,13 +862,17 @@ export function createSlider(
       root: track,
       rootMargin: isVertical() ? "-1px 0px" : "0px -1px", // ignore sub-pixel bleed from neighbours
     });
-    for (const child of row.children) intersectionObserver.observe(child);
+    for (const child of track.children) intersectionObserver.observe(child);
   }
 
   // ── Layout ───────────────────────────────────────────────────────────
 
-  /** Cheap path for size changes: re-measure and keep the current slide in place. */
-  function relayout(): void {
+  /**
+   * Cheap path for size changes: re-measure and keep the current slide in place. `atRest` keeps
+   * the track in place instead: a scroll that ended on positions since found stale never set the
+   * index, so it becomes the slide the track rests on.
+   */
+  function relayout(atRest = false): void {
     const previousStops = stops.join();
     let index = current;
     // The index doesn't follow a continuous drift, so keep the slide that's actually showing.
@@ -856,6 +881,7 @@ export function createSlider(
       const position = scrollPosition();
       const distances = readSnaps().map((snap) => Math.abs(snap - position));
       index = indexOfDom(distances.indexOf(Math.min(...distances)));
+      atRest = false;
     }
     play.reset(); // continuous autoplay's transforms would skew every measurement
     readSlidesPerView();
@@ -864,6 +890,10 @@ export function createSlider(
     if (stops.join() !== previousStops) dots.build();
     else dots.measure();
     nav.refresh();
+    const position = scrollPosition();
+    // A clamped edge can park several indices at one spot; keep the current one there.
+    if (atRest && !programmaticScroll && (loop() || Math.abs(position - restPositionOf(index)) > 1))
+      index = indexAt(position);
     rest(index);
     play.start();
   }
@@ -879,8 +909,8 @@ export function createSlider(
   /** Full path: re-read slides from the DOM, rebuild clones and UI, and rest on slide `index`. */
   function rebuild(index = current): void {
     play.reset(true);
-    for (const clone of row.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
-    slides = Array.from(row.children) as HTMLElement[];
+    for (const clone of track.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
+    slides = Array.from(track.children) as HTMLElement[];
     slideCount = slides.length;
     slides.forEach((slide, i) => {
       if (!slide.classList.contains(SLIDE_CLASS)) classed.add(slide);
@@ -896,11 +926,11 @@ export function createSlider(
 
     readSlidesPerView();
     clonesBefore = cloneCount();
-    for (let i = 1; i <= clonesBefore; i++) row.prepend(cloneOf(slides[wrap(-i)]!));
-    for (let i = 0; i < clonesBefore; i++) row.append(cloneOf(slides[i % slideCount]!));
+    for (let i = 1; i <= clonesBefore; i++) track.prepend(cloneOf(slides[wrap(-i)]!));
+    for (let i = 0; i < clonesBefore; i++) track.append(cloneOf(slides[i % slideCount]!));
     // WebKit never starts loading media that arrived from another document with <source> children.
     // The clone can be the media element itself.
-    for (const media of row.querySelectorAll<HTMLMediaElement>("video, audio")) {
+    for (const media of track.querySelectorAll<HTMLMediaElement>("video, audio")) {
       if (media.closest(`[${CLONE_ATTR}]`) && media.networkState === media.NETWORK_EMPTY)
         media.load();
     }
@@ -935,7 +965,7 @@ export function createSlider(
     clearTimeout(settleTimer);
     cancelAnimationFrame(scrollFrame);
     cancelEase();
-    for (const clone of row.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
+    for (const clone of track.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
     for (const slide of slides) {
       slide.removeAttribute(SLIDE_INDEX_ATTR);
       if (classed.has(slide)) slide.classList.remove(SLIDE_CLASS);
@@ -978,7 +1008,6 @@ export function createSlider(
   const core: SliderCore = {
     container,
     track,
-    row,
     config,
     signal,
     reducedMotion,

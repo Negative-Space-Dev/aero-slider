@@ -166,7 +166,7 @@
 }
 
 /* ── Slide content ─────────────────────────────────────────────────────── */
-.aero-slider__slides > .ex-wordmark {
+.aero-slider__track > .ex-wordmark {
   align-items: stretch;
   container-type: inline-size;
   border-radius: var(--slide-radius);
@@ -175,7 +175,7 @@
 
 /* A product card: a tonal plate for the image, then name, price and a button. The slider
    stretches a slide's one child to fill it, so the card is that child. */
-.aero-slider__slides > .ex-product {
+.aero-slider__track > .ex-product {
   align-items: stretch;
   /* Room for the focus ring of the link and the button, which the slide clips. */
   padding: 0 2px 2px;
@@ -257,7 +257,7 @@
   cursor: pointer;
 }
 
-.aero-slider__slides > .ex-wordmark {
+.aero-slider__track > .ex-wordmark {
   background: var(--surface);
 }
 .ex-wordmark {

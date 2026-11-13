@@ -38,7 +38,6 @@ const role = (i: number) => slideRole(i + 1, slider.slides.length);
             ))
         }
         <div class="aero-slider__track">
-          <div class="aero-slider__slides">
           {
             slider.slides.map((slide, i) =>
               slide.kind === "product" ? (
@@ -77,7 +76,6 @@ const role = (i: number) => slideRole(i + 1, slider.slides.length);
               )
             )
           }
-          </div>
         </div>
       </div>
       {slider.dots && <Pagination />}

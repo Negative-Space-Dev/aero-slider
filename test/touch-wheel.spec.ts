@@ -82,7 +82,7 @@ test("snap: settle waits for a finger held on the track after a wheel scroll", a
 test("snap: settle waits for a finger even when content stops its touchstart", async ({ page }) => {
   await settleSlider(page);
   await page.evaluate(() => {
-    for (const slide of document.querySelector("#s .aero-slider__slides")!.children) {
+    for (const slide of document.querySelector("#s .aero-slider__track")!.children) {
       slide.addEventListener("touchstart", (e) => e.stopPropagation());
     }
   });
@@ -133,7 +133,7 @@ test("snap: settle waits for a finger that panned the track and stays down", asy
       const r = track.getBoundingClientRect();
       const mid = r.left + r.width / 2;
       return Math.min(
-        ...[...track.querySelector(".aero-slider__slides")!.children].map((k) => {
+        ...[...track.children].map((k) => {
           const b = k.getBoundingClientRect();
           return Math.abs(b.left + b.width / 2 - mid);
         })

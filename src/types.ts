@@ -73,7 +73,7 @@ export interface SliderInstance {
   pause(): void;
   resume(): void;
   update(config?: SliderConfig): void;
-  /** Re-reads the slides from `.aero-slider__slides` and rebuilds, resting on the same index. */
+  /** Re-reads the slides from the track and rebuilds, resting on the same index. */
   refresh(): void;
   destroy(): void;
 }

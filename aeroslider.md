@@ -13,7 +13,7 @@ const slider = createSlider(element, { loop: true });
 
 No bundler: load `dist/aero-slider.min.css` and `dist/aero-slider.min.js` (`type="module"`), then call `window.AeroSlider.createSlider`. The package import sets no global.
 
-`createSlider` throws if the container has no `.aero-slider__track`, the track has no `.aero-slider__slides`, or that row has no children. Bad option values never throw; they fall back to defaults.
+`createSlider` throws if the container has no `.aero-slider__track` or the track has no children. Bad option values never throw; they fall back to defaults.
 
 ## Markup
 
@@ -30,11 +30,9 @@ Class names are fixed. Roles and names are yours to write; the slider does not a
     <button type="button" class="aero-slider__nav--prev" aria-label="Previous slide"></button>
     <button type="button" class="aero-slider__nav--next" aria-label="Next slide"></button>
     <div class="aero-slider__track">
-      <div class="aero-slider__slides">
-        <div role="group" aria-roledescription="slide" aria-label="1 of 3">…</div>
-        <div role="group" aria-roledescription="slide" aria-label="2 of 3">…</div>
-        <div role="group" aria-roledescription="slide" aria-label="3 of 3">…</div>
-      </div>
+      <div role="group" aria-roledescription="slide" aria-label="1 of 3">…</div>
+      <div role="group" aria-roledescription="slide" aria-label="2 of 3">…</div>
+      <div role="group" aria-roledescription="slide" aria-label="3 of 3">…</div>
     </div>
   </div>
   <div class="aero-slider__pagination" role="group" aria-label="Slides">
@@ -47,13 +45,12 @@ Class names are fixed. Roles and names are yours to write; the slider does not a
 | ------------------------------------------------ | -------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `.aero-slider`                                   | yes      | Container. Receives events, state classes and the instance (`element.aeroSlider`).                                     |
 | `.aero-slider__viewport`                         | yes      | `position: relative`. Put arrows inside it, before the track.                                                          |
-| `.aero-slider__track`                            | yes      | The scroller. Its only child is the slides row.                                                                        |
-| `.aero-slider__slides`                           | yes      | The row, as long as its slides and gaps. Every direct child is a slide.                                                |
+| `.aero-slider__track`                            | yes      | The scroller. Every direct child is a slide.                                                                           |
 | `.aero-slider__nav--prev`, `--next`              | no       | Buttons. Disabled by the slider at an end it cannot pass. Never disabled with `loop`.                                  |
 | `.aero-slider__pagination` > `.aero-slider__dot` | no       | One dot as a template. Copied once per stop; `{index}` in its `aria-label` becomes the slide number. Use a `<button>`. |
 
 - A slide that is a link, list item or image keeps its own semantics. Do not add `role="group"` to it.
-- Real slides carry `data-aero-slider-index`. Loop clones carry `data-aero-slider-clone`. Select real slides with `.aero-slider__slides > [data-aero-slider-index]`, never all children of the row.
+- Real slides carry `data-aero-slider-index`. Loop clones carry `data-aero-slider-clone`. Select real slides with `.aero-slider__track > [data-aero-slider-index]`, never all track children.
 
 ## Layout
 
@@ -78,8 +75,7 @@ CSS variables on the slider or any ancestor, except `--aero-layout-width`, which
 }
 ```
 
-- Resizes re-measure on their own, and so does any slide or gap that changes size (an image loads, a font swaps in, a class sets a new gap). After changing a variable from script, call `slider.refresh()`: a change that resizes nothing, such as `--aero-slides-per-view` over fixed-width slides, is one the slider cannot see.
-- Slides are sized in `cqi` units against the track, which is a size container. A slide with its own `width` keeps it; percentages on a slide resolve against the row, so use a length or `cqi`. A vertical slider's track is a `size` container, so the viewport needs a height that does not come from its slides (the default takes it from `--aero-slide-aspect`).
+- Resizes re-measure on their own, and so does any slide that changes size (an image loads, a font swaps in). After changing a variable from script, call `slider.refresh()`: a new gap between fixed-width slides resizes nothing, so the slider cannot see it happen. Without `refresh()`, it measures the new gap the next time the track comes to rest.
 - The variables stop at a slide's content. Set them again on a nested slider.
 - Breakout (track runs off both window edges, active slide lines up with the content column): add `aero-slider--breakout`, make the container full-bleed, set `--aero-layout-width` on the slider to the column width.
 - With `loop`, add `data-aero-defer-visibility` to the container to avoid a layout shift before init. If alignment is not centred, also write `data-aero-alignment="start"` or `"end"` in the HTML.
@@ -111,15 +107,15 @@ Autoplay pauses on hover, on keyboard focus inside, during a press or drag and w
 
 ## Instance
 
-| Member                                  | Use                                                          |
-| --------------------------------------- | ------------------------------------------------------------ |
-| `currentIndex`, `slideCount`, `element` | Read-only state.                                             |
-| `next()`, `prev()`                      | Move by `perMove`.                                           |
-| `goTo(index, { instant })`              | Go to a slide index. `instant: true` skips the animation.    |
-| `pause()`, `resume()`                   | Hold and release autoplay from code.                         |
-| `update(options)`                       | Change options in place.                                     |
-| `refresh()`                             | Rebuild after you change the row's slides or a CSS variable. |
-| `destroy()`                             | Remove listeners and clones and restore the markup.          |
+| Member                                  | Use                                                            |
+| --------------------------------------- | -------------------------------------------------------------- |
+| `currentIndex`, `slideCount`, `element` | Read-only state.                                               |
+| `next()`, `prev()`                      | Move by `perMove`.                                             |
+| `goTo(index, { instant })`              | Go to a slide index. `instant: true` skips the animation.      |
+| `pause()`, `resume()`                   | Hold and release autoplay from code.                           |
+| `update(options)`                       | Change options in place.                                       |
+| `refresh()`                             | Rebuild after you change the track's slides or a CSS variable. |
+| `destroy()`                             | Remove listeners and clones and restore the markup.            |
 
 - Without `loop`, slides that rest at the same position near an end share one stop and one dot. Indexes are still slide indexes.
 - Calling `createSlider` again on the same element replaces the old instance.
@@ -146,7 +142,7 @@ Build on the instance and the events. Do not patch the library or move the track
 - **Custom controls** (any element, anywhere): call `next()`, `prev()` or `goTo(i)` from your own handlers.
 - **Derived UI** (counter, progress bar, caption, analytics): listen for `aero:slideChange` and read `detail.index` and `slider.slideCount`.
 - **Work per visible slide** (play a video, load data, animate in): use `aero:visible` and `aero:hidden`.
-- **Dynamic content**: edit the children of `.aero-slider__slides` and call `refresh()`. It rests on the same index; follow with `goTo(0, { instant: true })` to start over. To swap the whole set (variant images): `row.replaceChildren(...slides); slider.refresh()`. A slide hidden with CSS still counts, so remove it from the track. A looping track also holds clones (`data-aero-slider-clone`); find a slide by `[data-aero-slider-index="N"]`, not by child position. Rewrite the slide names ("2 of 5") when the count changes.
+- **Dynamic content**: edit the track's children and call `refresh()`. It rests on the same index; follow with `goTo(0, { instant: true })` to start over. To swap the whole set (variant images): `track.replaceChildren(...slides); slider.refresh()`. A slide hidden with CSS still counts, so remove it from the track. A looping track also holds clones (`data-aero-slider-clone`); find a slide by `[data-aero-slider-index="N"]`, not by child position. Rewrite the slide names ("2 of 5") when the count changes.
 - **Frameworks**: create the slider once the slides are in the DOM (mount effect) and call `destroy()` on unmount. After the framework re-renders the slides, call `refresh()`.
 - **Thumbnails**: two sliders and `syncThumbnails`.
 

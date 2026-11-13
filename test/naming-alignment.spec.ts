@@ -89,8 +89,7 @@ const preInitOffset = (page: Page) =>
   page.evaluate(() => {
     const track = document.querySelector("#s .aero-slider__track")!;
     return Math.round(
-      track.querySelector(".aero-slider__slides")!.children[0]!.getBoundingClientRect().left -
-        track.getBoundingClientRect().left
+      track.children[0]!.getBoundingClientRect().left - track.getBoundingClientRect().left
     );
   });
 
@@ -125,7 +124,7 @@ test("server-rendered alignment markup snaps natively before init", async ({ pag
     expect(
       await page.evaluate(
         () =>
-          getComputedStyle(document.querySelector("#s .aero-slider__slides > *")!).scrollSnapAlign
+          getComputedStyle(document.querySelector("#s .aero-slider__track > *")!).scrollSnapAlign
       )
     ).toBe(alignment);
   }

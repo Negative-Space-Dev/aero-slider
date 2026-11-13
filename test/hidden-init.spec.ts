@@ -31,10 +31,8 @@ test("a slider created while hidden remembers goTo() and lands there once shown"
   expect((await state(page, "s")).index).toBe(2);
   const centre = await page.evaluate(() => {
     const track = document.querySelector<HTMLElement>("#s .aero-slider__track")!;
-    const before = (track.querySelector(".aero-slider__slides")!.children.length - 4) / 2;
-    const r = track
-      .querySelector(".aero-slider__slides")!
-      .children[before + 2]!.getBoundingClientRect();
+    const before = (track.children.length - 4) / 2;
+    const r = track.children[before + 2]!.getBoundingClientRect();
     const tr = track.getBoundingClientRect();
     return { at: (r.left + r.right) / 2 - tr.left, middle: track.clientWidth / 2 };
   });

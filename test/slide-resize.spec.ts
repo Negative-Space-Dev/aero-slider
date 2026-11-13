@@ -1,12 +1,12 @@
 import { type Page, create, expect, mount, settled, test } from "./fixtures";
 
 // Slides sized by the page, not by --aero-slides-per-view: each 200px wide until one changes. The
-// fixed height keeps the track's own box the same whatever the slides do.
+// fixed height keeps the track's own box the same when a slide widens.
 const mixed = (n: number) =>
-  `<div id="s" class="aero-slider" style="width:600px"><div class="aero-slider__track"><div class="aero-slider__slides">${Array.from(
+  `<div id="s" class="aero-slider" style="width:600px"><div class="aero-slider__track">${Array.from(
     { length: n },
     (_, i) => `<div style="flex:none;width:200px;height:100px">${i}</div>`
-  ).join("")}</div></div></div>`;
+  ).join("")}</div></div>`;
 
 /** Resolves with how many `aero:resized` events `#s` dispatched during `change` and the frames after it. */
 const resizedDuring = (page: Page, change: () => void) =>
@@ -74,7 +74,7 @@ test("slides added before refresh() are tracked, and removed ones are not", asyn
       const slide = document.createElement("div");
       slide.id = id;
       slide.style.cssText = "flex:none;width:200px;height:100px";
-      track.querySelector(".aero-slider__slides")!.append(slide);
+      track.append(slide);
     }
     window.sliders.s!.refresh();
     // Still in the document, so the observer would report it if it were still observed.
@@ -102,7 +102,40 @@ test("slides added before refresh() are tracked, and removed ones are not", asyn
   ).toBe(5 * 200 + 350 + 200 - 600);
 });
 
-// The row stays as long, so only watching each slide shows the change.
+// A gap between fixed-width slides resizes no element, so no observer reports it. The track's
+// scroll range shows it, and the slider looks at that when a scroll comes to rest.
+for (const first of ["goTo", "scroll"] as const) {
+  test(`a new gap is measured once a ${first} brings the track to rest`, async ({ page }) => {
+    await mount(page, mixed(8));
+    await create(page, "s", { alignment: "start" });
+    await settled(page, "s");
+    await page.evaluate(() => {
+      const el = document.getElementById("s")!;
+      el.addEventListener("aero:resized", () => (el.dataset.resized = "yes"));
+      el.style.setProperty("--aero-slide-gap", "20px");
+    });
+    const scrollToSlide = (index: number) =>
+      page.evaluate((left) => {
+        document.querySelector("#s .aero-slider__track")!.scrollTo({ left, behavior: "smooth" });
+      }, index * 220);
+
+    if (first === "goTo") await page.evaluate(() => window.sliders.s!.goTo(3));
+    else await scrollToSlide(3);
+    await settled(page, "s");
+    await expect(page.locator("#s")).toHaveAttribute("data-resized", "yes");
+    expect(await offsetOf(page, 3)).toBe(0);
+    expect(await page.evaluate(() => window.sliders.s!.currentIndex)).toBe(3);
+
+    await scrollToSlide(5);
+    await settled(page, "s");
+    expect(await page.evaluate(() => window.sliders.s!.currentIndex)).toBe(5);
+
+    await page.evaluate(() => window.sliders.s!.goTo(1, { instant: true }));
+    expect(await offsetOf(page, 1)).toBe(0);
+  });
+}
+
+// The track's scroll range stays the same, so only watching each slide shows the change.
 test("two slides trading width re-measure", async ({ page }) => {
   await mount(page, mixed(8));
   await create(page, "s", { alignment: "start" });
@@ -116,22 +149,35 @@ test("two slides trading width re-measure", async ({ page }) => {
   expect(await offsetOf(page, 2)).toBe(0);
 });
 
-// A gap between fixed-width slides resizes no slide and not the track: only the row grows.
-test("a new gap re-measures without a refresh()", async ({ page }) => {
-  await mount(page, mixed(8));
-  await create(page, "s", { alignment: "start" });
-  await settled(page, "s");
-  const resized = await resizedDuring(page, () => {
-    document.getElementById("s")!.style.setProperty("--aero-slide-gap", "20px");
-  });
-  expect(resized).toBe(1);
-
-  await page.evaluate(() => window.sliders.s!.goTo(3));
-  await settled(page, "s");
-  expect(await offsetOf(page, 3)).toBe(0);
+test("a loop with one wider slide rests on, steps to and reports the right slide", async ({
+  page,
+}) => {
+  await mount(page, mixed(6));
   await page.evaluate(() => {
-    document.querySelector("#s .aero-slider__track")!.scrollTo({ left: 1100, behavior: "smooth" });
+    document.querySelector<HTMLElement>("#s .aero-slider__track > :nth-child(3)")!.style.width =
+      "400px";
   });
+  await create(page, "s", { alignment: "start", loop: true });
   await settled(page, "s");
-  expect(await page.evaluate(() => window.sliders.s!.currentIndex)).toBe(5);
+  const index = () => page.evaluate(() => window.sliders.s!.currentIndex);
+
+  for (const slide of [4, 2, 5, 0]) {
+    await page.evaluate((slide) => window.sliders.s!.goTo(slide), slide);
+    await settled(page, "s");
+    expect(await index()).toBe(slide);
+    expect(await offsetOf(page, slide)).toBe(0);
+  }
+  // Slides 0 and 1 are 200px each, and slide 2 is 400px: a scroll past each lands on the next.
+  for (const [by, slide] of [
+    [200, 1],
+    [200, 2],
+    [400, 3],
+  ] as const) {
+    await page.evaluate((by) => {
+      document.querySelector("#s .aero-slider__track")!.scrollBy({ left: by, behavior: "smooth" });
+    }, by);
+    await settled(page, "s");
+    expect(await index()).toBe(slide);
+    expect(await offsetOf(page, slide)).toBe(0);
+  }
 });

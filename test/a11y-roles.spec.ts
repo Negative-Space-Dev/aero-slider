@@ -48,7 +48,7 @@ test("slides keep the roles and names their author gave them; clones are hidden"
 }) => {
   await mount(page, slider("s", 3, { style: "--aero-slides-per-view:2", nav: false, dots: false }));
   await page.evaluate(() => {
-    document.querySelectorAll("#s .aero-slider__slides > *").forEach((slide, i) => {
+    document.querySelectorAll("#s .aero-slider__track > *").forEach((slide, i) => {
       slide.setAttribute("role", "group");
       slide.setAttribute("aria-roledescription", "slide");
       slide.setAttribute("aria-label", `${i + 1} of 3`);

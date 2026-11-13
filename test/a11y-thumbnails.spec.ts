@@ -8,10 +8,10 @@ const thumbs = (page: Page) =>
 
 /** A strip whose thumbnails are named buttons, as the docs tell authors to write them. */
 const buttonStrip = (n: number) =>
-  `<div id="thumbs" class="aero-slider" style="width:600px;--aero-slides-per-view:5"><div class="aero-slider__viewport"><div class="aero-slider__track"><div class="aero-slider__slides">${Array.from(
+  `<div id="thumbs" class="aero-slider" style="width:600px;--aero-slides-per-view:5"><div class="aero-slider__viewport"><div class="aero-slider__track">${Array.from(
     { length: n },
     (_, i) => `<button type="button" aria-label="Show photo ${i + 1}">${i}</button>`
-  ).join("")}</div></div></div></div>`;
+  ).join("")}</div></div></div>`;
 
 const sync = (page: Page, loop = true) =>
   page.evaluate((loop) => {
@@ -92,7 +92,7 @@ test("thumbnails that are links keep their own semantics", async ({ page }) => {
   await mount(page, slider("main", 4) + slider("thumbs", 4, strip));
   await page.evaluate(() => {
     for (const [i, slide] of document
-      .querySelectorAll("#thumbs .aero-slider__slides > *")
+      .querySelectorAll("#thumbs .aero-slider__track > *")
       .entries()) {
       const link = document.createElement("a");
       link.href = `#t${i}`;

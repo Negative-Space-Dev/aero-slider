@@ -23,7 +23,7 @@ test("rebuilding keeps interval autoplay running without announcing it again", a
     s.update({ perMove: 1 });
     const slide = document.createElement("div");
     slide.innerHTML = "<div>new</div>";
-    s.element.querySelector(".aero-slider__slides")!.append(slide);
+    s.element.querySelector(".aero-slider__track")!.append(slide);
     s.refresh();
   });
   expect(await lifecycle(page)).toEqual([]);
@@ -41,10 +41,10 @@ for (const config of [{}, { loop: true }, { autoplay: "continuous" as const }]) 
   }) => {
     await mount(page, slider("s", 5, { style: "--aero-slides-per-view:2" }));
     const markup = () =>
-      page.evaluate(() => document.querySelector("#s .aero-slider__slides")!.innerHTML);
+      page.evaluate(() => document.querySelector("#s .aero-slider__track")!.innerHTML);
     await page.evaluate(() => {
       const [, first, second] = document.querySelectorAll<HTMLElement>(
-        "#s .aero-slider__slides > *"
+        "#s .aero-slider__track > *"
       );
       first!.className = "aero-slider__slide promo";
       second!.className = "promo";

@@ -19,7 +19,7 @@ failOnPageErrors();
 const restOf = (page: Page, k: number) =>
   page.evaluate((k) => {
     const track = document.querySelector<HTMLElement>("#s .aero-slider__track")!;
-    const r = track.querySelector(".aero-slider__slides")!.children[k]!.getBoundingClientRect();
+    const r = track.children[k]!.getBoundingClientRect();
     const tr = track.getBoundingClientRect();
     return track.scrollLeft + (r.left + r.right) / 2 - tr.left - track.clientWidth / 2;
   }, k);
@@ -28,7 +28,7 @@ const restOf = (page: Page, k: number) =>
 const slideAtLeftEdge = (page: Page) =>
   page.evaluate(() => {
     const track = document.querySelector<HTMLElement>("#s .aero-slider__track")!;
-    const child = [...track.querySelector(".aero-slider__slides")!.children].find(
+    const child = [...track.children].find(
       (c) => Math.abs((c as HTMLElement).offsetLeft - track.scrollLeft) <= 2
     );
     return child?.textContent;
@@ -65,7 +65,7 @@ test.describe("with one and a half slides in view", () => {
   });
 
   test("clones a full set of slides on each side, hidden from assistive tech", async ({ page }) => {
-    const children = page.locator("#s .aero-slider__slides > *");
+    const children = page.locator("#s .aero-slider__track > *");
     await expect(children).toHaveCount(12);
     await expect(page.locator("#s [data-aero-slider-clone]")).toHaveCount(8);
     await expect(children.first()).toHaveAttribute("aria-hidden", "true");
@@ -218,7 +218,7 @@ test("seven quick next() calls with three slides in view land on the last slide"
     const track = document.querySelector<HTMLElement>("#s .aero-slider__track")!;
     const width = track.clientWidth / 3;
     const mid = track.scrollLeft + track.clientWidth / 2;
-    return [...track.querySelector(".aero-slider__slides")!.children].find(
+    return [...track.children].find(
       (c) => Math.abs((c as HTMLElement).offsetLeft + width / 2 - mid) <= 2
     )?.textContent;
   });
@@ -229,7 +229,7 @@ test("clones of link slides leave the tab order and drop their ids", async ({ pa
   const links = Array.from({ length: 3 }, (_, i) => `<a href="#card${i}" id="card${i}">${i}</a>`);
   await mount(
     page,
-    `<div id="s" class="aero-slider" style="width:600px"><div class="aero-slider__viewport"><div class="aero-slider__track"><div class="aero-slider__slides">${links.join("")}</div></div></div></div>`
+    `<div id="s" class="aero-slider" style="width:600px"><div class="aero-slider__viewport"><div class="aero-slider__track">${links.join("")}</div></div></div>`
   );
   await create(page, "s", { loop: true });
   const clones = await page.evaluate(() =>
