@@ -502,8 +502,6 @@ export function createSlider(
   /** Where each copy of slide `index` the track can reach rests. */
   const copiesOf = (index: number) =>
     snaps.filter((position, domIndex) => indexOfDom(domIndex) === index && reachable(position));
-  const nearest = (positions: number[], to: number) =>
-    positions.reduce((a, b) => (Math.abs(b - to) < Math.abs(a - to) ? b : a));
 
   /**
    * Steps queued faster than the track moves can run a lap or more past the reachable clones. Head for the
@@ -514,7 +512,12 @@ export function createSlider(
    */
   function headFor(index: number, dir: number): number {
     // No direction (a zero step onto an unreachable copy): the nearest reachable copy will do.
-    if (!dir) return nearest(copiesOf(index), scrollPosition());
+    if (!dir) {
+      const position = scrollPosition();
+      return copiesOf(index).reduce((a, b) =>
+        Math.abs(b - position) < Math.abs(a - position) ? b : a
+      );
+    }
     const copiesAhead = (position: number) =>
       copiesOf(index).filter((p) => (dir > 0 ? p > position + 1 : p < position - 1));
     let ahead = copiesAhead(scrollPosition());
@@ -913,7 +916,13 @@ export function createSlider(
     if (stops.join() !== previousStops) dots.build();
     else dots.measure();
     nav.refresh();
-    if (after === "move") return glideTo(index);
+    if (after === "move") {
+      // The move that ended short is over, even if native snapping stopped it short of its target.
+      // Going to the same slide again eases the rest of the way, as that move would have.
+      programmaticScroll = false;
+      goTo(index, { instant: !moveSmooth });
+      return play.start();
+    }
     if (after === "input") {
       // The input's settle places the index. A press that never moves the track has none to come,
       // so one is owed on its release, or now if it has already lifted.
@@ -934,21 +943,6 @@ export function createSlider(
       setCurrent(index);
     } else rest(index);
     play.start();
-  }
-
-  /**
-   * Eases the rest of the way onto slide `index`, after a move that ended on positions since found
-   * stale. A loop eases onto the copy nearest the track, never a lap across.
-   */
-  function glideTo(index: number): void {
-    const position = scrollPosition();
-    const target = nearest(loop() ? copiesOf(index) : [restPositionOf(index)], position);
-    play.start();
-    if (Math.abs(target - position) > 1) return startMove(target, moveSmooth);
-    // Native snapping may have put the track there already, short of where the move was headed,
-    // so the move never settled. As goTo() does when the track is in place, settle it now.
-    programmaticScroll = false;
-    onSettle(false);
   }
 
   /** Rests the track on slide `index`, brought into range, and makes it the current slide. */
