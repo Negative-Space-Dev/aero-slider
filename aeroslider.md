@@ -54,7 +54,7 @@ Class names are fixed. Roles and names are yours to write; the slider does not a
 
 ## Layout
 
-CSS variables on the slider or any ancestor. Change them in media or container queries. Never size slides in JavaScript.
+CSS variables on the slider or any ancestor, except `--aero-layout-width`, which goes on the slider itself. Change them in media or container queries. Never size slides in JavaScript.
 
 | Variable                 | Default | Meaning                                              |
 | ------------------------ | ------- | ---------------------------------------------------- |
@@ -77,7 +77,7 @@ CSS variables on the slider or any ancestor. Change them in media or container q
 
 - Resizes re-measure on their own. After changing a variable from script, call `slider.refresh()`.
 - The variables stop at a slide's content. Set them again on a nested slider.
-- Breakout (track runs off both window edges, active slide lines up with the content column): add `aero-slider--breakout`, make the container full-bleed, set `--aero-layout-width` to the column width.
+- Breakout (track runs off both window edges, active slide lines up with the content column): add `aero-slider--breakout`, make the container full-bleed, set `--aero-layout-width` on the slider to the column width.
 - With `loop`, add `data-aero-defer-visibility` to the container to avoid a layout shift before init. If alignment is not centred, also write `data-aero-alignment="start"` or `"end"` in the HTML.
 
 ## Options
@@ -94,6 +94,7 @@ CSS variables on the slider or any ancestor. Change them in media or container q
 | `draggable`        | `true`         | Mouse drag. Touch always scrolls natively.                                                          |
 | `noDrag`           | form fields    | Selector for slide content that must not start a drag. Replaces the default, listed below.          |
 | `autoplay`         | `false`        | `true` steps every `autoplayInterval`. `"continuous"` drifts like a ticker and implies `loop`.      |
+|                    |                | `"continuous"` also forces `snap: "none"`, whatever `snap` is set to.                               |
 | `autoplayInterval` | `5000`         | Milliseconds, at least 100.                                                                         |
 | `autoplaySpeed`    | `40`           | Pixels per second for `"continuous"`.                                                               |
 | `maxDots`          | `0`            | Show at most this many dots, windowed. `0` shows all.                                               |

@@ -82,7 +82,12 @@ export function syncThumbnails(
     mark(-1);
   };
   // Destroying the strip without calling the teardown still takes the marks back.
-  thumbnails.element.addEventListener("aero:destroy", teardown, { signal });
+  // A slider nested in a thumbnail bubbles its own destroy through here.
+  thumbnails.element.addEventListener(
+    "aero:destroy",
+    (event) => event.target === thumbnails.element && teardown(),
+    { signal }
+  );
 
   activate(primary.currentIndex);
   return teardown;

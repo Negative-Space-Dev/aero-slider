@@ -366,10 +366,15 @@
 .ex-bare.aero-slider .aero-slider__nav--next {
   all: revert;
 }
+.ex-bare.aero-slider .aero-slider__pagination {
+  gap: 8px;
+  padding-block: 12px 16px;
+}
 .ex-bare.aero-slider .aero-slider__dot {
+  display: inline-block;
   width: auto;
   height: auto;
-  border-radius: 0;
-  background: none;
-  transform: none;
+}
+.ex-bare.aero-slider .aero-slider__dot::before {
+  all: revert;
 }

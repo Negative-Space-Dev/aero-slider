@@ -70,7 +70,7 @@ The slider does this:
 - Marks the current dot, and the current thumbnail of a synced strip, with `aria-current="true"`.
 - Hides loop clones from screen readers, the tab order and forms.
 - Keeps keyboard focus when a nav button disables or the dots are rebuilt, and brings a partly shown slide into view when focus moves into it.
-- Announces the new position ("2 of 5") in a hidden live region when a user changes slide. It stays quiet while autoplay runs. Set `data-aero-status="Bild {index} von {count}"` on the container to word it for another language.
+- Announces the new position ("2 of 5") in a hidden live region when a user changes slide. It stays quiet for the moves autoplay makes on its own. Set `data-aero-status="Bild {index} von {count}"` on the container to word it for another language.
 
 You write this:
 
@@ -137,11 +137,22 @@ type SlideChange = SliderEventMap["slideChange"]; // { index: number }
 | `--slide-gap`        | `--aero-slide-gap`       |
 | `--slide-aspect`     | `--aero-slide-aspect`    |
 
-Three more things to check:
+The betas also had these, which 1.0 removes:
 
+| Beta                              | 1.0                                                       |
+| --------------------------------- | --------------------------------------------------------- |
+| `slider.add()`, `slider.remove()` | Change the track's children, then call `slider.refresh()` |
+| `direction: "ttb"`                | `vertical: true`                                          |
+| `direction: "rtl"`                | `dir="rtl"` on the slider or any ancestor                 |
+| `labels`                          | Write the names in your markup                            |
+
+More things to check:
+
+- **Roles and names are yours now.** The betas wrote the roles and labels for the container, slides, arrows and dots. 1.0 leaves them to your markup, so add them as [Accessibility](#accessibility) shows. Without them the slider still works, but screen readers get unnamed controls.
+- **Finding slides in a looping slider.** A looping track also holds copies of its slides. Select a real slide with `[data-aero-slider-index="2"]`, not by its place among the track's children.
 - **Alignment is logical.** `"start"` is the right edge in an RTL slider and the top in a vertical one.
 - **Your own selectors on `data-aero-alignment`.** The attribute now holds `"start"`, `"center"` or `"end"`, so a rule such as `[data-aero-alignment="left"]` no longer matches.
-- **Nested sliders.** The `--aero-*` variables are inherited, so you can set them on any ancestor of a slider. They stop at the content of a slide: a slider nested inside a slide, or used as a slide itself, does not take the outer slider's settings, so set its variables on the nested slider itself.
+- **Nested sliders.** The `--aero-*` variables are inherited, so you can set them on any ancestor of a slider. The exception is `--aero-layout-width`, which goes on the slider itself. They stop at the content of a slide: a slider nested inside a slide, or used as a slide itself, does not take the outer slider's settings, so set its variables on the nested slider itself.
 
 ## Contributing
 

@@ -42,3 +42,25 @@ test("thumbnails ignore a slider nested inside the primary", async ({ page }) =>
   await expect(page.locator("#thumbs .aero-slider__thumb--active")).toHaveText("0");
   expect(await page.evaluate(() => window.sliders.thumbs!.currentIndex)).toBe(0);
 });
+
+test("destroying a slider nested in a thumbnail leaves the sync running", async ({ page }) => {
+  const nested = slider("nested", 2, { nav: false, dots: false });
+  await mount(
+    page,
+    slider("main", 3) +
+      slider("thumbs", 3, {
+        style: "--aero-slides-per-view:3",
+        dots: false,
+        inner: (i) => (i === 0 ? nested : String(i)),
+      })
+  );
+  await create(page, "nested");
+  await create(page, "main");
+  await create(page, "thumbs");
+  await page.evaluate(() => {
+    window.syncThumbnails(window.sliders.main!, window.sliders.thumbs!, { loop: false });
+    window.sliders.nested!.destroy();
+  });
+  await page.locator('#thumbs [data-aero-slider-index="2"]').click();
+  await expect.poll(() => page.evaluate(() => window.sliders.main!.currentIndex)).toBe(2);
+});

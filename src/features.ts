@@ -234,6 +234,7 @@ export function autoplay(core: SliderCore) {
   let running = false; // autoplayStart has been announced and autoplayStop hasn't followed it
   let settleFallback = 0;
   const pressed = new Set<number>(); // pointerIds currently down on the track
+  let advancing = false; // the slide change under way is autoplay's own
 
   /** Announces a change of state only: a lap swapped on resize stays running throughout. */
   function announce(on: boolean): void {
@@ -242,7 +243,7 @@ export function autoplay(core: SliderCore) {
     core.emit(on ? "autoplayStart" : "autoplayStop", {});
   }
   // Scrolling changes nothing a screen reader can hear, so a hidden status line names the slide
-  // the user moved to. It stays quiet while autoplay moves the slides on its own.
+  // the user moved to. It stays quiet for the moves autoplay makes on its own.
   const status = document.createElement("div");
   status.className = "aero-slider__status";
   status.setAttribute("aria-live", "polite");
@@ -259,8 +260,10 @@ export function autoplay(core: SliderCore) {
   function advance(): void {
     if (core.easing()) return; // scrollDuration outlasts the interval: let the move land first
     const atEnd = !core.loop() && core.stop() >= core.stopCount() - 1;
+    advancing = true;
     if (atEnd) core.goTo(0);
     else core.next();
+    advancing = false;
   }
 
   function travelled(current: Lap): number {
@@ -383,15 +386,14 @@ export function autoplay(core: SliderCore) {
     if (timer) countdown();
     const { index } = (event as CustomEvent<{ index: number }>).detail;
     // data-aero-status on the container words it for other languages.
-    status.textContent =
-      timer || lap
-        ? ""
-        : (container.dataset.aeroStatus ?? "{index} of {count}")
-            .replace("{index}", String(index + 1))
-            .replace(
-              "{count}",
-              String(track.querySelectorAll(":scope > [data-aero-slider-index]").length)
-            );
+    status.textContent = advancing
+      ? ""
+      : (container.dataset.aeroStatus ?? "{index} of {count}")
+          .replace("{index}", String(index + 1))
+          .replace(
+            "{count}",
+            String(track.querySelectorAll(":scope > [data-aero-slider-index]").length)
+          );
   });
   listen(document, "visibilitychange", () => (document.hidden ? stop() : start()));
   listen(reducedMotion, "change", () => (reducedMotion.matches ? stop() : start()));

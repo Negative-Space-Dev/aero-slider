@@ -293,7 +293,8 @@ export function createSlider(
     for (let i = 0; i < slideCount && (loop() || i <= maxIndex()); i++) {
       const position = loop() ? 0 : restPositionOf(i);
       // Unmeasured (display: none), every slide reads 0; keep them all until relayout() measures.
-      if (i && slideStride && !loop() && position - stopPositions.at(-1)! < 0.5) continue;
+      if (i && slideStride && !loop() && position - stopPositions[stopPositions.length - 1]! < 0.5)
+        continue;
       stops.push(i);
       stopPositions.push(position);
     }

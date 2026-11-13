@@ -69,6 +69,14 @@ test("the status line stays quiet while autoplay moves the slides", async ({ pag
   await expect(status(page)).toHaveText(`${target + 1} of 4`);
 });
 
+// A control outside the slider calls goTo() without pausing anything.
+test("a manual change is announced while autoplay keeps running", async ({ page }) => {
+  await mount(page, slider("s", 4));
+  await create(page, "s", { autoplay: true, autoplayInterval: 60_000, loop: true });
+  await page.evaluate(() => window.sliders.s!.goTo(2));
+  await expect(status(page)).toHaveText("3 of 4");
+});
+
 const autoplayEvents = async (page: Page) =>
   (await takeEvents(page, "s")).filter((event) => event.startsWith("autoplay"));
 

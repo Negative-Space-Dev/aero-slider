@@ -774,19 +774,44 @@ body {
   transform: scaleX(-1);
 }
 
+/* Each dot is a 16 by 24px button around a 6px mark, so it is easier to tap than the mark
+   alone. The buttons touch, which sets the marks 16px apart, and the row's padding shrinks to
+   keep them where smaller buttons would put them. */
+.aero-slider__pagination {
+  gap: 0;
+  padding-block: 2px 6px;
+}
 .aero-slider__dot {
+  display: grid;
+  place-items: center;
+  width: 1rem;
+  height: 1.5rem;
+}
+.aero-slider__dot::before {
+  content: "";
   width: 0.375rem;
   height: 0.375rem;
   border-radius: 9999px;
   background: var(--line-strong);
   transition:
     transform 0.2s ease-out,
-    opacity 0.2s ease-out,
     background-color 0.2s ease-out;
 }
-.aero-slider__dot--active {
+.aero-slider__dot--active::before {
   background: var(--ink);
   transform: scale(1.35);
+}
+/* With maxDots the library shrinks the buttons at the window's edges. Shrink the marks instead,
+   so those stay full-size targets too. */
+.aero-slider__dot--edge,
+.aero-slider__dot--near-edge {
+  transform: none;
+}
+.aero-slider__dot--edge::before {
+  transform: scale(0.6);
+}
+.aero-slider__dot--near-edge::before {
+  transform: scale(0.8);
 }
 
 /* ── Slides ─────────────────────────────────────────────────────────────

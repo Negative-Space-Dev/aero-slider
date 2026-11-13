@@ -245,7 +245,7 @@ function readConfig(): SliderConfig & { thumbnails?: boolean; slideCount?: numbe
     perMove: Number(fd.get("perMove")) || 1,
     thumbnails: fd.get("thumbnails") === "on",
     slideCount: Math.min(20, Math.max(3, Number(fd.get("slideCount")) || 5)),
-    maxDots: maxDotsVal >= 21 ? undefined : maxDotsVal,
+    maxDots: maxDotsVal >= 21 ? 0 : maxDotsVal,
   };
 }
 
@@ -484,7 +484,7 @@ function readSettings(): PlaygroundSettings {
     slidesPerView: spvIndexToValue(Number(fd.get("slidesPerView")) || 0),
     gap: Number(fd.get("gap")) || 0,
     perMove: config.perMove ?? 1,
-    maxDots: config.maxDots,
+    maxDots: config.maxDots || undefined, // 0 is the default: leave it out of the code
     autoplayInterval: config.autoplayInterval ?? 4000,
     alignment: config.alignment ?? "center",
     direction: readDirection(),

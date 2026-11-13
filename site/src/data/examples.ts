@@ -200,17 +200,29 @@ const styledCss = `#styled .aero-slider__nav--prev,
   border-color: rgb(255 255 255 / 0.16);
 }
 
+/* Each dot is a button larger than its mark, so it is easier to tap. */
+#styled .aero-slider__pagination {
+  gap: 0;
+}
 #styled .aero-slider__dot {
+  display: grid;
+  place-items: center;
+  min-width: 16px;
+  height: 24px;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+}
+#styled .aero-slider__dot::before {
+  content: "";
   width: 6px;
   height: 6px;
-  padding: 0;
-  border: 0;
   border-radius: 3px;
   background: #2d3036;
   transition: width 0.2s, background-color 0.2s;
 }
 /* The slider marks the current position's dot. */
-#styled .aero-slider__dot--active {
+#styled .aero-slider__dot--active::before {
   width: 20px;
   background: #6aa5ff;
 }`;
@@ -329,7 +341,7 @@ pageSize();`,
         label: "Featured",
         className: "aero-slider--breakout",
         wrapperClass: "breakout-clip",
-        config: { alignment: "start" },
+        config: { alignment: "start", snap: "settle" },
         nav: true,
         dots: true,
         slides: [
@@ -345,6 +357,7 @@ pageSize();`,
     notes: [
       "<code>aero-slider--breakout</code> lets the viewport overflow and pads the track so the first and last slides line up with the column.",
       "<code>--aero-layout-width</code> is the width slides are sized against. Set it to your content column.",
+      '<code>snap: "settle"</code> lets a drag move freely, then eases onto the nearest card. A short pull on these wide cards springs back instead of moving a whole card.',
       "The edge padding is worked out from the track's own width, so it stays right with or without a scrollbar.",
       "The wrapper must span the window. Hide the page's horizontal overflow, because <code>100vw</code> includes the scrollbar.",
       "The dashed lines mark the column. The switch calls <code>update({ alignment })</code>.",
@@ -719,6 +732,7 @@ show(); // no slideChange fires for the starting slide`,
       "The viewport is <code>position: relative</code>, so arrows inside it can be placed with <code>position: absolute</code>.",
       "The slider sets <code>disabled</code> on an arrow that cannot go further, so <code>:disabled</code> styles the end state. With <code>loop</code> no arrow is ever disabled.",
       'The current dot gets <code>aero-slider__dot--active</code> and <code>aria-current="true"</code>.',
+      "A dot this small is hard to tap. Make the button larger than the mark and draw the mark inside it, as the CSS here does with <code>::before</code>. Buttons 24px wide meet the WCAG target size, at the cost of dots set 24px apart.",
       'Every class the slider sets is listed under <a href="#api-states">States in the API</a>.',
     ],
   },

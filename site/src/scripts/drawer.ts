@@ -85,6 +85,9 @@ function setUp(
   function close(velocity = 0): void {
     if (closing || !drawer.open) return;
     closing = true;
+    // A drag still held would spring the sheet back on release and cancel this dismissal.
+    drag = null;
+    body.style.overflowY = "";
     springTo(height() + 24, velocity, () => drawer.close());
   }
 
