@@ -82,6 +82,14 @@ const FLICK_PROJECTION_MS = 250;
 const SETTLE_FALLBACK_MS = 150; // for browsers without the scrollend event
 const WHEEL_SETTLE_MS = 200; // Firefox can skip scrollend after wheel scrolling
 
+/**
+ * What a re-measure follows, which decides where the track goes. `resize`: the layout changed under
+ * the track, which rests on the same slide at its new position. `scroll`: a user's scroll ended on
+ * positions since found stale, so the index becomes the slide the track rests on. `move`: a goTo()
+ * ended there, so the index stays and the track eases the rest of the way onto that slide.
+ */
+type Remeasure = "resize" | "scroll" | "move";
+
 /** What the UI features (nav, dots, keyboard, autoplay) need from the core. */
 export interface SliderCore {
   container: HTMLElement;
@@ -326,15 +334,14 @@ export function createSlider(
   }
 
   let remeasureQueued = false;
-  let remeasureAtRest = false;
+  let remeasureAfter: Remeasure = "scroll";
   /**
    * Re-measures after a change no observer reports: a new gap between fixed-width slides resizes
    * no element, and only the track's scroll range shows it. Called once the track rests, so it
-   * never moves the track under a scroll. After a user's scroll (`atRest`) the track stays put and
-   * the index follows it; after a goTo() the index stays and the track is put on it.
+   * never moves the track under a scroll.
    */
-  function remeasureUnobserved(atRest: boolean): void {
-    remeasureAtRest = atRest;
+  function remeasureUnobserved(after: Remeasure): void {
+    remeasureAfter = after;
     if (remeasureQueued) return;
     remeasureQueued = true;
     // The observer delivers after layout, which a settle can precede. Two frames on it has had
@@ -342,7 +349,7 @@ export function createSlider(
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
         remeasureQueued = false;
-        if (!destroyed && extent() !== seenExtent) resized(remeasureAtRest);
+        if (!destroyed && extent() !== seenExtent) resized(remeasureAfter);
       })
     );
   }
@@ -598,7 +605,7 @@ export function createSlider(
     // A resize can settle before the observer re-measures: the re-measure then places the track
     // and the index, which the stale positions here would get wrong.
     const stale = scrolled && extentChanged();
-    if (stale) remeasureUnobserved(!programmaticScroll);
+    if (stale) remeasureUnobserved(programmaticScroll ? "move" : "scroll");
     // A scrollend from an instant scroll issued just before goTo() lands mid-animation; wait for ours.
     if (programmaticScroll && Math.abs(scrollPosition() - scrollTarget) > 1) return;
     const userScroll = !programmaticScroll;
@@ -827,9 +834,9 @@ export function createSlider(
     if (changed) resized();
   });
 
-  function resized(atRest = false): void {
+  function resized(after: Remeasure = "resize"): void {
     emit("resize", {});
-    relayout(atRest);
+    relayout(after);
     emit("resized", {});
   }
 
@@ -871,12 +878,8 @@ export function createSlider(
 
   // ── Layout ───────────────────────────────────────────────────────────
 
-  /**
-   * Cheap path for size changes: re-measure and keep the current slide in place. `atRest` keeps
-   * the track in place instead: a scroll that ended on positions since found stale never set the
-   * index, so it becomes the slide the track rests on.
-   */
-  function relayout(atRest = false): void {
+  /** Cheap path for size changes: re-measure and keep the current slide in place (see Remeasure). */
+  function relayout(after: Remeasure = "resize"): void {
     const previousStops = stops.join();
     let index = current;
     // The index doesn't follow a continuous drift, so keep the slide that's actually showing.
@@ -885,7 +888,7 @@ export function createSlider(
       const position = scrollPosition();
       const distances = readSnaps().map((snap) => Math.abs(snap - position));
       index = indexOfDom(distances.indexOf(Math.min(...distances)));
-      atRest = false;
+      after = "resize";
     }
     play.reset(); // continuous autoplay's transforms would skew every measurement
     readSlidesPerView();
@@ -894,7 +897,8 @@ export function createSlider(
     if (stops.join() !== previousStops) dots.build();
     else dots.measure();
     nav.refresh();
-    const follow = atRest && !programmaticScroll;
+    if (after === "move") return glideTo(index);
+    const follow = after === "scroll" && !programmaticScroll;
     const position = scrollPosition();
     // A clamped edge can park several indices at one spot; keep the current one there.
     if (follow && (loop() || Math.abs(position - restPositionOf(index)) > 1))
@@ -905,6 +909,27 @@ export function createSlider(
       setCurrent(index);
     } else rest(index);
     play.start();
+  }
+
+  /**
+   * Eases the rest of the way onto slide `index`, after a move that ended on positions since found
+   * stale. A loop eases onto the copy nearest the track, never a lap across.
+   */
+  function glideTo(index: number): void {
+    const position = scrollPosition();
+    const copies = loop()
+      ? snaps.filter((snap, domIndex) => indexOfDom(domIndex) === index && reachable(snap))
+      : [restPositionOf(index)];
+    const target = copies.reduce(
+      (a, b) => (Math.abs(b - position) < Math.abs(a - position) ? b : a),
+      copies[0] ?? position
+    );
+    play.start();
+    if (Math.abs(target - position) > 1) return startMove(target);
+    // Native snapping may have put the track there already, short of where the move was headed,
+    // so the move never settled. As goTo() does when the track is in place, settle it now.
+    programmaticScroll = false;
+    onSettle(false);
   }
 
   /** Rests the track on slide `index`, brought into range, and makes it the current slide. */

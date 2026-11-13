@@ -1,4 +1,4 @@
-import { type Page, create, expect, mount, settled, test } from "./fixtures";
+import { type Page, create, expect, mount, recordScroll, settled, state, test } from "./fixtures";
 
 // Slides sized by the page, not by --aero-slides-per-view: each 200px wide until one changes. The
 // fixed height keeps the track's own box the same when a slide widens.
@@ -235,3 +235,36 @@ test('a scroll after a new gap stays where it stopped, with snap: "none"', async
     await page.evaluate(() => document.querySelector("#s .aero-slider__track")!.scrollLeft)
   ).toBe(950);
 });
+
+// A goTo() made before the slider sees a new gap ends short of the slide. It eases the rest of the
+// way: a jump would show no position between where the move ended and the slide.
+for (const [snap, loop] of [
+  ["settle", false],
+  ["none", false],
+  ["none", true],
+] as const) {
+  test(`a goTo() after a new gap eases onto the slide, with snap: "${snap}"${loop ? " on a loop" : ""}`, async ({
+    page,
+  }) => {
+    await mount(page, mixed(8));
+    await create(page, "s", { alignment: "start", snap, loop });
+    await settled(page, "s");
+    const record = await recordScroll(page, "s", 2000);
+    const start = (await state(page, "s")).position;
+    await page.evaluate(() => {
+      document.getElementById("s")!.style.setProperty("--aero-slide-gap", "40px");
+      window.sliders.s!.goTo(3);
+    });
+    const samples = await record();
+    expect(await offsetOf(page, 3)).toBe(0);
+    const end = samples.at(-1)!;
+    // The old target was 600px past the start, the new one 720px.
+    const shortfall = samples.filter((p) => p > start + 602 && p < end - 2);
+    expect(shortfall.length, samples.join()).toBeGreaterThan(0);
+    // Forward the whole way: never back across a lap.
+    expect(
+      samples.every((p, i) => !i || p >= samples[i - 1]! - 1),
+      samples.join()
+    ).toBe(true);
+  });
+}
