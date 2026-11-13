@@ -59,6 +59,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "size": "bun run ./scripts/size.ts",
+    "og-image": "bun run build && node ./scripts/og-image.ts",
     "check:package": "bun run ./scripts/check-package.ts",
     "test": "bun run build && playwright test",
     "test:ui": "bun run build && playwright test --ui",
