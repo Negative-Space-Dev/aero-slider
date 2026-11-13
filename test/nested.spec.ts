@@ -38,7 +38,7 @@ test("a vertical slider inside a horizontal one leaves a pointer the outer one c
       inner: (i) => (i === 0 ? slider("inner", 3, { style: "height:300px" }) : `<div>${i}</div>`),
     })
   );
-  await create(page, "inner", { direction: "ttb" });
+  await create(page, "inner", { vertical: true });
   await create(page, "outer");
   const box = (await page.locator("#inner .aero-slider__track").boundingBox())!;
   const x = box.x + box.width / 2;

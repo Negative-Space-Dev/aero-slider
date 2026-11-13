@@ -187,8 +187,8 @@ test("the content steps evenly across the lap's seam", async ({ page }) => {
 
 test("rtl drifts the other way on screen", async ({ page }) => {
   await page.addInitScript(installTicker);
-  await mount(page, tickerMarkup("s", 4));
-  await create(page, "s", { autoplay: "continuous", autoplaySpeed: SPEED, direction: "rtl" });
+  await mount(page, tickerMarkup("s", 4), { htmlAttributes: { dir: "rtl" } });
+  await create(page, "s", { autoplay: "continuous", autoplaySpeed: SPEED });
   const pxPerMs = await page.evaluate(async () => {
     const slide = window.ticker.track("s").children[5]!;
     const cycle = 4 * Math.abs(window.ticker.stride("s"));

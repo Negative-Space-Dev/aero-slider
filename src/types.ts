@@ -34,10 +34,10 @@ export interface SliderConfig {
    */
   perMove?: number;
   /**
-   * `"auto"` (the default) follows the container's computed direction and leaves its `dir`
-   * attribute alone. `"ltr"` and `"rtl"` set `dir` on the container. `"ttb"` scrolls vertically.
+   * Scroll top to bottom instead of along the text direction. Horizontal sliders follow the
+   * container's computed direction, so `dir="rtl"` on it or an ancestor makes one right-to-left.
    */
-  direction?: "auto" | "ltr" | "rtl" | "ttb";
+  vertical?: boolean;
   /** How the track comes to rest after scrolling. Defaults to `"native"`. */
   snap?: SliderSnap;
   /**

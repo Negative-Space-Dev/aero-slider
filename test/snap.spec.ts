@@ -81,7 +81,7 @@ test("native snapping is the default", async ({ page }) => {
 for (const [name, config, style] of [
   ["settle", { snap: "settle" }, ""],
   ["none", { snap: "none" }, ""],
-  ["settle on a vertical track", { snap: "settle", direction: "ttb" }, "height:300px"],
+  ["settle on a vertical track", { snap: "settle", vertical: true }, "height:300px"],
 ] as const) {
   test(`snap: ${name} turns CSS snapping off`, async ({ page }) => {
     await mount(page, slider("s", 4, { style }));

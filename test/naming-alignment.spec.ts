@@ -20,7 +20,7 @@ async function restingPosition(
   });
   await create(page, "s", {
     alignment: alignment as never,
-    direction: layout === "vertical" ? "ttb" : "auto",
+    vertical: layout === "vertical",
   });
   await page.evaluate(() => window.sliders.s!.goTo(2, { instant: true }));
   await settled(page, "s");

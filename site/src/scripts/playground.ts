@@ -2,7 +2,11 @@ import { createSlider, syncThumbnails } from "aero-slider";
 import type { SliderConfig, SliderInstance } from "aero-slider";
 import { getRequiredElementById } from "../lib/dom";
 import { highlight, type LiveLang } from "../lib/highlight";
-import { playgroundCode, type PlaygroundSettings } from "../lib/playground-code";
+import {
+  playgroundCode,
+  type PlaygroundDirection,
+  type PlaygroundSettings,
+} from "../lib/playground-code";
 import { createSlideElement, heroToneFor, nameSlides } from "../lib/slide";
 
 // Discrete steps for slidesPerView with exponential curve
@@ -222,18 +226,22 @@ let heroSlider: SliderInstance;
 let heroThumbs: SliderInstance | null = null;
 let syncTeardown: (() => void) | null = null;
 
+function readDirection(): PlaygroundDirection {
+  const value = new FormData(form).get("direction");
+  return value === "rtl" || value === "ttb" ? value : "ltr";
+}
+
 function readConfig(): SliderConfig & { thumbnails?: boolean; slideCount?: number } {
   const fd = new FormData(form);
   const maxDotsVal = Number(fd.get("maxDots")) || 9;
   const alignment = (fd.get("alignment") as string) || "center";
-  const direction = (fd.get("direction") as string) || "ltr";
   return {
     autoplay: fd.get("autoplay") === "on",
     autoplayInterval: Number(fd.get("autoplayInterval")) || 4000,
     loop: fd.get("loop") === "on",
     draggable: fd.get("draggable") === "on",
     alignment: alignment as SliderConfig["alignment"],
-    direction: direction as "ltr" | "rtl" | "ttb",
+    vertical: readDirection() === "ttb",
     perMove: Number(fd.get("perMove")) || 1,
     thumbnails: fd.get("thumbnails") === "on",
     slideCount: Math.min(20, Math.max(3, Number(fd.get("slideCount")) || 5)),
@@ -350,6 +358,8 @@ function rebuildHero(): void {
   reconcileSlideCount(targetCount);
 
   applyLayoutFromFormToContainer(heroSliderEl);
+  if (readDirection() === "rtl") heroSliderEl.dir = "rtl";
+  else heroSliderEl.removeAttribute("dir");
   ensureHeroNavAndPagination();
   heroSlider = createSlider(heroSliderEl, config);
 
@@ -477,7 +487,7 @@ function readSettings(): PlaygroundSettings {
     maxDots: config.maxDots,
     autoplayInterval: config.autoplayInterval ?? 4000,
     alignment: config.alignment ?? "center",
-    direction: config.direction ?? "ltr",
+    direction: readDirection(),
     loop: config.loop ?? false,
     pagination: getFormBool("pagination"),
     navigation: getFormBool("navigation"),

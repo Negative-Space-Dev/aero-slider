@@ -28,7 +28,7 @@ const DEFAULTS: Config = {
   maxDots: 0,
   noDrag: "",
   perMove: 1,
-  direction: "auto",
+  vertical: false,
   snap: "native",
   scrollDuration: 0,
   scrollEasing: easeOutCubic,
@@ -36,7 +36,6 @@ const DEFAULTS: Config = {
 
 const CHOICES = {
   alignment: ["start", "center", "end"],
-  direction: ["auto", "ltr", "rtl", "ttb"],
   snap: ["native", "settle", "none"],
 } as const;
 
@@ -138,7 +137,6 @@ export function createSlider(
   let destroyed = false;
   let ready = false; // autoplay waits for the ready event before it starts
   let rtl = false; // resolved from the computed direction on every rebuild
-  let authorDir: string | null | undefined; // the dir we replaced; undefined while we hold none
 
   // Layout metrics, refreshed by measure()
   let slidesPerView = 1;
@@ -171,7 +169,7 @@ export function createSlider(
   const touches = new Set<number>();
   let settleDeferred = false; // a settle arrived while a pointer or finger was still down
 
-  const isVertical = () => config.direction === "ttb";
+  const isVertical = () => config.vertical;
   const isRtl = () => rtl;
   const computedRtl = () => !isVertical() && getComputedStyle(container).direction === "rtl";
   /**
@@ -821,11 +819,6 @@ export function createSlider(
     });
 
     container.classList.toggle("aero-slider--vertical", isVertical());
-    const { direction } = config;
-    if (direction === "ltr" || direction === "rtl") {
-      if (authorDir === undefined) authorDir = container.getAttribute("dir");
-      container.setAttribute("dir", direction);
-    } else restoreDir();
     rtl = computedRtl();
     container.setAttribute("data-aero-alignment", config.alignment);
     container.classList.toggle("aero-slider--draggable", config.draggable);
@@ -848,14 +841,6 @@ export function createSlider(
     rest(index);
     observe();
     if (ready) play.restart(); // the lap was already reset above
-  }
-
-  /** Puts back the dir an explicit direction replaced. A dir we never wrote is the page's to keep. */
-  function restoreDir(): void {
-    if (authorDir === undefined) return;
-    if (authorDir === null) container.removeAttribute("dir");
-    else container.setAttribute("dir", authorDir);
-    authorDir = undefined;
   }
 
   // ── Public API ───────────────────────────────────────────────────────
@@ -912,7 +897,6 @@ export function createSlider(
       "aero-slider--ready"
     );
     container.removeAttribute("data-aero-alignment");
-    restoreDir();
     if (container.aeroSlider === api) delete container.aeroSlider;
   }
 

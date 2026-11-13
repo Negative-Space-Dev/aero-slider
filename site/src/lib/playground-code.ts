@@ -1,4 +1,6 @@
-import type { SliderAlignment, SliderConfig } from "aero-slider";
+import type { SliderAlignment } from "aero-slider";
+
+export type PlaygroundDirection = "ltr" | "rtl" | "ttb";
 
 export interface PlaygroundSettings {
   slideCount: number;
@@ -9,7 +11,8 @@ export interface PlaygroundSettings {
   maxDots: number | undefined;
   autoplayInterval: number;
   alignment: SliderAlignment;
-  direction: NonNullable<SliderConfig["direction"]>;
+  /** The playground's layout picker: rtl is a dir attribute, ttb the vertical option. */
+  direction: PlaygroundDirection;
   loop: boolean;
   pagination: boolean;
   navigation: boolean;
@@ -26,7 +29,6 @@ export interface PlaygroundCode {
 
 const LIBRARY_DEFAULTS = {
   alignment: "center",
-  direction: "ltr",
   perMove: 1,
   autoplayInterval: 5000,
 } as const;
@@ -43,7 +45,7 @@ function slideLines(count: number, indent: string, slide: (n: number) => string)
 
 function html(s: PlaygroundSettings): string {
   const lines = [
-    `<div id="slider" class="aero-slider" role="region" aria-roledescription="carousel" aria-label="Featured">`,
+    `<div id="slider" class="aero-slider"${s.direction === "rtl" ? ` dir="rtl"` : ""} role="region" aria-roledescription="carousel" aria-label="Featured">`,
     `  <div class="aero-slider__viewport">`,
     ...(s.navigation
       ? [
@@ -115,7 +117,7 @@ function sliderOptions(s: PlaygroundSettings): [string, string][] {
   const entries: [string, string][] = [];
   if (s.loop) entries.push(["loop", "true"]);
   if (s.alignment !== LIBRARY_DEFAULTS.alignment) entries.push(["alignment", `"${s.alignment}"`]);
-  if (s.direction !== LIBRARY_DEFAULTS.direction) entries.push(["direction", `"${s.direction}"`]);
+  if (s.direction === "ttb") entries.push(["vertical", "true"]);
   if (s.perMove !== LIBRARY_DEFAULTS.perMove) entries.push(["perMove", String(s.perMove)]);
   if (!s.draggable) entries.push(["draggable", "false"]);
   if (s.autoplay) {

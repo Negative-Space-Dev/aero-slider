@@ -16,10 +16,9 @@ test("destroy() removes the loop clones", async ({ page }) => {
 
 test("destroy() restores the markup and leaves the API inert", async ({ page }) => {
   await mount(page, slider("s", 4));
-  await create(page, "s", { direction: "rtl" });
+  await create(page, "s");
   const el = page.locator("#s");
   await expect(el).toHaveAttribute("tabindex", "0");
-  await expect(el).toHaveAttribute("dir", "rtl");
 
   await page.evaluate(() => {
     window.sliders.s!.destroy();
@@ -27,7 +26,6 @@ test("destroy() restores the markup and leaves the API inert", async ({ page }) 
   });
   expect(await el.evaluate((el: HTMLElement) => el.aeroSlider)).toBeUndefined();
   await expect(el).not.toHaveAttribute("tabindex");
-  await expect(el).not.toHaveAttribute("dir");
   await expect(page.locator("#s .aero-slider__dot")).toHaveCount(1);
   expect(await page.evaluate(() => window.sliders.s!.currentIndex)).toBe(0);
 });

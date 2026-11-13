@@ -101,12 +101,13 @@ test("the container, track, nav buttons and dots take arrows, Home and End", asy
   }
 });
 
-for (const direction of ["ltr", "ttb"] as const) {
-  test(`${direction}: an arrow with nowhere to go keeps its default`, async ({ page }) => {
+for (const vertical of [false, true]) {
+  test(`${vertical ? "vertical" : "horizontal"}: an arrow with nowhere to go keeps its default`, async ({
+    page,
+  }) => {
     await mount(page, slider("s", 3));
-    await create(page, "s", { direction });
-    const [back, forward] =
-      direction === "ttb" ? ["ArrowUp", "ArrowDown"] : ["ArrowLeft", "ArrowRight"];
+    await create(page, "s", { vertical });
+    const [back, forward] = vertical ? ["ArrowUp", "ArrowDown"] : ["ArrowLeft", "ArrowRight"];
     await recordKeys(page);
     await page.locator("#s").focus();
     for (const key of [back, "Home", forward, forward, "End", forward]) {

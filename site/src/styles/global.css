@@ -763,7 +763,7 @@ body {
   height: 1rem;
 }
 /* Arrows point toward the direction of travel in RTL too */
-.aero-slider[dir="rtl"] :is(.aero-slider__nav--prev, .aero-slider__nav--next) svg {
+.aero-slider:dir(rtl) :is(.aero-slider__nav--prev, .aero-slider__nav--next) svg {
   transform: scaleX(-1);
 }
 

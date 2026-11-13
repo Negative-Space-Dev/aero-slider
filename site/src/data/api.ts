@@ -59,12 +59,12 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
       "Where the active slide rests in the viewport. The values are logical: <code>start</code> is the left edge, the right edge in a right-to-left slider and the top in a vertical one. At the ends of a non-looping track the scroll clamps, but <code>currentIndex</code> still names the focused slide.",
     example: "ex-alignment",
   },
-  direction: {
+  vertical: {
     group: "Layout",
-    type: '"auto" | "ltr" | "rtl" | "ttb"',
-    default: '"auto"',
+    type: "boolean",
+    default: "false",
     description:
-      '<code>"auto"</code> follows the direction of the page. <code>"ltr"</code> and <code>"rtl"</code> force one and set <code>dir</code> on the container. <code>"ttb"</code> scrolls top to bottom.',
+      'Scrolls top to bottom. A horizontal slider follows the text direction of the page: <code>dir="rtl"</code> on the slider or any ancestor makes it right-to-left.',
     example: "ex-direction",
   },
   perMove: {
@@ -580,7 +580,7 @@ export const stateClasses: RefEntry[] = [
     description:
       '<code>snap</code> is <code>"settle"</code> or <code>"none"</code>. Turns CSS scroll snapping off',
   },
-  { name: "aero-slider--vertical", description: '<code>direction</code> is <code>"ttb"</code>' },
+  { name: "aero-slider--vertical", description: "<code>vertical</code> is on" },
 ];
 
 /** Groups a registry in the given group order; `display` maps a key to its shown name. */

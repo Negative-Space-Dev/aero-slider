@@ -5,14 +5,14 @@ failOnPageErrors();
 test.describe("rtl", () => {
   test.beforeEach(async ({ page }) => {
     await mount(page, slider("s", 4));
-    await create(page, "s", { direction: "rtl" });
+    await page.evaluate(() => document.getElementById("s")!.setAttribute("dir", "rtl"));
+    await create(page, "s");
   });
 
   test("next() scrolls toward the left, on negative offsets", async ({ page }) => {
     await page.evaluate(() => window.sliders.s!.next());
     await settled(page, "s");
     expect(await state(page, "s")).toEqual({ index: 1, position: -600 });
-    await expect(page.locator("#s")).toHaveAttribute("dir", "rtl");
   });
 
   test("ArrowRight goes back a slide", async ({ page }) => {

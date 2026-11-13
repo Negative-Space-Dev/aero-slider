@@ -7,7 +7,7 @@ test("undefined options keep their defaults", async ({ page }) => {
     window.sliders.s = window.createSlider(document.getElementById("s")!, {
       perMove: undefined,
       alignment: undefined,
-      direction: undefined,
+      vertical: undefined,
       snap: undefined,
       maxDots: undefined,
       scrollDuration: undefined,
@@ -128,14 +128,6 @@ test("goTo() with a non-finite index does nothing", async ({ page }) => {
   expect(await state(page, "s")).toEqual({ index: 1, position: 600 });
   const events = await takeEvents(page, "s");
   expect(events.filter((e) => e.startsWith("slideChange"))).toEqual([]);
-});
-
-test("an unknown direction follows the page", async ({ page }) => {
-  await mount(page, slider("s", 5), { htmlAttributes: { dir: "rtl" } });
-  await create(page, "s", { direction: "sideways" as never });
-  await page.evaluate(() => window.sliders.s!.next());
-  await settled(page, "s");
-  expect(await state(page, "s")).toEqual({ index: 1, position: -600 });
 });
 
 test("numbers passed as strings are read as numbers", async ({ page }) => {

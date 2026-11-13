@@ -4,7 +4,7 @@ import { drag, state } from "./helpers/state";
 const rtl = { htmlAttributes: { dir: "rtl" } };
 const gap = { style: "--aero-slide-gap:10px" };
 
-test.describe("on a right-to-left page with the default direction", () => {
+test.describe("on a right-to-left page", () => {
   test.beforeEach(async ({ page }) => {
     await mount(page, slider("s", 5, gap), rtl);
     await create(page, "s");
@@ -48,40 +48,13 @@ test.describe("on a right-to-left page with the default direction", () => {
   });
 });
 
-test("direction: ltr inside a right-to-left page scrolls left to right", async ({ page }) => {
+test("dir=ltr on a slider inside a right-to-left page scrolls left to right", async ({ page }) => {
   await mount(page, slider("s", 5, gap), rtl);
-  await create(page, "s", { direction: "ltr" });
-  await expect(page.locator("#s")).toHaveAttribute("dir", "ltr");
+  await page.evaluate(() => document.getElementById("s")!.setAttribute("dir", "ltr"));
+  await create(page, "s");
   await page.evaluate(() => window.sliders.s!.next());
   await settled(page, "s");
   expect(await state(page, "s")).toEqual({ index: 1, position: 610 });
-});
-
-test("an author's dir attribute survives create, update and destroy", async ({ page }) => {
-  await mount(page, slider("s", 5, gap));
-  const container = page.locator("#s");
-  await page.evaluate(() => document.getElementById("s")!.setAttribute("dir", "rtl"));
-  await create(page, "s");
-  await expect(container).toHaveAttribute("dir", "rtl");
-  await page.evaluate(() => window.sliders.s!.next());
-  await settled(page, "s");
-  expect(await state(page, "s")).toEqual({ index: 1, position: -610 });
-
-  await page.evaluate(() => window.sliders.s!.update({ direction: "ltr" }));
-  await expect(container).toHaveAttribute("dir", "ltr");
-  await page.evaluate(() => window.sliders.s!.update({ direction: "auto" }));
-  await expect(container).toHaveAttribute("dir", "rtl");
-
-  await page.evaluate(() => window.sliders.s!.destroy());
-  await expect(container).toHaveAttribute("dir", "rtl");
-});
-
-test("going back to direction: auto removes the dir the slider wrote", async ({ page }) => {
-  await mount(page, slider("s", 5, gap));
-  await create(page, "s", { direction: "rtl" });
-  await expect(page.locator("#s")).toHaveAttribute("dir", "rtl");
-  await page.evaluate(() => window.sliders.s!.update({ direction: "auto" }));
-  await expect(page.locator("#s")).not.toHaveAttribute("dir");
 });
 
 test("a dir the page sets after creation survives a refresh and destroy", async ({ page }) => {

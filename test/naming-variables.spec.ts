@@ -35,7 +35,7 @@ test("a vertical slider reads the variables", async ({ page }) => {
       style: "--aero-slides-per-view:2;--aero-slide-gap:10px;--aero-slide-aspect:2 / 1",
     })
   );
-  await create(page, "s", { direction: "ttb" });
+  await create(page, "s", { vertical: true });
   expect(await box(page)).toEqual({ width: 600, height: 145, gap: 10 });
 });
 
