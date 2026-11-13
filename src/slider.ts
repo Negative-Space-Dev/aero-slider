@@ -607,7 +607,8 @@ export function createSlider(
     // Native snapping normally has the track on a slide by now, and settleNear() then does
     // nothing. WebKit doesn't re-snap when an interrupted eased move restores snapping.
     if (userScroll && !stale && snapMode() !== "none" && settleNear(scrollPosition())) return;
-    teleportToRealSlides();
+    // Stale positions can take a real slide for a clone; the re-measure rests on the real copy.
+    if (!stale) teleportToRealSlides();
     const position = scrollPosition();
     const landed = indexAt(position);
     // A clamped edge can park several indices at one spot; keep the requested one there.

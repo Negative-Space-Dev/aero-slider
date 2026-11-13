@@ -198,3 +198,20 @@ test('a goTo() after a new gap rests on the slide asked for, with snap: "none"',
   await expect.poll(() => offsetOf(page, 4)).toBe(0);
   expect(await page.evaluate(() => window.sliders.s!.currentIndex)).toBe(4);
 });
+
+// Stale positions would take the real slide for a clone and jump the track a lap away.
+test("a scroll after a new gap keeps a looped track on the slide it reached", async ({ page }) => {
+  await mount(page, mixed(6));
+  await create(page, "s", { alignment: "start", loop: true, snap: "none" });
+  await settled(page, "s");
+  await page.evaluate(() => {
+    document.getElementById("s")!.style.setProperty("--aero-slide-gap", "20px");
+    // Six clones sit ahead of the real slides, so slide 5 is the twelfth child.
+    document
+      .querySelector("#s .aero-slider__track")!
+      .scrollTo({ left: 11 * 220, behavior: "smooth" });
+  });
+  await settled(page, "s");
+  await expect.poll(() => page.evaluate(() => window.sliders.s!.currentIndex)).toBe(5);
+  expect(await offsetOf(page, 5)).toBe(0);
+});
