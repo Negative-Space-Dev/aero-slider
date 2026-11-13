@@ -321,7 +321,8 @@ export function createSlider(
     return stops[nearest] ?? 0;
   }
 
-  const stopOf = (index: number) => stops.findLastIndex((slide) => slide <= index);
+  // The last stop at or before the slide. Stops ascend, so counting them finds it.
+  const stopOf = (index: number) => stops.filter((slide) => slide <= index).length - 1;
 
   /** Where the real copy of slide `index` rests. */
   function restPositionOf(index: number): number {
