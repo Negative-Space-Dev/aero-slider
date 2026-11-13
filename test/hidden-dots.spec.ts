@@ -4,10 +4,10 @@ import { type Page, create, expect, mount, slider, test } from "./fixtures";
 const dotWindow = (page: Page, id: string) =>
   page.evaluate((id) => {
     const box = document.querySelector<HTMLElement>(`#${id} .aero-slider__pagination`)!;
-    const track = box.querySelector<HTMLElement>(".aero-slider__pagination-track")!;
+    const dot = box.querySelector<HTMLElement>(".aero-slider__dot")!;
     return {
       width: box.style.getPropertyValue("--pagination-width"),
-      offset: track.style.getPropertyValue("--track-offset"),
+      offset: dot.style.translate,
     };
   }, id);
 

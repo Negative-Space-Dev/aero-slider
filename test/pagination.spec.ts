@@ -15,7 +15,7 @@ failOnPageErrors();
 /** One letter per dot: A active, _ hidden, e edge, n near the edge, . full size. */
 const dotSizes = (page: Page) =>
   page.evaluate(() =>
-    [...document.querySelectorAll("#s .aero-slider__pagination-track .aero-slider__dot")]
+    [...document.querySelectorAll("#s .aero-slider__pagination .aero-slider__dot")]
       .map((d) =>
         d.classList.contains("aero-slider__dot--active")
           ? "A"
@@ -54,14 +54,13 @@ test.describe("twelve slides, three in view, two per move, at most five dots", (
     await expect.poll(() => dotSizes(page)).toBe("____enAne___");
     const offset = await page.evaluate(() => {
       const dots = document.querySelectorAll<HTMLElement>(
-        "#s .aero-slider__pagination-track .aero-slider__dot"
+        "#s .aero-slider__pagination .aero-slider__dot"
       );
-      const track = document.querySelector<HTMLElement>("#s .aero-slider__pagination-track")!;
       return {
         pitch: dots[1]!.offsetLeft - dots[0]!.offsetLeft,
-        offset: track.style.getPropertyValue("--track-offset"),
+        offsets: [...new Set(Array.from(dots, (dot) => dot.style.translate))],
       };
     });
-    expect(offset.offset).toBe(`-${4 * offset.pitch}px`);
+    expect(offset.offsets).toEqual([`-${4 * offset.pitch}px`]);
   });
 });

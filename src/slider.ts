@@ -927,14 +927,9 @@ export function createSlider(
     maxScroll: () => maxScroll,
     jumpTo: (position) => scrollTo(position),
     cycle() {
-      if (!loop() || !slideStride) return null;
-      const first = track.children[clonesBefore];
-      const twin = track.children[clonesBefore + slideCount];
-      if (!first || !twin) return null;
-      const home = snapPositionOf(first);
-      const width = snapPositionOf(twin) - home;
+      const width = cycleWidth(); // 0 without a loop, and while nothing is laid out
       // Centred on the real slides, so resting anywhere in it never triggers a teleport.
-      return width > 0 ? { start: home - slideStride / 2, width } : null;
+      return width > 0 ? { start: restPositionOf(0) - slideStride / 2, width } : null;
     },
   };
   // Before the features: they tell their own controls from a nested slider's by this class.

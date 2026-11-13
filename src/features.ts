@@ -38,8 +38,8 @@ export function navigation(core: SliderCore) {
 
 // ── Pagination dots ────────────────────────────────────────────────────
 // The markup supplies one .aero-slider__dot as a template. It leaves the page while the slider runs,
-// and a copy of it stands in per stop. With maxDots set, the dots sit in a sliding track and only a
-// window of them shows, iOS style.
+// and a copy of it stands in per stop. With maxDots set, the dots slide under a fixed-width window
+// that shows only some of them, iOS style.
 
 export function pagination(core: SliderCore) {
   const box = core.container.querySelector<HTMLElement>(".aero-slider__pagination");
@@ -54,14 +54,11 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
   const anchor = template.nextSibling;
   let dots: HTMLElement[] = [];
   let windowed = false;
-  let dotTrack: HTMLElement | null = null;
   let dotPitch = 0; // distance between neighbouring dots; negative in RTL
   const name = template.getAttribute("aria-label");
 
   function clear(): void {
     for (const dot of dots) dot.remove();
-    dotTrack?.remove();
-    dotTrack = null;
     dots = [];
     box.classList.remove("aero-slider__pagination--windowed");
     box.style.removeProperty("--pagination-width");
@@ -74,22 +71,16 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
     const count = core.stopCount();
     const { maxDots } = config;
     windowed = maxDots > 0 && count > maxDots;
-    const holder = windowed ? document.createElement("div") : new DocumentFragment();
+    box.classList.toggle("aero-slider__pagination--windowed", windowed);
     for (let i = 0; i < count; i++) {
       const dot = template.cloneNode(true) as HTMLElement;
       const slide = core.slideOfStop(i);
       // The template names its dots: aria-label="Go to slide {index}".
       if (name) dot.setAttribute("aria-label", name.replace("{index}", String(slide + 1)));
       dot.dataset.slideIndex = String(slide);
-      holder.append(dot);
+      parent.insertBefore(dot, anchor);
       dots.push(dot);
     }
-    if (windowed) {
-      dotTrack = holder as HTMLElement;
-      dotTrack.className = "aero-slider__pagination-track";
-      box.classList.add("aero-slider__pagination--windowed");
-    }
-    parent.insertBefore(holder, anchor);
     measure();
     // With no dot focused this looks up dots[-1], which is nothing.
     dots[Math.min(focused, count - 1)]?.focus({ preventScroll: true });
@@ -97,7 +88,7 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
 
   /** Sizes the dot window. Everything measures 0 while hidden, so it reruns on every relayout. */
   function measure(): void {
-    if (dotTrack) {
+    if (windowed) {
       dotPitch = dots[1]!.offsetLeft - dots[0]!.offsetLeft;
       const width = (config.maxDots - 1) * Math.abs(dotPitch) + dots[0]!.offsetWidth;
       box.style.setProperty("--pagination-width", `${width}px`);
@@ -112,9 +103,6 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
     const firstShown = windowed
       ? Math.max(0, Math.min(current - Math.floor(maxDots / 2), count - maxDots))
       : 0;
-    const atStart = firstShown === 0;
-    const atEnd = firstShown >= count - maxDots;
-    dotTrack?.style.setProperty("--track-offset", `${-firstShown * dotPitch}px`);
 
     const hidden: HTMLElement[] = [];
     dots.forEach((dot, i) => {
@@ -124,22 +112,18 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
       else dot.removeAttribute("aria-current");
       if (!windowed) return;
 
+      dot.style.translate = `${-firstShown * dotPitch}px`;
+      // How far inside the window the dot sits: -1 is outside it, 0 its outermost dot, 1 the next
+      // one in. A side of the window with no dots beyond it has no edge.
       const slot = i - firstShown;
-      const size =
-        slot < 0 || slot >= maxDots
-          ? "hidden"
-          : (slot === 0 && !atStart) || (slot === maxDots - 1 && !atEnd)
-            ? "edge"
-            : (slot === 1 && !atStart) || (slot === maxDots - 2 && !atEnd)
-              ? "near-edge"
-              : "";
-      dot.classList.remove(
-        "aero-slider__dot--hidden",
-        "aero-slider__dot--edge",
-        "aero-slider__dot--near-edge"
+      const depth = Math.min(
+        firstShown ? slot : 9,
+        firstShown < count - maxDots ? maxDots - 1 - slot : 9
       );
-      if (size) dot.classList.add(`aero-slider__dot--${size}`);
-      if (size === "hidden") hidden.push(dot);
+      ["hidden", "edge", "near-edge"].forEach((size, at) =>
+        dot.classList.toggle(`aero-slider__dot--${size}`, at ? at === depth + 1 : depth < 0)
+      );
+      if (depth < 0) hidden.push(dot);
       else dot.inert = false;
     });
     // A dot leaving the tab order hands focus to the current one, which must be focusable first:
@@ -227,9 +211,7 @@ export function keyboard(core: SliderCore): void {
 const SETTLE_FALLBACK_MS = 150; // resume a press that never scrolled
 
 interface Lap {
-  start: number;
   width: number;
-  duration: number;
   animations: Animation[];
 }
 
@@ -239,11 +221,16 @@ export function autoplay(core: SliderCore) {
   const continuous = () => config.autoplay === "continuous";
   let timer = 0;
   let lap: Lap | null = null;
-  let running = false; // autoplayStart has been announced; a lap swapped on resize doesn't re-announce
+  let running = false; // autoplayStart has been announced and autoplayStop hasn't followed it
   let settleFallback = 0;
   const pressed = new Set<number>(); // pointerIds currently down on the track
 
-  const announce = (on: boolean) => core.emit(on ? "autoplayStart" : "autoplayStop", {});
+  /** Announces a change of state only: a lap swapped on resize stays running throughout. */
+  function announce(on: boolean): void {
+    if (running === on) return;
+    running = on;
+    core.emit(on ? "autoplayStart" : "autoplayStop", {});
+  }
   // Scrolling changes nothing a screen reader can hear, so a hidden status line names the slide
   // the user moved to. It stays quiet while autoplay moves the slides on its own.
   const status = document.createElement("div");
@@ -266,28 +253,23 @@ export function autoplay(core: SliderCore) {
     else core.next();
   }
 
-  /** The same view one lap earlier or later, inside the teleport-safe band. */
-  function fold(position: number, { start, width }: { start: number; width: number }): number {
-    while (position < start) position += width;
-    while (position >= start + width) position -= width;
-    return position;
-  }
-
   function travelled(current: Lap): number {
     const time = Number(current.animations[0]?.currentTime) || 0;
-    return ((time % current.duration) / current.duration) * current.width;
+    return ((time * config.autoplaySpeed) / 1000) % current.width;
   }
 
   function startLap(): void {
     const cycle = core.cycle();
     if (!cycle) return;
-    const base = fold(core.position(), cycle);
-    if (base + cycle.width > core.maxScroll()) return; // too few clones to cover a lap
+    const { start, width } = cycle;
+    // The same view one lap earlier or later, inside the teleport-safe band.
+    const base = start + ((((core.position() - start) % width) + width) % width);
+    if (base + width > core.maxScroll()) return; // too few clones to cover a lap
     if (Math.abs(base - core.position()) > 0.5) core.jumpTo(base);
 
-    const distance = (core.isRtl() ? 1 : -1) * cycle.width;
+    const distance = (core.isRtl() ? 1 : -1) * width;
     const to = core.isVertical() ? `0 ${distance}px` : `${distance}px 0`;
-    const duration = (cycle.width / config.autoplaySpeed) * 1000;
+    const duration = (width / config.autoplaySpeed) * 1000;
     const startTime = document.timeline.currentTime;
     const animations = Array.from(track.children, (slide) => {
       const animation = slide.animate([{ translate: "0 0" }, { translate: to }], {
@@ -297,11 +279,7 @@ export function autoplay(core: SliderCore) {
       animation.startTime = startTime;
       return animation;
     });
-    lap = { ...cycle, duration, animations };
-    if (!running) {
-      running = true;
-      announce(true);
-    }
+    lap = { width, animations };
   }
 
   /**
@@ -310,52 +288,35 @@ export function autoplay(core: SliderCore) {
    * product link lands on the link that was pressed. Laps start inside the band and the runway
    * covers a full lap past it, so the unfolded offset is always reachable.
    */
-  function stopLap(handBack: boolean, loud = true): void {
+  function stopLap(handBack: boolean): void {
     if (!lap) return;
     const current = lap;
     lap = null;
-    const position = handBack ? core.position() + travelled(current) : null;
+    const position = core.position() + travelled(current);
     for (const animation of current.animations) animation.cancel();
-    if (position !== null) core.jumpTo(position);
-    if (loud && running) {
-      running = false;
-      announce(false);
-    }
+    if (handBack) core.jumpTo(position);
   }
 
   function start(): void {
-    if (blocked()) {
-      // A lap reset quietly for a resize that can't restart now still owes its autoplayStop.
-      if (running && !lap) {
-        running = false;
-        announce(false);
-      }
-      return;
+    if (!blocked()) {
+      if (!continuous()) timer ||= countdown();
+      else if (!lap) startLap();
     }
-    if (continuous()) {
-      if (!lap) startLap();
-    } else if (!timer) {
-      countdown();
-      announce(true);
-    }
+    // A lap reset quietly for a resize that can't restart now still owes its autoplayStop.
+    announce(!!(timer || lap));
   }
 
   /** A fresh interval before the next automatic move. */
-  function countdown(): void {
+  function countdown(): number {
     clearInterval(timer);
-    timer = window.setInterval(advance, config.autoplayInterval);
+    return (timer = window.setInterval(advance, config.autoplayInterval));
   }
 
-  function stopInterval(): void {
-    if (!timer) return;
+  function stop(handBack = true): void {
     clearInterval(timer);
     timer = 0;
+    stopLap(handBack);
     announce(false);
-  }
-
-  function stop(): void {
-    stopInterval();
-    stopLap(true);
   }
 
   function hold(reason: string): void {
@@ -423,24 +384,20 @@ export function autoplay(core: SliderCore) {
             );
   });
   listen(document, "visibilitychange", () => (document.hidden ? stop() : start()));
-  listen(reducedMotion, "change", () => {
-    if (reducedMotion.matches) stop();
-    else start();
-  });
+  listen(reducedMotion, "change", () => (reducedMotion.matches ? stop() : start()));
   signal.addEventListener("abort", () => {
     status.remove();
     clearTimeout(settleFallback);
-    stopInterval();
-    stopLap(false);
+    stop(false);
   });
 
   return {
     start,
-    stop,
     /** After a rebuild: a running interval gets a fresh countdown without announcing a restart. */
     restart(): void {
-      if (timer && !blocked() && !continuous()) return countdown();
-      stopInterval();
+      if (timer && !blocked() && !continuous()) return void countdown();
+      clearInterval(timer);
+      timer = 0;
       start();
     },
     hold,
@@ -453,7 +410,7 @@ export function autoplay(core: SliderCore) {
      * would otherwise go on naming the old one until the next slide change.
      */
     reset(rebuilding?: boolean): void {
-      stopLap(false, false);
+      stopLap(false);
       if (rebuilding) status.textContent = "";
     },
     /** goTo() is about to measure from the scroll offset. True if a lap was handed back. */
