@@ -1,4 +1,5 @@
 import { type Page, create, expect, mount, recordScroll, settled, state, test } from "./fixtures";
+import { drag } from "./helpers/state";
 
 // Slides sized by the page, not by --aero-slides-per-view: each 200px wide until one changes. The
 // fixed height keeps the track's own box the same when a slide widens.
@@ -312,4 +313,27 @@ test("a press after a move settles on a new gap keeps the track still", async ({
   // goTo(3) headed for the old 600px; held there, the track must not glide to the new 720px.
   const record = await recordScroll(page, "s", 500);
   expect(new Set(await record())).toEqual(new Set([600]));
+});
+
+// A free drag's release coasts on, which is the user's scroll, not a goTo() to put right.
+test('a drag that coasts after a new gap stays where it stops, with snap: "none"', async ({
+  page,
+}) => {
+  await mount(page, mixed(8));
+  await create(page, "s", { alignment: "start", snap: "none" });
+  await settled(page, "s");
+  const record = await recordScroll(page, "s", 2000);
+  await drag(page, "s", 500, -300);
+  await page.evaluate(() => {
+    document.getElementById("s")!.style.setProperty("--aero-slide-gap", "40px");
+  });
+  await settled(page, "s");
+  const samples = await record();
+  expect(
+    samples.every((p, i) => !i || p >= samples[i - 1]! - 1),
+    samples.join()
+  ).toBe(true);
+  // Slides now rest every 240px: the index is the one nearest where the coast stopped.
+  const end = samples.at(-1)!;
+  expect(await page.evaluate(() => window.sliders.s!.currentIndex)).toBe(Math.round(end / 240));
 });

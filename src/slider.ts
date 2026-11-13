@@ -172,6 +172,7 @@ export function createSlider(
   // Scroll state
   let programmaticScroll = false; // a goTo() animation is in flight
   let moveSmooth = true; // how that move scrolls, which a move correcting it keeps
+  let coasting = false; // that move is a free drag's release coasting on, not a goTo()
   let scrollTarget = 0; // where that animation is headed
   let dragging = false;
   let suppressNextClick = false;
@@ -475,6 +476,7 @@ export function createSlider(
    */
   function startMove(target: number, smooth = true): void {
     moveSmooth = smooth;
+    coasting = false;
     programmaticScroll = true;
     scrollTarget = clamp(target, 0, maxScroll);
     scrollTo(scrollTarget, smooth);
@@ -612,7 +614,8 @@ export function createSlider(
     // A resize can settle before the observer re-measures: the re-measure then places the track
     // and the index, which the stale positions here would get wrong.
     const stale = scrolled && extentChanged();
-    if (stale) remeasureUnobserved(programmaticScroll ? "move" : "scroll");
+    // A coast is the user's scroll carried on, so it is followed like one.
+    if (stale) remeasureUnobserved(programmaticScroll && !coasting ? "move" : "scroll");
     // A scrollend from an instant scroll issued just before goTo() lands mid-animation; wait for ours.
     if (programmaticScroll && Math.abs(scrollPosition() - scrollTarget) > 1) return;
     const userScroll = !programmaticScroll;
@@ -773,8 +776,10 @@ export function createSlider(
             scrollTo(position + shift);
             rest += shift;
           }
-          if (Math.abs(rest - scrollPosition()) > 1) startMove(rest);
-          else onSettle();
+          if (Math.abs(rest - scrollPosition()) > 1) {
+            startMove(rest);
+            coasting = true;
+          } else onSettle();
         }
         emit("dragEnd", { index: current, fromIndex });
         play.release("drag");
