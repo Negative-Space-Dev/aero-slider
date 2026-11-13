@@ -23,6 +23,7 @@ function pick(group: HTMLElement, event: Event, attr: string): HTMLButtonElement
   if (!button) return null;
   for (const each of group.querySelectorAll<HTMLButtonElement>(`button[${attr}]`)) {
     each.toggleAttribute("data-active", each === button);
+    each.setAttribute("aria-pressed", String(each === button));
   }
   return button;
 }

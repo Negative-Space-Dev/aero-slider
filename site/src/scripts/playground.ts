@@ -444,13 +444,12 @@ if (installWidget) {
   const copyIcon = document.getElementById("copy-icon");
   const checkIcon = document.getElementById("check-icon");
 
-  // Set initial active tab (bun)
-  tabs[0]?.setAttribute("data-active", "");
-
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
-      tabs.forEach((t) => t.removeAttribute("data-active"));
-      tab.setAttribute("data-active", "");
+      for (const each of tabs) {
+        each.toggleAttribute("data-active", each === tab);
+        each.setAttribute("aria-pressed", String(each === tab));
+      }
       const pm = tab.dataset.pm ?? "bun";
       if (commandEl) commandEl.textContent = installCommands[pm] ?? installCommands.bun;
     });

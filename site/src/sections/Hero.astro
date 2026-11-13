@@ -26,10 +26,12 @@ const kb = (value: number) => value.toFixed(1);
     <div class="flex items-center justify-between border-b border-line pr-2 pl-1.5">
       <div class="flex">
         {
-          packageManagers.map((pm) => (
+          packageManagers.map((pm, i) => (
             <button
               type="button"
               data-pm={pm}
+              data-active={i === 0 ? "" : undefined}
+              aria-pressed={String(i === 0)}
               class="install-tab -mb-px border-b border-transparent px-2.5 py-2.5 font-mono text-xs text-subtle transition-colors hover:text-ink data-[active]:border-accent data-[active]:text-ink"
             >
               {pm}

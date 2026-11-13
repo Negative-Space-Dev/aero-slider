@@ -26,13 +26,13 @@ const groups = exampleGroups.map((group) => ({
               <div slot="controls" class="ex-controls">
                 <span class="caption">Alignment</span>
                 <div id="edge-align" class="segmented" role="group" aria-label="Edge-to-edge alignment">
-                  <button type="button" data-align="start" data-active>
+                  <button type="button" data-align="start" data-active aria-pressed="true">
                     Start
                   </button>
-                  <button type="button" data-align="center">
+                  <button type="button" data-align="center" aria-pressed="false">
                     Center
                   </button>
-                  <button type="button" data-align="end">
+                  <button type="button" data-align="end" aria-pressed="false">
                     End
                   </button>
                 </div>
@@ -50,7 +50,12 @@ const groups = exampleGroups.map((group) => ({
                   <span class="caption">Colour</span>
                   <div id="swatches" class="segmented" role="group" aria-label="Colour">
                     {variantOptions.map(({ key, label }, i) => (
-                      <button type="button" data-variant={key} data-active={i === 0 ? "" : undefined}>
+                      <button
+                        type="button"
+                        data-variant={key}
+                        data-active={i === 0 ? "" : undefined}
+                        aria-pressed={String(i === 0)}
+                      >
                         <span class="ex-swatch" data-variant={key} />
                         {label}
                       </button>
@@ -60,10 +65,10 @@ const groups = exampleGroups.map((group) => ({
                 <div class="ex-controls__row">
                   <span class="caption">On switch</span>
                   <div id="variant-rest" class="segmented" role="group" aria-label="After a colour switch">
-                    <button type="button" data-rest="first" data-active>
+                    <button type="button" data-rest="first" data-active aria-pressed="true">
                       First slide
                     </button>
-                    <button type="button" data-rest="same">
+                    <button type="button" data-rest="same" aria-pressed="false">
                       Same index
                     </button>
                   </div>
