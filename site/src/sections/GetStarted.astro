@@ -56,7 +56,11 @@ const create: CodeTab[] = [
 const steps = [
   {
     title: "Markup",
-    text: "A container, a viewport and a track. Every direct child of the track is a slide. Arrows and pagination are optional elements you add when you want them. Roles and names are yours to write: the slider adds only what changes at runtime, such as <code>aria-current</code> on the current dot.",
+    text: [
+      "A container, a viewport and a track. Each child of the track is a slide.",
+      "Arrows and dots are optional. Add them only if you want them.",
+      "You write the roles and labels. The slider keeps state such as <code>aria-current</code> on the active dot up to date.",
+    ],
     tabs: [{ label: "HTML", lang: "html", code: markup }] satisfies CodeTab[],
   },
   {
@@ -120,7 +124,9 @@ const callouts = [
                   <span class="caption text-accent tabular-nums">{String(i + 1).padStart(2, "0")}</span>
                   <span class="text-lg font-medium tracking-[-0.015em] text-ink">{step.title}</span>
                 </p>
-                <p class="copy mt-2 text-[0.9375rem]" set:html={step.text} />
+                {[step.text].flat().map((text) => (
+                  <p class="copy mt-2 text-[0.9375rem]" set:html={text} />
+                ))}
               </div>
               <CodeTabs tabs={step.tabs} group={step.tabs.length > 1 ? "setup" : undefined} class="self-start" />
             </li>
