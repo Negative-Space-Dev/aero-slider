@@ -133,7 +133,7 @@ test("windowed dots slide in stop positions", async ({ page }) => {
   await page.evaluate(() => window.sliders.s!.goTo(11, { instant: true }));
   expect(await activeDot(page)).toBe(9);
   const sizes = await page.evaluate(() =>
-    Array.from(document.querySelectorAll("#s .aero-slider__pagination .aero-slider__dot"), (dot) =>
+    Array.from(document.querySelectorAll("#s .aero-slider__pagination-track > *"), (dot) =>
       dot.className.replace(/aero-slider__dot\s*/, "").trim()
     )
   );

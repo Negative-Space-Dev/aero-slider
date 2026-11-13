@@ -195,11 +195,10 @@
   flex-shrink: 0;
   transition:
     transform 0.2s ease-out,
-    opacity 0.2s ease-out,
-    translate 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity 0.2s ease-out;
 }
 
-/* Windowed (maxDots) pagination: a fixed-width window that the dots slide under */
+/* Windowed (maxDots) pagination: a fixed-width window over a sliding track */
 .aero-slider__pagination--windowed {
   width: calc(var(--pagination-width) + 12px);
   max-width: calc(100% + 12px);
@@ -207,6 +206,14 @@
   overflow: hidden;
   justify-content: flex-start;
   padding-inline: 6px;
+}
+
+.aero-slider__pagination-track {
+  display: flex;
+  gap: inherit;
+  align-items: center;
+  transform: translateX(var(--track-offset, 0));
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .aero-slider__dot--hidden {
@@ -223,7 +230,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .aero-slider__dot {
+  .aero-slider__dot,
+  .aero-slider__pagination-track {
     transition: none;
   }
 }

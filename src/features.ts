@@ -38,8 +38,9 @@ export function navigation(core: SliderCore) {
 
 // ── Pagination dots ────────────────────────────────────────────────────
 // The markup supplies one .aero-slider__dot as a template. It leaves the page while the slider runs,
-// and a copy of it stands in per stop. With maxDots set, the dots slide under a fixed-width window
-// that shows only some of them, iOS style.
+// and a copy of it stands in per stop. With maxDots set, the dots sit in a sliding track and only a
+// window of them shows, iOS style. The track does the sliding, so a theme is free to restyle and
+// animate the dots themselves.
 
 export function pagination(core: SliderCore) {
   const box = core.container.querySelector<HTMLElement>(".aero-slider__pagination");
@@ -54,11 +55,14 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
   const anchor = template.nextSibling;
   let dots: HTMLElement[] = [];
   let windowed = false;
+  let dotTrack: HTMLElement | null = null;
   let dotPitch = 0; // distance between neighbouring dots; negative in RTL
   const name = template.getAttribute("aria-label");
 
   function clear(): void {
     for (const dot of dots) dot.remove();
+    dotTrack?.remove();
+    dotTrack = null;
     dots = [];
     box.classList.remove("aero-slider__pagination--windowed");
     box.style.removeProperty("--pagination-width");
@@ -71,16 +75,22 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
     const count = core.stopCount();
     const { maxDots } = config;
     windowed = maxDots > 0 && count > maxDots;
-    box.classList.toggle("aero-slider__pagination--windowed", windowed);
+    const holder = windowed ? document.createElement("div") : new DocumentFragment();
     for (let i = 0; i < count; i++) {
       const dot = template.cloneNode(true) as HTMLElement;
       const slide = core.slideOfStop(i);
       // The template names its dots: aria-label="Go to slide {index}".
       if (name) dot.setAttribute("aria-label", name.replace("{index}", String(slide + 1)));
       dot.dataset.slideIndex = String(slide);
-      parent.insertBefore(dot, anchor);
+      holder.append(dot);
       dots.push(dot);
     }
+    if (windowed) {
+      dotTrack = holder as HTMLElement;
+      dotTrack.className = "aero-slider__pagination-track";
+      box.classList.add("aero-slider__pagination--windowed");
+    }
+    parent.insertBefore(holder, anchor);
     measure();
     // With no dot focused this looks up dots[-1], which is nothing.
     dots[Math.min(focused, count - 1)]?.focus({ preventScroll: true });
@@ -88,7 +98,7 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
 
   /** Sizes the dot window. Everything measures 0 while hidden, so it reruns on every relayout. */
   function measure(): void {
-    if (windowed) {
+    if (dotTrack) {
       dotPitch = dots[1]!.offsetLeft - dots[0]!.offsetLeft;
       const width = (config.maxDots - 1) * Math.abs(dotPitch) + dots[0]!.offsetWidth;
       box.style.setProperty("--pagination-width", `${width}px`);
@@ -103,6 +113,7 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
     const firstShown = windowed
       ? Math.max(0, Math.min(current - Math.floor(maxDots / 2), count - maxDots))
       : 0;
+    dotTrack?.style.setProperty("--track-offset", `${-firstShown * dotPitch}px`);
 
     const hidden: HTMLElement[] = [];
     dots.forEach((dot, i) => {
@@ -112,7 +123,6 @@ function createPagination(core: SliderCore, box: HTMLElement, template: HTMLElem
       else dot.removeAttribute("aria-current");
       if (!windowed) return;
 
-      dot.style.translate = `${-firstShown * dotPitch}px`;
       // How far inside the window the dot sits: -1 is outside it, 0 its outermost dot, 1 the next
       // one in. A side of the window with no dots beyond it has no edge.
       const slot = i - firstShown;
