@@ -75,7 +75,7 @@ CSS variables on the slider or any ancestor, except `--aero-layout-width`, which
 }
 ```
 
-- Resizes re-measure on their own. After changing a variable from script, call `slider.refresh()`.
+- Resizes re-measure on their own, and so does any slide that changes size (an image loads, a font swaps in). After changing a variable from script, call `slider.refresh()`: a new gap between fixed-width slides resizes nothing, so the slider cannot see it.
 - The variables stop at a slide's content. Set them again on a nested slider.
 - Breakout (track runs off both window edges, active slide lines up with the content column): add `aero-slider--breakout`, make the container full-bleed, set `--aero-layout-width` on the slider to the column width.
 - With `loop`, add `data-aero-defer-visibility` to the container to avoid a layout shift before init. If alignment is not centred, also write `data-aero-alignment="start"` or `"end"` in the HTML.

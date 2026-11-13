@@ -144,6 +144,10 @@ export function createSlider(
   let clonesBefore = 0; // loop clones prepended ahead of the real slides
   let slideStride = 0; // distance between neighbouring snap positions; 0 until laid out
   let firstSnapPosition = 0; // snap position of track.children[0]
+  // Snap position of every track child, clones included. Slides can differ in width, so nothing
+  // derives these from the stride. Moving the track reads them and never the DOM: a read there
+  // would force a layout of the page whenever a slideChange handler had just changed it.
+  let snaps: number[] = [];
   let maxScroll = 0;
   let paddingStart = 0; // track padding doubles as scroll-padding (see slider.css)
   let paddingEnd = 0;
@@ -242,29 +246,63 @@ export function createSlider(
     easeFrame = requestAnimationFrame(step);
   }
 
-  /** Scroll position at which `el` rests on its snap point, honouring alignment and scroll-padding. */
-  function snapPositionOf(el: Element): number {
-    const rect = el.getBoundingClientRect();
+  /**
+   * Reads, for every track child, the scroll position at which it rests on its snap point,
+   * honouring alignment and scroll-padding. Only measure() and relayout() read the DOM this way.
+   */
+  function readSnaps(): number[] {
     const trackRect = track.getBoundingClientRect();
-    const [axisStart, axisSize, elStart, elEnd] = isVertical()
-      ? [trackRect.top + track.clientTop, track.clientHeight, rect.top, rect.bottom]
+    const [axisStart, axisSize] = isVertical()
+      ? [trackRect.top + track.clientTop, track.clientHeight]
       : isRtl() // mirror x so "start" is the right edge
-        ? [
-            -(trackRect.left + track.clientLeft + track.clientWidth),
-            track.clientWidth,
-            -rect.right,
-            -rect.left,
-          ]
-        : [trackRect.left + track.clientLeft, track.clientWidth, rect.left, rect.right];
+        ? [-(trackRect.left + track.clientLeft + track.clientWidth), track.clientWidth]
+        : [trackRect.left + track.clientLeft, track.clientWidth];
     const snapportStart = axisStart + paddingStart;
     const snapportEnd = axisStart + axisSize - paddingEnd;
-    const delta =
-      config.alignment === "start"
-        ? elStart - snapportStart
-        : config.alignment === "end"
-          ? elEnd - snapportEnd
-          : (elStart + elEnd - snapportStart - snapportEnd) / 2;
-    return scrollPosition() + delta;
+    const position = scrollPosition();
+    return Array.from(track.children, (el) => {
+      const rect = el.getBoundingClientRect();
+      const [elStart, elEnd] = isVertical()
+        ? [rect.top, rect.bottom]
+        : isRtl()
+          ? [-rect.right, -rect.left]
+          : [rect.left, rect.right];
+      const delta =
+        config.alignment === "start"
+          ? elStart - snapportStart
+          : config.alignment === "end"
+            ? elEnd - snapportEnd
+            : (elStart + elEnd - snapportStart - snapportEnd) / 2;
+      return position + delta;
+    });
+  }
+
+  // The track's size and scroll range along its axis, which scrolling may read every frame.
+  const extent = () =>
+    isVertical()
+      ? `${track.clientHeight},${track.scrollHeight}`
+      : `${track.clientWidth},${track.scrollWidth}`;
+  let seenExtent = ""; // the extent the layout was measured at
+  let awaitedExtent = ""; // a newer one the observer has yet to re-measure
+  /**
+   * True while the track's extent differs from the one measured. A resize can move the scroll
+   * offset before the observer re-measures; the caller leaves the index alone until relayout()
+   * places it. A change the observer cannot see (a gap set from script, slides added without
+   * refresh()) is let through two frames on, so the index goes on following the scroll.
+   */
+  function extentChanged(): boolean {
+    const now = extent();
+    if (now === seenExtent) return false;
+    if (now !== awaitedExtent) {
+      awaitedExtent = now;
+      // The observer delivers after layout, which a frame queued from a scroll event precedes.
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          if (awaitedExtent === now) seenExtent = now;
+        })
+      );
+    }
+    return true;
   }
 
   function readSlidesPerView(): void {
@@ -281,10 +319,11 @@ export function createSlider(
       paddingStart = parseFloat(isRtl() ? style.paddingRight : style.paddingLeft);
       paddingEnd = parseFloat(isRtl() ? style.paddingLeft : style.paddingRight);
     }
-    const [first, second] = track.children;
     const axisSize = isVertical() ? track.clientHeight : track.clientWidth;
-    firstSnapPosition = first ? snapPositionOf(first) : 0;
-    slideStride = second ? snapPositionOf(second) - firstSnapPosition : axisSize; // 0 under display: none
+    snaps = readSnaps();
+    seenExtent = extent();
+    firstSnapPosition = snaps[0] ?? 0;
+    slideStride = snaps.length > 1 ? snaps[1]! - firstSnapPosition : axisSize; // 0 under display: none
     maxScroll = isVertical()
       ? track.scrollHeight - track.clientHeight
       : track.scrollWidth - track.clientWidth;
@@ -326,9 +365,7 @@ export function createSlider(
 
   /** Where the real copy of slide `index` rests. */
   function restPositionOf(index: number): number {
-    const slide = track.children[clonesBefore + index];
-    if (!slide) return 0; // every slide removed
-    const position = snapPositionOf(slide);
+    const position = snaps[clonesBefore + index] ?? 0; // every slide removed
     return loop() ? position : clamp(position, 0, maxScroll);
   }
 
@@ -346,9 +383,7 @@ export function createSlider(
   // identical so the jump is invisible.
 
   function shiftToRealCopy(domIndex: number): number {
-    const clone = track.children[domIndex];
-    const real = track.children[clonesBefore + wrap(domIndex - clonesBefore)];
-    return clone && real ? snapPositionOf(real) - snapPositionOf(clone) : 0;
+    return snaps[clonesBefore + wrap(domIndex - clonesBefore)]! - snaps[domIndex]! || 0;
   }
 
   function teleportToRealSlides(): void {
@@ -359,9 +394,7 @@ export function createSlider(
 
   /** One lap of real slides on a loop: the distance from a slide to its next copy. */
   function cycleWidth(): number {
-    const first = track.children[clonesBefore];
-    const twin = track.children[clonesBefore + slideCount];
-    return first && twin ? snapPositionOf(twin) - snapPositionOf(first) : 0;
+    return snaps[clonesBefore + slideCount]! - snaps[clonesBefore]! || 0;
   }
 
   /**
@@ -403,9 +436,7 @@ export function createSlider(
    */
   function headFor(index: number, dir: number): number {
     const copies = () =>
-      Array.from(track.children, (child, domIndex) =>
-        indexOfDom(domIndex) === index ? snapPositionOf(child) : NaN
-      ).filter(reachable);
+      snaps.filter((position, domIndex) => indexOfDom(domIndex) === index && reachable(position));
     // No direction (a zero step onto an unreachable copy): the nearest reachable copy will do.
     if (!dir) {
       const position = scrollPosition();
@@ -444,8 +475,7 @@ export function createSlider(
       const forward = wrap(logical - indexOfDom(fromDom));
       const back = forward * 2 > slideCount || (forward * 2 === slideCount && towards < 0);
       const steps = back ? forward - slideCount : forward;
-      const queued = track.children[fromDom + steps];
-      const queuedAt = queued ? snapPositionOf(queued) : NaN;
+      const queuedAt = snaps[fromDom + steps] ?? NaN;
       target = reachable(queuedAt) ? queuedAt : headFor(logical, Math.sign(steps));
     } else {
       target = restPositionOf(logical);
@@ -477,7 +507,7 @@ export function createSlider(
         scrollFrame = 0;
         // A goTo() since this frame was queued (a drag's release) has already set the index. A
         // resize can clamp the offset before the observer re-measures; relayout() places it then.
-        if (programmaticScroll || observedSize() !== measuredSize) return;
+        if (programmaticScroll || extentChanged()) return;
         const position = scrollPosition();
         // Several slides can share a stop; a scroll that stays on it keeps the one that was asked for.
         if (loop() || Math.abs(position - stopPositions[stopOf(current)]!) > 1) {
@@ -511,14 +541,16 @@ export function createSlider(
     track.style.scrollSnapType = "";
     // Native snapping normally has the track on a slide by now, and settleNear() then does
     // nothing. WebKit doesn't re-snap when an interrupted eased move restores snapping.
-    if (userScroll && snapMode() !== "none" && settleNear(scrollPosition())) return;
+    // A resize can settle before the observer re-measures: relayout() then places the track and
+    // the index, which the stale positions here would get wrong.
+    const stale = extentChanged();
+    if (userScroll && !stale && snapMode() !== "none" && settleNear(scrollPosition())) return;
     teleportToRealSlides();
     const position = scrollPosition();
     const landed = indexAt(position);
-    // A clamped edge can park several indices at one spot; keep the requested one there. A resize
-    // can settle before the observer re-measures: relayout() places the index then, not stale stops.
+    // A clamped edge can park several indices at one spot; keep the requested one there.
     const moved = loop() || Math.abs(position - restPositionOf(current)) > 1;
-    if (landed !== current && moved && observedSize() === measuredSize) setCurrent(landed);
+    if (landed !== current && moved && !stale) setCurrent(landed);
     play.settled();
   }
 
@@ -528,7 +560,7 @@ export function createSlider(
    * first jumps by the same distance, which looks identical, so nothing visibly flies across.
    */
   function settleOnto(domIndex: number): void {
-    let target = snapPositionOf(track.children[domIndex]!);
+    let target = snaps[domIndex]!;
     if (target < -1 || target > maxScroll + 1) {
       const shift = shiftToRealCopy(domIndex);
       scrollTo(scrollPosition() + shift);
@@ -555,7 +587,7 @@ export function createSlider(
       return true;
     }
     const domIndex = clamp(domIndexAt(position), 0, track.children.length - 1);
-    if (Math.abs(snapPositionOf(track.children[domIndex]!) - scrollPosition()) <= 1) return false;
+    if (Math.abs(snaps[domIndex]! - scrollPosition()) <= 1) return false;
     settleOnto(domIndex);
     return true;
   }
@@ -708,18 +740,27 @@ export function createSlider(
 
   // ── Observers ────────────────────────────────────────────────────────
 
-  // Sizes the layout was last measured at. The first callback after observe() may already carry a
-  // change (no frame ran in between), so compare rather than skip it.
-  let measuredSize = "";
-  // Computed sizes keep their fractions, which clientWidth rounds away: a 0.4px change to each of
-  // 100 slides moves the last one 40px.
-  const observedSize = () =>
-    [track, track.firstElementChild]
-      .map((el) => el && [getComputedStyle(el).width, getComputedStyle(el).height])
-      .join();
-  const resizeObserver = new ResizeObserver(() => {
-    if (destroyed || observedSize() === measuredSize) return;
-    measuredSize = observedSize();
+  // The size of the track and of every track child when the layout was last measured. The first
+  // callback after observe() may already carry a change (no frame ran in between), so compare
+  // rather than skip it. Computed sizes keep their fractions, which clientWidth rounds away: a
+  // 0.4px change to each of 100 slides moves the last one 40px.
+  const measuredSizes = new Map<Element, string>();
+  const sizeOf = (el: Element) => {
+    const style = getComputedStyle(el);
+    return `${style.width},${style.height}`;
+  };
+  // The observer calls back after layout, so the reads here and in relayout() force nothing.
+  const resizeObserver = new ResizeObserver((entries) => {
+    if (destroyed) return;
+    let changed = false;
+    for (const { target } of entries) {
+      const size = sizeOf(target);
+      // A rebuild earlier in this delivery may have dropped the target.
+      if (!measuredSizes.has(target) || measuredSizes.get(target) === size) continue;
+      measuredSizes.set(target, size);
+      changed = true;
+    }
+    if (!changed) return;
     emit("resize", {});
     relayout();
     emit("resized", {});
@@ -743,10 +784,14 @@ export function createSlider(
   }
 
   function observe(): void {
+    // A later slide can change size alone (an image loads, a font swaps), and the track's own box
+    // stays the same when it does: the track scrolls, so only its scroll width grows.
     resizeObserver.disconnect();
-    measuredSize = observedSize();
-    resizeObserver.observe(track);
-    if (track.firstElementChild) resizeObserver.observe(track.firstElementChild);
+    measuredSizes.clear();
+    for (const el of [track, ...track.children]) {
+      measuredSizes.set(el, sizeOf(el));
+      resizeObserver.observe(el);
+    }
 
     intersectionObserver?.disconnect();
     intersecting.clear();
@@ -766,11 +811,9 @@ export function createSlider(
     // The index doesn't follow a continuous drift, so keep the slide that's actually showing.
     // Its box includes the drift, so the slide resting nearest the scroll offset is the one on screen.
     if (play.drifting()) {
-      const children = Array.from(track.children);
       const position = scrollPosition();
-      const distance = (el: Element) => Math.abs(snapPositionOf(el) - position);
-      const showing = children.reduce((best, el) => (distance(el) < distance(best) ? el : best));
-      index = indexOfDom(children.indexOf(showing));
+      const distances = readSnaps().map((snap) => Math.abs(snap - position));
+      index = indexOfDom(distances.indexOf(Math.min(...distances)));
     }
     play.reset(); // continuous autoplay's transforms would skew every measurement
     readSlidesPerView();
