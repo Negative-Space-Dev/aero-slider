@@ -362,3 +362,24 @@ test("a press that holds still after a move settles on a new gap leaves the inde
   // goTo(4) headed for the old 800px, where slide 2 now rests. The press kept the track there.
   await expect.poll(() => state(page, "s")).toEqual({ index: 2, position: 800 });
 });
+
+// A narrower gap shortens the track, so the coast's target lies past its end and is never reached.
+test('a drag that coasts past the end of a shrunk track stays at the end, with snap: "none"', async ({
+  page,
+}) => {
+  await mount(page, mixed(8));
+  await page.evaluate(() => {
+    document.getElementById("s")!.style.setProperty("--aero-slide-gap", "100px");
+  });
+  await create(page, "s", { alignment: "start", snap: "none" });
+  await page.evaluate(() => window.sliders.s!.goTo(3, { instant: true }));
+  await settled(page, "s");
+  await drag(page, "s", 500, -300);
+  await page.evaluate(() => {
+    document.getElementById("s")!.style.setProperty("--aero-slide-gap", "0px");
+  });
+  await settled(page, "s");
+  await page.waitForTimeout(300);
+  // Eight 200px slides in a 600px track end at 1000px, where slide 5 rests.
+  expect(await state(page, "s")).toEqual({ index: 5, position: 1000 });
+});

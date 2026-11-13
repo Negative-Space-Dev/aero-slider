@@ -921,6 +921,8 @@ export function createSlider(
       }
       return play.start();
     }
+    // A coast whose target a narrower track no longer reaches never settled: it ends here.
+    if (after === "scroll" && coasting) programmaticScroll = coasting = false;
     const follow = after === "scroll" && !programmaticScroll;
     const position = scrollPosition();
     // A clamped edge can park several indices at one spot; keep the current one there.
