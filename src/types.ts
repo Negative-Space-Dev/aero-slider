@@ -36,6 +36,7 @@ export interface SliderConfig {
   /**
    * Scroll top to bottom instead of along the text direction. Horizontal sliders follow the
    * container's computed direction, so `dir="rtl"` on it or an ancestor makes one right-to-left.
+   * The direction is read when the slider starts; call `refresh()` after changing it.
    */
   vertical?: boolean;
   /** How the track comes to rest after scrolling. Defaults to `"native"`. */

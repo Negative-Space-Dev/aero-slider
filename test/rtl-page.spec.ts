@@ -77,37 +77,43 @@ test.describe("a page that turns right-to-left after creation", () => {
     await create(page, "s");
   });
 
-  test("next() in the same task as the dir change moves the track", async ({ page }) => {
+  test("refresh() picks up the new dir", async ({ page }) => {
     await page.evaluate(() => {
       document.documentElement.dir = "rtl";
+      window.sliders.s!.refresh();
       window.sliders.s!.next();
     });
     await settled(page, "s");
     expect(await state(page, "s")).toEqual({ index: 1, position: -610 });
   });
 
-  test("a direction set in CSS, with no dir attribute, is picked up by the next move", async ({
-    page,
-  }) => {
+  test("refresh() picks up a direction set in CSS", async ({ page }) => {
     await page.evaluate(() => {
       document.body.style.direction = "rtl";
+      window.sliders.s!.refresh();
       window.sliders.s!.goTo(2);
     });
     await settled(page, "s");
     expect(await state(page, "s")).toEqual({ index: 2, position: -1220 });
   });
 
-  test("the first arrow key after the dir change goes the right-to-left way", async ({ page }) => {
-    await page.evaluate(() => (document.documentElement.dir = "rtl"));
+  test("arrow keys go the right-to-left way after refresh()", async ({ page }) => {
+    await page.evaluate(() => {
+      document.documentElement.dir = "rtl";
+      window.sliders.s!.refresh();
+    });
     await page.locator("#s").focus();
     await page.keyboard.press("ArrowLeft");
     await settled(page, "s");
     expect(await state(page, "s")).toEqual({ index: 1, position: -610 });
   });
 
-  test("the slider keeps its slide when the page turns", async ({ page }) => {
+  test("the slider keeps its slide through the refresh()", async ({ page }) => {
     await page.evaluate(() => window.sliders.s!.goTo(2, { instant: true }));
-    await page.evaluate(() => (document.documentElement.dir = "rtl"));
+    await page.evaluate(() => {
+      document.documentElement.dir = "rtl";
+      window.sliders.s!.refresh();
+    });
     await settled(page, "s");
     expect(await state(page, "s")).toEqual({ index: 2, position: -1220 });
   });

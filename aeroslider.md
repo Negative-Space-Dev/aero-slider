@@ -88,7 +88,7 @@ CSS variables on the slider or any ancestor. Change them in media or container q
 | ------------------ | -------------- | --------------------------------------------------------------------------------------------------- |
 | `loop`             | `false`        | Turns itself off when every slide already fits in view.                                             |
 | `alignment`        | `"center"`     | `"start"`, `"center"`, `"end"`. Logical: `"start"` is the right edge in RTL, the top when vertical. |
-| `vertical`         | `false`        | Scrolls top to bottom. Horizontal sliders follow the page's `dir`, so RTL needs no option.          |
+| `vertical`         | `false`        | Scrolls top to bottom. Horizontal sliders follow `dir`; call `refresh()` after changing it.         |
 | `perMove`          | `1`            | Stops advanced by `next()`, `prev()`, the arrows, the arrow keys and autoplay.                      |
 | `snap`             | `"native"`     | `"settle"` scrolls freely, then eases onto a slide. `"none"` rests anywhere.                        |
 | `draggable`        | `true`         | Mouse drag. Touch always scrolls natively.                                                          |

@@ -64,7 +64,7 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     type: "boolean",
     default: "false",
     description:
-      'Scrolls top to bottom. A horizontal slider follows the text direction of the page: <code>dir="rtl"</code> on the slider or any ancestor makes it right-to-left.',
+      'Scrolls top to bottom. A horizontal slider follows the text direction of the page: <code>dir="rtl"</code> on the slider or any ancestor makes it right-to-left. The direction is read when the slider starts, so call <code>refresh()</code> after changing it.',
     example: "ex-direction",
   },
   perMove: {

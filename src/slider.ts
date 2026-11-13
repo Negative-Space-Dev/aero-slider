@@ -136,7 +136,7 @@ export function createSlider(
   let current = 0;
   let destroyed = false;
   let ready = false; // autoplay waits for the ready event before it starts
-  let rtl = false; // resolved from the computed direction on every rebuild
+  let rtl = false; // read from the computed direction on every rebuild, so refresh() updates it
 
   // Layout metrics, refreshed by measure()
   let slidesPerView = 1;
@@ -172,16 +172,6 @@ export function createSlider(
   const isVertical = () => config.vertical;
   const isRtl = () => rtl;
   const computedRtl = () => !isVertical() && getComputedStyle(container).direction === "rtl";
-  /**
-   * No observer reports the page's direction changing under a slider that follows it, so the
-   * paths that turn a scroll offset into a slide, or a slide into an offset, ask first.
-   */
-  function directionChanged(): boolean {
-    if (rtl === computedRtl()) return false;
-    rtl = !rtl;
-    relayout();
-    return true;
-  }
   const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(value, max));
   const wrap = (index: number) => ((index % slideCount) + slideCount) % slideCount;
 
@@ -435,7 +425,6 @@ export function createSlider(
   /** `towards` is the sign of a next()/prev() step: it picks the way round when both are equally short. */
   function goTo(index: number, options: GoToOptions = {}, towards = 0): void {
     if (destroyed || !slideCount || !Number.isFinite(index)) return;
-    directionChanged();
     // Continuous autoplay hands its lap back to the scroll offset before we measure from it.
     play.interrupt();
     const logical = loop() ? wrap(Math.trunc(index)) : clamp(Math.trunc(index), 0, maxIndex());
@@ -485,7 +474,7 @@ export function createSlider(
         scrollFrame = 0;
         // A goTo() since this frame was queued (a drag's release) has already set the index. A
         // resize can clamp the offset before the observer re-measures; relayout() places it then.
-        if (programmaticScroll || directionChanged() || observedSize() !== measuredSize) return;
+        if (programmaticScroll || observedSize() !== measuredSize) return;
         const position = scrollPosition();
         // Several slides can share a stop; a scroll that stays on it keeps the one that was asked for.
         if (loop() || Math.abs(position - stopPositions[stopOf(current)]!) > 1) {
@@ -733,13 +722,6 @@ export function createSlider(
     emit("resized", {});
   });
 
-  // A page that switches language sets dir on <html> or an ancestor, which resizes nothing.
-  const directionObserver = new MutationObserver(directionChanged);
-  directionObserver.observe(document.documentElement, {
-    attributeFilter: ["dir"],
-    subtree: true,
-  });
-
   let intersectionObserver: IntersectionObserver | undefined;
   const intersecting = new Map<Element, boolean>();
   let visibleIndices = new Set<number>();
@@ -877,7 +859,6 @@ export function createSlider(
     destroyed = true;
     controller.abort(); // removes every listener; features clean up on this signal too
     resizeObserver.disconnect();
-    directionObserver.disconnect();
     intersectionObserver?.disconnect();
     clearTimeout(settleTimer);
     cancelAnimationFrame(scrollFrame);
