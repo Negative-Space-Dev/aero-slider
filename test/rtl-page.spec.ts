@@ -2,7 +2,7 @@ import { create, expect, mount, settled, slider, test } from "./fixtures";
 import { drag, state } from "./helpers/state";
 
 const rtl = { htmlAttributes: { dir: "rtl" } };
-const gap = { style: "--slide-gap:10px" };
+const gap = { style: "--aero-slide-gap:10px" };
 
 test.describe("on a right-to-left page with the default direction", () => {
   test.beforeEach(async ({ page }) => {

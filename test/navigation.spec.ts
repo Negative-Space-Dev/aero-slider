@@ -19,7 +19,7 @@ const STRIDE = 610;
 const END = 4 * STRIDE;
 
 async function fiveSlides(page: Page): Promise<void> {
-  await mount(page, slider("s", 5, { style: "--slide-gap:10px" }));
+  await mount(page, slider("s", 5, { style: "--aero-slide-gap:10px" }));
   await create(page, "s");
 }
 

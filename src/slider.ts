@@ -15,11 +15,8 @@ const FOCUSABLE =
 
 const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
 
-/**
- * The config as the slider holds it: every option set, and `alignment` resolved to its canonical
- * spelling.
- */
-export type Config = Required<SliderConfig> & { alignment: "start" | "center" | "end" };
+/** The config as the slider holds it: every option set. */
+export type Config = Required<SliderConfig>;
 
 const DEFAULTS: Config = {
   loop: false,
@@ -43,8 +40,6 @@ const CHOICES = {
   snap: ["native", "settle", "none"],
 } as const;
 
-const ALIGNMENT_ALIASES: Record<string, Config["alignment"]> = { left: "start", right: "end" };
-
 /** Lowest accepted value for each numeric option, and whether it must be a whole number. */
 const NUMBERS = {
   perMove: [1, true],
@@ -64,7 +59,6 @@ function configure(config: Config, changes: SliderConfig = {}): void {
   for (const [key, value] of Object.entries(changes ?? {})) {
     if (value !== undefined) target[key] = value;
   }
-  target.alignment = ALIGNMENT_ALIASES[target.alignment as string] ?? target.alignment;
   for (const [key, [min, whole]] of Object.entries(NUMBERS)) {
     // Theme scripts often pass numbers straight from data attributes, as strings.
     const raw = target[key];
@@ -286,10 +280,7 @@ export function createSlider(
 
   function readSlidesPerView(): void {
     const style = getComputedStyle(container);
-    const value =
-      style.getPropertyValue("--aero-slides-per-view") ||
-      style.getPropertyValue("--slides-per-view");
-    slidesPerView = parseFloat(value) || 1;
+    slidesPerView = parseFloat(style.getPropertyValue("--aero-slides-per-view")) || 1;
   }
 
   function measure(): void {

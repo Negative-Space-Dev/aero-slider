@@ -49,7 +49,7 @@ async function wheel(page: Page, deltaX: number): Promise<{ x: number; y: number
 }
 
 async function settleSlider(page: Page, inner?: (i: number) => string): Promise<void> {
-  await mount(page, slider("s", 5, { style: "--slide-gap:10px", inner }));
+  await mount(page, slider("s", 5, { style: "--aero-slide-gap:10px", inner }));
   await create(page, "s", { snap: "settle", scrollDuration: 300 });
 }
 
@@ -100,7 +100,7 @@ test("snap: settle waits for a finger even when content stops its touchstart", a
 
 // The browser takes a panning finger over and sends pointercancel, but the finger is still down.
 test("snap: settle waits for a finger that panned the track and stays down", async ({ page }) => {
-  await mount(page, slider("s", 4, { style: "--slide-gap:10px" }));
+  await mount(page, slider("s", 4, { style: "--aero-slide-gap:10px" }));
   await create(page, "s", { loop: true, snap: "settle", scrollDuration: 300 });
   await page.evaluate(() => window.sliders.s!.goTo(1, { instant: true }));
   await settled(page, "s");

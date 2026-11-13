@@ -13,12 +13,13 @@ import {
 failOnPageErrors();
 
 // A 1000px breakout slider over a 600px layout column: the track pads 200px each side.
-async function breakout(page: Page, alignment: "left" | "center" | "right"): Promise<void> {
+async function breakout(page: Page, alignment: "start" | "center" | "end"): Promise<void> {
   await mount(
     page,
     `<div style="width:1000px">${slider("s", 5, {
       className: "aero-slider--breakout",
-      style: "width:1000px;--aero-layout-width:600px;--slides-per-view:1.2;--slide-gap:20px",
+      style:
+        "width:1000px;--aero-layout-width:600px;--aero-slides-per-view:1.2;--aero-slide-gap:20px",
     })}</div>`
   );
   await create(page, "s", { alignment });
@@ -41,12 +42,12 @@ async function restingSlide(page: Page, index: number) {
 }
 
 test("the track pads out to the layout column", async ({ page }) => {
-  await breakout(page, "left");
+  await breakout(page, "start");
   await expect(page.locator("#s .aero-slider__track")).toHaveCSS("padding-left", "200px");
 });
 
-test("left alignment rests a slide on the padding's inner edge", async ({ page }) => {
-  await breakout(page, "left");
+test("start alignment rests a slide on the padding's inner edge", async ({ page }) => {
+  await breakout(page, "start");
   expectNear((await restingSlide(page, 2)).left, 200);
 });
 
@@ -56,7 +57,7 @@ test("center alignment rests a slide in the middle of the track", async ({ page 
   expectNear(slide.centre, slide.trackWidth / 2);
 });
 
-test("right alignment rests a slide on the padding's inner edge", async ({ page }) => {
-  await breakout(page, "right");
+test("end alignment rests a slide on the padding's inner edge", async ({ page }) => {
+  await breakout(page, "end");
   expectNear((await restingSlide(page, 2)).right, 200);
 });

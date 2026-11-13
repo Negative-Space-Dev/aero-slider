@@ -79,7 +79,6 @@ CSS variables on the slider or any ancestor. Change them in media or container q
 - The variables stop at a slide's content. Set them again on a nested slider.
 - Breakout (track runs off both window edges, active slide lines up with the content column): add `aero-slider--breakout`, make the container full-bleed, set `--aero-layout-width` to the column width.
 - With `loop`, add `data-aero-defer-visibility` to the container to avoid a layout shift before init. If alignment is not centred, also write `data-aero-alignment="start"` or `"end"` in the HTML.
-- Pre-1.0 names (`--slides-per-view`, `--slide-gap`, `--slide-aspect`, `alignment: "left" | "right"`) still work. Write the new ones.
 
 ## Options
 
@@ -188,7 +187,6 @@ toggle.addEventListener("click", () => {
 - Layout is CSS variables. Do not pass sizes as options or set widths in JavaScript.
 - Use `<button>` for dots and thumbnails. `<span>` and `<div>` cannot be reached by keyboard.
 - Do not expect roles, labels or a pause button from the slider.
-- Do not select `[data-aero-alignment="left"]`. The slider writes `"start"`.
 - Do not create the slider before its slides exist, unless you call `refresh()` afterwards.
 - Do not read or write loop clones. Filter on `[data-aero-slider-index]`.
 - Call `destroy()` before removing the element.

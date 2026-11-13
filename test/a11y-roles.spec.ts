@@ -46,7 +46,7 @@ test("the author's role, description and name stay, and destroy() restores the c
 test("slides keep the roles and names their author gave them; clones are hidden", async ({
   page,
 }) => {
-  await mount(page, slider("s", 3, { style: "--slides-per-view:2", nav: false, dots: false }));
+  await mount(page, slider("s", 3, { style: "--aero-slides-per-view:2", nav: false, dots: false }));
   await page.evaluate(() => {
     document.querySelectorAll("#s .aero-slider__track > *").forEach((slide, i) => {
       slide.setAttribute("role", "group");

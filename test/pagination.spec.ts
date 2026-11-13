@@ -32,7 +32,7 @@ const dotSizes = (page: Page) =>
 
 test.describe("twelve slides, three in view, two per move, at most five dots", () => {
   test.beforeEach(async ({ page }) => {
-    await mount(page, slider("s", 12, { style: "--slides-per-view:3;--slide-gap:6px" }));
+    await mount(page, slider("s", 12, { style: "--aero-slides-per-view:3;--aero-slide-gap:6px" }));
     await create(page, "s", { loop: true, perMove: 2, maxDots: 5 });
   });
 

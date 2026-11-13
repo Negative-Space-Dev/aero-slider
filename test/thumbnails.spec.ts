@@ -1,6 +1,6 @@
 import { create, expect, mount, slider, test } from "./fixtures";
 
-const fiveUp = { style: "--slides-per-view:5", dots: false };
+const fiveUp = { style: "--aero-slides-per-view:5", dots: false };
 
 test("a loop whose slides all fit makes no clones", async ({ page }) => {
   await mount(page, slider("main", 4) + slider("thumbs", 4, fiveUp));
@@ -30,7 +30,7 @@ test("thumbnails ignore a slider nested inside the primary", async ({ page }) =>
   await mount(
     page,
     slider("main", 3, { inner: (i) => (i === 0 ? nested : String(i)) }) +
-      slider("thumbs", 3, { style: "--slides-per-view:3", dots: false })
+      slider("thumbs", 3, { style: "--aero-slides-per-view:3", dots: false })
   );
   await create(page, "nested");
   await create(page, "main");

@@ -1,12 +1,7 @@
 import { type Page, create, expect, mount, settled, slider, test } from "./fixtures";
 import { state } from "./helpers/state";
 
-const twoAndAHalf = { style: "--slides-per-view:2.5", dots: false };
-
-const PAIRS = [
-  ["start", "left"],
-  ["end", "right"],
-] as const;
+const twoAndAHalf = { style: "--aero-slides-per-view:2.5", dots: false };
 
 /** Where slide 2 of 6 rests, 240px slides in a 600px track (144px of a 360px one vertically). */
 const LAYOUTS = {
@@ -33,10 +28,9 @@ async function restingPosition(
 }
 
 for (const layout of Object.keys(LAYOUTS) as (keyof typeof LAYOUTS)[]) {
-  for (const [canonical, alias] of PAIRS) {
-    test(`${layout}: "${alias}" rests where "${canonical}" does`, async ({ page }) => {
-      expect(await restingPosition(page, layout, canonical)).toBe(LAYOUTS[layout][canonical]);
-      expect(await restingPosition(page, layout, alias)).toBe(LAYOUTS[layout][canonical]);
+  for (const alignment of ["start", "end"] as const) {
+    test(`${layout}: "${alignment}" rests on that edge`, async ({ page }) => {
+      expect(await restingPosition(page, layout, alignment)).toBe(LAYOUTS[layout][alignment]);
     });
   }
 
@@ -45,40 +39,35 @@ for (const layout of Object.keys(LAYOUTS) as (keyof typeof LAYOUTS)[]) {
   });
 }
 
-test("the container's data-aero-alignment holds the canonical value", async ({ page }) => {
+test("the container's data-aero-alignment holds the alignment", async ({ page }) => {
   await mount(page, slider("s", 6, twoAndAHalf));
-  const attribute = page.locator("#s");
-  for (const [given, written] of [
-    ["left", "start"],
-    ["start", "start"],
-    ["center", "center"],
-    ["right", "end"],
-    ["end", "end"],
-  ]) {
-    await create(page, "s", { alignment: given as never });
-    await expect(attribute).toHaveAttribute("data-aero-alignment", written!);
+  for (const alignment of ["start", "center", "end"] as const) {
+    await create(page, "s", { alignment });
+    await expect(page.locator("#s")).toHaveAttribute("data-aero-alignment", alignment);
   }
 });
 
-test("update({ alignment }) accepts either spelling and moves the resting place", async ({
-  page,
-}) => {
+test("an unknown alignment falls back to center", async ({ page }) => {
+  await mount(page, slider("s", 6, twoAndAHalf));
+  await create(page, "s", { alignment: "left" as never });
+  await expect(page.locator("#s")).toHaveAttribute("data-aero-alignment", "center");
+});
+
+test("update({ alignment }) moves the resting place", async ({ page }) => {
   await mount(page, slider("s", 6, twoAndAHalf));
   await create(page, "s", { alignment: "start" });
   await page.evaluate(() => window.sliders.s!.goTo(2, { instant: true }));
   await settled(page, "s");
   expect(await state(page, "s")).toEqual({ index: 2, position: 480 });
 
-  for (const [given, written, position] of [
-    ["right", "end", 120],
-    ["start", "start", 480],
-    ["end", "end", 120],
-    ["left", "start", 480],
-    ["center", "center", 300],
+  for (const [alignment, position] of [
+    ["end", 120],
+    ["start", 480],
+    ["center", 300],
   ] as const) {
-    await page.evaluate((alignment) => window.sliders.s!.update({ alignment }), given);
+    await page.evaluate((alignment) => window.sliders.s!.update({ alignment }), alignment);
     await settled(page, "s");
-    await expect(page.locator("#s")).toHaveAttribute("data-aero-alignment", written);
+    await expect(page.locator("#s")).toHaveAttribute("data-aero-alignment", alignment);
     expect(await state(page, "s")).toEqual({ index: 2, position });
   }
 });
@@ -86,7 +75,7 @@ test("update({ alignment }) accepts either spelling and moves the resting place"
 test("start alignment with a whole number of slides per view still caps the last stop", async ({
   page,
 }) => {
-  await mount(page, slider("s", 6, { style: "--slides-per-view:3" }));
+  await mount(page, slider("s", 6, { style: "--aero-slides-per-view:3" }));
   await create(page, "s", { alignment: "start" });
   await expect(page.locator("#s .aero-slider__dot")).toHaveCount(4);
   await page.evaluate(() => window.sliders.s!.goTo(5));
@@ -104,39 +93,32 @@ const preInitOffset = (page: Page) =>
     );
   });
 
-for (const [values, offset] of [
-  [["start", "left"], 0],
-  [["end", "right"], 360],
-  [["center"], 180],
+for (const [alignment, offset] of [
+  ["start", 0],
+  ["end", 360],
+  ["center", 180],
 ] as const) {
-  test(`pre-init spacer for data-aero-alignment="${values.join('" / "')}" is ${offset}px`, async ({
+  test(`pre-init spacer for data-aero-alignment="${alignment}" is ${offset}px`, async ({
     page,
   }) => {
-    for (const value of values) {
-      await mount(
-        page,
-        slider("s", 6, twoAndAHalf).replace(
-          'class="aero-slider',
-          `data-aero-defer-visibility data-aero-alignment="${value}" class="aero-slider`
-        )
-      );
-      expect(await preInitOffset(page)).toBe(offset);
-    }
+    await mount(
+      page,
+      slider("s", 6, twoAndAHalf).replace(
+        'class="aero-slider',
+        `data-aero-defer-visibility data-aero-alignment="${alignment}" class="aero-slider`
+      )
+    );
+    expect(await preInitOffset(page)).toBe(offset);
   });
 }
 
-test("legacy left/right markup snaps natively like start/end before init", async ({ page }) => {
-  for (const [value, align] of [
-    ["left", "start"],
-    ["start", "start"],
-    ["right", "end"],
-    ["end", "end"],
-  ]) {
+test("server-rendered alignment markup snaps natively before init", async ({ page }) => {
+  for (const alignment of ["start", "end"]) {
     await mount(
       page,
       slider("s", 3).replace(
         'class="aero-slider',
-        `data-aero-alignment="${value}" class="aero-slider`
+        `data-aero-alignment="${alignment}" class="aero-slider`
       )
     );
     expect(
@@ -144,6 +126,6 @@ test("legacy left/right markup snaps natively like start/end before init", async
         () =>
           getComputedStyle(document.querySelector("#s .aero-slider__track > *")!).scrollSnapAlign
       )
-    ).toBe(align);
+    ).toBe(alignment);
   }
 });

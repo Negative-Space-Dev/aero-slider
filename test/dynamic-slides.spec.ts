@@ -69,12 +69,12 @@ test("removing the last slide while on it announces the new index", async ({ pag
 });
 
 test("a resize that lowers the last stop announces the new index", async ({ page }) => {
-  await mount(page, slider("s", 6, { style: "--slides-per-view:2" }));
-  await create(page, "s", { alignment: "left" });
+  await mount(page, slider("s", 6, { style: "--aero-slides-per-view:2" }));
+  await create(page, "s", { alignment: "start" });
   await page.evaluate(() => window.sliders.s!.goTo(4, { instant: true }));
   await recordEvents(page, "s");
   await page.evaluate(() =>
-    document.getElementById("s")!.style.setProperty("--slides-per-view", "3")
+    document.getElementById("s")!.style.setProperty("--aero-slides-per-view", "3")
   );
   await expect.poll(() => page.evaluate(() => window.events.s)).toContain("slideChange:3");
   await settled(page, "s");
@@ -84,7 +84,7 @@ test("a resize that lowers the last stop announces the new index", async ({ page
 });
 
 test("synced thumbnails follow a slide removed from both", async ({ page }) => {
-  await mount(page, slider("s", 5) + slider("thumbs", 5, { style: "--slides-per-view:5" }));
+  await mount(page, slider("s", 5) + slider("thumbs", 5, { style: "--aero-slides-per-view:5" }));
   await create(page, "s");
   await create(page, "thumbs");
   await page.evaluate(() => {

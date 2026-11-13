@@ -6,7 +6,7 @@ const lifecycle = async (page: Page) =>
 
 for (const autoplay of [true, "continuous"] as const) {
   test(`autoplay ${autoplay}: ready comes before autoplayStart`, async ({ page }) => {
-    await mount(page, slider("s", 5, { style: "--slides-per-view:2" }));
+    await mount(page, slider("s", 5, { style: "--aero-slides-per-view:2" }));
     await recordEvents(page, "s");
     await create(page, "s", { autoplay });
     expect(await lifecycle(page)).toEqual(["ready", "autoplayStart"]);
@@ -40,7 +40,7 @@ for (const config of [{}, { loop: true }, { autoplay: "continuous" as const }]) 
   test(`destroy() leaves slide markup as it found it: ${JSON.stringify(config)}`, async ({
     page,
   }) => {
-    await mount(page, slider("s", 5, { style: "--slides-per-view:2" }));
+    await mount(page, slider("s", 5, { style: "--aero-slides-per-view:2" }));
     const markup = () =>
       page.evaluate(() => document.querySelector("#s .aero-slider__track")!.innerHTML);
     await page.evaluate(() => {

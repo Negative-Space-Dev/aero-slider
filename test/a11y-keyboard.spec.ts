@@ -29,8 +29,8 @@ test("arrow keys inside slide content belong to that content", async ({ page }) 
       : i === 1
         ? `<div role="slider" tabindex="0" id="widget" aria-valuenow="0" onkeydown="event.preventDefault()">widget</div>`
         : String(i);
-  await mount(page, slider("s", 4, { inner: content, style: "--slides-per-view:2" }));
-  await create(page, "s", { alignment: "left" });
+  await mount(page, slider("s", 4, { inner: content, style: "--aero-slides-per-view:2" }));
+  await create(page, "s", { alignment: "start" });
   await recordKeys(page);
   await page.locator("#link").focus();
   await page.keyboard.press("ArrowRight");

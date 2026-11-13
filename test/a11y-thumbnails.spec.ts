@@ -1,6 +1,6 @@
 import { type Page, create, expect, mount, settled, slider, test } from "./fixtures";
 
-const strip = { style: "--slides-per-view:5", dots: false, nav: false };
+const strip = { style: "--aero-slides-per-view:5", dots: false, nav: false };
 const index = (page: Page) => page.evaluate(() => window.sliders.main!.currentIndex);
 // classList rewrites the class attribute without the fixture's trailing space.
 const thumbs = (page: Page) =>
@@ -8,7 +8,7 @@ const thumbs = (page: Page) =>
 
 /** A strip whose thumbnails are named buttons, as the docs tell authors to write them. */
 const buttonStrip = (n: number) =>
-  `<div id="thumbs" class="aero-slider" style="width:600px;--slides-per-view:5"><div class="aero-slider__viewport"><div class="aero-slider__track">${Array.from(
+  `<div id="thumbs" class="aero-slider" style="width:600px;--aero-slides-per-view:5"><div class="aero-slider__viewport"><div class="aero-slider__track">${Array.from(
     { length: n },
     (_, i) => `<button type="button" aria-label="Show photo ${i + 1}">${i}</button>`
   ).join("")}</div></div></div>`;

@@ -103,7 +103,7 @@ test("a negative maxDots shows every dot", async ({ page }) => {
 });
 
 test("a non-finite autoplaySpeed uses the default speed", async ({ page }) => {
-  await mount(page, slider("s", 5, { style: "--slides-per-view:2" }));
+  await mount(page, slider("s", 5, { style: "--aero-slides-per-view:2" }));
   await recordEvents(page, "s");
   await create(page, "s", { autoplay: "continuous", autoplaySpeed: NaN });
   expect(await takeEvents(page, "s")).toContain("autoplayStart");

@@ -60,7 +60,7 @@ test.describe("with one and a half slides in view", () => {
   const BEFORE = 4;
 
   test.beforeEach(async ({ page }) => {
-    await mount(page, slider("s", 4, { style: "--slides-per-view:1.5;--slide-gap:8px" }));
+    await mount(page, slider("s", 4, { style: "--aero-slides-per-view:1.5;--aero-slide-gap:8px" }));
     await create(page, "s", { loop: true });
   });
 
@@ -207,7 +207,7 @@ test.describe("with two slides", () => {
 test("seven quick next() calls with three slides in view land on the last slide", async ({
   page,
 }) => {
-  await mount(page, slider("s", 4, { style: "--slides-per-view:3" }));
+  await mount(page, slider("s", 4, { style: "--aero-slides-per-view:3" }));
   await create(page, "s", { loop: true, scrollDuration: 1200 });
   await page.evaluate(() => {
     for (let k = 0; k < 7; k++) window.sliders.s!.next();

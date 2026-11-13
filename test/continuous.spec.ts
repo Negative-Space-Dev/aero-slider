@@ -133,7 +133,7 @@ function steady(samples: { time: number; content: number }[], cycle: number, spe
 }
 
 const tickerMarkup = (id: string, n: number, inner?: (i: number) => string) =>
-  slider(id, n, { style: "--slides-per-view:3;--slide-gap:10px", inner });
+  slider(id, n, { style: "--aero-slides-per-view:3;--aero-slide-gap:10px", inner });
 
 async function ticker(page: Page, config: Parameters<typeof create>[2] = {}): Promise<number> {
   await page.addInitScript(installTicker);
@@ -357,7 +357,7 @@ test.describe("product links as slides", () => {
     );
     await mount(
       page,
-      `<div id="s" class="aero-slider" style="width:600px;--slides-per-view:3;--slide-gap:10px"><div class="aero-slider__viewport"><div class="aero-slider__track">${links.join("")}</div></div></div>`
+      `<div id="s" class="aero-slider" style="width:600px;--aero-slides-per-view:3;--aero-slide-gap:10px"><div class="aero-slider__viewport"><div class="aero-slider__track">${links.join("")}</div></div></div>`
     );
     await create(page, "s", { autoplay: "continuous", autoplaySpeed: 36, draggable: false });
   });
@@ -419,7 +419,7 @@ test.describe("product links as slides", () => {
 
 test("a short left-aligned rail, no more slides than fit, still drifts", async ({ page }) => {
   await mount(page, tickerMarkup("s", 3));
-  await create(page, "s", { autoplay: "continuous", alignment: "left" });
+  await create(page, "s", { autoplay: "continuous", alignment: "start" });
   expect(
     await page.evaluate(
       () =>

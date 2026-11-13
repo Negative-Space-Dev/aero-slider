@@ -1,7 +1,7 @@
 import { type Page, create, expect, mount, settled, slider, test } from "./fixtures";
 import { recordEvents, state, takeEvents } from "./helpers/state";
 
-const threeUp = { style: "--slides-per-view:3" };
+const threeUp = { style: "--aero-slides-per-view:3" };
 
 async function press(page: Page, button: "prev" | "next") {
   await page.locator(`#s .aero-slider__nav--${button}`).click();
@@ -63,7 +63,7 @@ test("goTo() a slide that shares the last stop lights the last dot", async ({ pa
 
 test("right-aligned, 6 slides at 3 per view, mirrors the centred case", async ({ page }) => {
   await mount(page, slider("s", 6, threeUp));
-  await create(page, "s", { alignment: "right" });
+  await create(page, "s", { alignment: "end" });
   await expect(page.locator("#s .aero-slider__dot")).toHaveCount(4);
   expect(await press(page, "next")).toEqual({ index: 3, position: 200 });
   expect(await press(page, "next")).toEqual({ index: 4, position: 400 });
@@ -90,7 +90,7 @@ test("2 slides at 3 per view have a single stop", async ({ page }) => {
 
 test("left-aligned, 6 slides at 3 per view, stops at slide 3 as before", async ({ page }) => {
   await mount(page, slider("s", 6, threeUp));
-  await create(page, "s", { alignment: "left" });
+  await create(page, "s", { alignment: "start" });
   await expect(page.locator("#s .aero-slider__dot")).toHaveCount(4);
   expect(await press(page, "next")).toEqual({ index: 1, position: 200 });
   expect(await press(page, "next")).toEqual({ index: 2, position: 400 });
@@ -127,7 +127,7 @@ test("interval autoplay wraps after the last stop", async ({ page }) => {
 });
 
 test("windowed dots slide in stop positions", async ({ page }) => {
-  await mount(page, slider("s", 12, { style: "--slides-per-view:3" }));
+  await mount(page, slider("s", 12, { style: "--aero-slides-per-view:3" }));
   await create(page, "s", { maxDots: 5 });
   await expect(page.locator("#s .aero-slider__dot:visible")).toHaveCount(10);
   await page.evaluate(() => window.sliders.s!.goTo(11, { instant: true }));
@@ -147,7 +147,7 @@ test("windowed dots slide in stop positions", async ({ page }) => {
 });
 
 test("a resize keeps a requested slide that shares the last stop", async ({ page }) => {
-  await mount(page, slider("s", 6, { style: "--slides-per-view:3" }));
+  await mount(page, slider("s", 6, { style: "--aero-slides-per-view:3" }));
   await create(page, "s");
   await page.evaluate(() => window.sliders.s!.goTo(5, { instant: true }));
   await settled(page, "s");

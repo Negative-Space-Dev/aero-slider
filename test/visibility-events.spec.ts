@@ -13,9 +13,9 @@ const visibleSlides = (page: Page) =>
     return [...shown].sort((a, b) => a - b);
   });
 
-for (const alignment of ["left", "center"] as const) {
+for (const alignment of ["start", "center"] as const) {
   test(`${alignment}-aligned, the last slides report visible`, async ({ page }) => {
-    await mount(page, slider("s", 6, { style: "--slides-per-view:3" }));
+    await mount(page, slider("s", 6, { style: "--aero-slides-per-view:3" }));
     await recordEvents(page, "s");
     await create(page, "s", { alignment });
     await expect.poll(() => visibleSlides(page)).toEqual([0, 1, 2]);
@@ -25,7 +25,7 @@ for (const alignment of ["left", "center"] as const) {
 }
 
 test("on a loop, clones report the slide they copy", async ({ page }) => {
-  await mount(page, slider("s", 6, { style: "--slides-per-view:3" }));
+  await mount(page, slider("s", 6, { style: "--aero-slides-per-view:3" }));
   await recordEvents(page, "s");
   await create(page, "s", { loop: true });
   await expect.poll(() => visibleSlides(page)).toEqual([0, 1, 5]);

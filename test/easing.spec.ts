@@ -76,7 +76,7 @@ function expectEvenPace({ firstHalf, secondHalf }: ReturnType<typeof glide>): vo
 }
 
 async function eased(page: Page, scrollDuration: number): Promise<void> {
-  await mount(page, slider("s", 5, { style: "--slide-gap:10px" }));
+  await mount(page, slider("s", 5, { style: "--aero-slide-gap:10px" }));
   await create(page, "s", { scrollDuration });
 }
 
@@ -106,7 +106,7 @@ test("scrollDuration eases goTo() out over its own timeline, with snapping off u
 
 test("scrollEasing shapes the curve: linear moves in even steps, both ways", async ({ page }) => {
   await onSteadyFrames(page, async () => {
-    await mount(page, slider("s", 5, { style: "--slide-gap:10px" }));
+    await mount(page, slider("s", 5, { style: "--aero-slide-gap:10px" }));
     await page.evaluate(() => {
       window.sliders.s = window.createSlider(document.getElementById("s")!, {
         scrollDuration: 800,

@@ -67,7 +67,7 @@ const range = (from: number, to: number, step: number) =>
   Array.from({ length: Math.floor((from - to) / step) }, (_, i) => from - (i + 1) * step);
 
 async function fiveSlides(page: Page, snap: "settle" | "none", scrollDuration = 300) {
-  await mount(page, slider("s", 5, { style: "--slide-gap:10px" }));
+  await mount(page, slider("s", 5, { style: "--aero-slide-gap:10px" }));
   await create(page, "s", { snap, scrollDuration });
 }
 
@@ -179,7 +179,7 @@ test.describe("snap: settle", () => {
 // the flick's speed varies. With two slides any flick can only carry to the next one; it releases
 // short of the midpoint, so only its speed can carry it there.
 test("snap: settle: a flick carries past the midpoint to the next slide", async ({ page }) => {
-  await mount(page, slider("s", 2, { style: "--slide-gap:10px" }));
+  await mount(page, slider("s", 2, { style: "--aero-slide-gap:10px" }));
   await create(page, "s", { snap: "settle", scrollDuration: 600 });
   await drag(page, 590, range(590, 350, 60));
   await page.mouse.up();
@@ -192,7 +192,7 @@ test.describe("snap: settle on a loop", () => {
   // the real copy. It never flies back across the track to get there.
   test("eases onto a clone past the end, then teleports to the real slide", async ({ page }) => {
     await onSteadyFrames(page, async () => {
-      await mount(page, slider("s", 4, { style: "--slide-gap:10px" }));
+      await mount(page, slider("s", 4, { style: "--aero-slide-gap:10px" }));
       await create(page, "s", { loop: true, snap: "settle", scrollDuration: 300 });
       await page.evaluate(() => window.sliders.s!.goTo(3, { instant: true }));
       await settled(page, "s");
@@ -230,7 +230,10 @@ test.describe("snap: settle on a loop", () => {
     test(`with fractional slides in view, a scroll to the ${edge} settles onto a slide`, async ({
       page,
     }) => {
-      await mount(page, slider("s", 4, { style: "--slides-per-view:1.5;--slide-gap:8px" }));
+      await mount(
+        page,
+        slider("s", 4, { style: "--aero-slides-per-view:1.5;--aero-slide-gap:8px" })
+      );
       await create(page, "s", { loop: true, snap: "settle", scrollDuration: 300 });
       await page.evaluate((edge) => {
         const track = document.querySelector("#s .aero-slider__track")!;
@@ -313,7 +316,7 @@ test("snap: none on a loop: a fast flick near the end stays on the runway and ke
 }) => {
   await mount(
     page,
-    `<div style="padding-left:400px">${slider("s", 4, { style: "--slides-per-view:3;--slide-gap:10px" })}</div>`
+    `<div style="padding-left:400px">${slider("s", 4, { style: "--aero-slides-per-view:3;--aero-slide-gap:10px" })}</div>`
   );
   await create(page, "s", { loop: true, snap: "none", scrollDuration: 550 });
   await page.evaluate(() => window.sliders.s!.goTo(3, { instant: true }));

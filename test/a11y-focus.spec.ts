@@ -110,7 +110,7 @@ const fullyShown = (page: Page, i: number) =>
 test("tabbing into a partly shown slide brings it into view", async ({ page }) => {
   await mount(
     page,
-    `<button id="before">before</button>${slider("s", 4, { inner: linked, nav: false, dots: false, style: "--slides-per-view:1.5" })}`
+    `<button id="before">before</button>${slider("s", 4, { inner: linked, nav: false, dots: false, style: "--aero-slides-per-view:1.5" })}`
   );
   await create(page, "s");
   expect(await fullyShown(page, 1)).toBe(false);
@@ -136,7 +136,7 @@ test("tabbing to a hidden slide still lands it in view", async ({ page }) => {
 test("a click into a partly shown slide doesn't move the slider", async ({ page }) => {
   await mount(
     page,
-    slider("s", 4, { inner: linked, nav: false, dots: false, style: "--slides-per-view:1.5" })
+    slider("s", 4, { inner: linked, nav: false, dots: false, style: "--aero-slides-per-view:1.5" })
   );
   await create(page, "s");
   await page.locator("#l1").click();
@@ -179,11 +179,11 @@ test("a click into a text field in a partly shown slide doesn't move the slider"
   await mount(
     page,
     slider("s", 4, {
-      style: "--slides-per-view:1.5",
+      style: "--aero-slides-per-view:1.5",
       inner: (i) => `<input id="field${i}" style="width:80%">`,
     })
   );
-  await create(page, "s", { alignment: "left" });
+  await create(page, "s", { alignment: "start" });
   await page.locator("#field1").click({ position: { x: 5, y: 5 } });
   await settled(page, "s");
   expect(await page.evaluate(() => window.sliders.s!.currentIndex)).toBe(0);

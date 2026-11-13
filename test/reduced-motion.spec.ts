@@ -19,7 +19,7 @@ const animationCount = (page: Page) =>
   );
 
 test("turning reduced motion on lands an eased scroll in flight at once", async ({ page }) => {
-  await mount(page, slider("s", 5, { style: "--slide-gap:10px" }));
+  await mount(page, slider("s", 5, { style: "--aero-slide-gap:10px" }));
   await create(page, "s", { scrollDuration: 2000 });
   await page.evaluate(() => window.sliders.s!.goTo(4));
   await page.waitForFunction(
@@ -37,8 +37,8 @@ test("under reduced motion, goTo() jumps at once, with or without scrollDuration
   await page.emulateMedia({ reducedMotion: "reduce" });
   await mount(
     page,
-    slider("native", 5, { style: "--slide-gap:10px" }) +
-      slider("eased", 5, { style: "--slide-gap:10px" })
+    slider("native", 5, { style: "--aero-slide-gap:10px" }) +
+      slider("eased", 5, { style: "--aero-slide-gap:10px" })
   );
   await create(page, "native");
   await create(page, "eased", { scrollDuration: 300 });
@@ -54,7 +54,7 @@ test("under reduced motion, goTo() jumps at once, with or without scrollDuration
 test("reduced motion stops continuous autoplay, keeps a rebuild still, and lifting it restarts", async ({
   page,
 }) => {
-  await mount(page, slider("s", 4, { style: "--slides-per-view:3;--slide-gap:10px" }));
+  await mount(page, slider("s", 4, { style: "--aero-slides-per-view:3;--aero-slide-gap:10px" }));
   await create(page, "s", { autoplay: "continuous", autoplaySpeed: 600 });
   expect(await animationCount(page)).toBeGreaterThan(0);
 

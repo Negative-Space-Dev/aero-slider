@@ -125,11 +125,11 @@ el.addEventListener("aero:slideChange", (e) => console.log(e.detail.index));
 type SlideChange = SliderEventMap["slideChange"]; // { index: number }
 ```
 
-## Renamed in 1.0
+## Upgrading from a beta
 
-The old names still work as aliases, so existing options, markup and variables keep working:
+1.0 renamed these, and the old names no longer work. Rename them in your options, markup and CSS:
 
-| Old                  | New                      |
+| Beta                 | 1.0                      |
 | -------------------- | ------------------------ |
 | `alignment: "left"`  | `alignment: "start"`     |
 | `alignment: "right"` | `alignment: "end"`       |
@@ -137,11 +137,10 @@ The old names still work as aliases, so existing options, markup and variables k
 | `--slide-gap`        | `--aero-slide-gap`       |
 | `--slide-aspect`     | `--aero-slide-aspect`    |
 
-Alignment is logical: `"start"` is the right edge in an RTL slider and the top in a vertical one. When both a new and an old variable are set on the same element, the new one wins.
+Three more things to check:
 
-Two things to check when you upgrade:
-
-- **Your own selectors on `data-aero-alignment`.** The library writes `data-aero-alignment="start"` or `"end"` once it initialises, whichever spelling you used. The stylesheet accepts `"left"` and `"right"` in server-rendered markup, but a rule of yours such as `[data-aero-alignment="left"]` stops matching after init. Select both spellings: `:is([data-aero-alignment="start"], [data-aero-alignment="left"])`.
+- **Alignment is logical.** `"start"` is the right edge in an RTL slider and the top in a vertical one.
+- **Your own selectors on `data-aero-alignment`.** The attribute now holds `"start"`, `"center"` or `"end"`, so a rule such as `[data-aero-alignment="left"]` no longer matches.
 - **Nested sliders.** The `--aero-*` variables are inherited, so you can set them on any ancestor of a slider. They stop at the content of a slide: a slider nested inside a slide, or used as a slide itself, does not take the outer slider's settings, so set its variables on the nested slider itself.
 
 ## Contributing

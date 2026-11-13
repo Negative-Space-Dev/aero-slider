@@ -113,11 +113,6 @@ function applyParamsFromUrl(): void {
   setRange("autoplayInterval", 1000, 8000);
   setRange("maxDots", 3, 21);
   setRange("perMove", 1, 4);
-  // Links saved before 1.0 carry the old names.
-  const oldAlign = ({ left: "start", right: "end" } as Record<string, string>)[
-    params.get(PARAM_KEYS.alignment) ?? ""
-  ];
-  if (oldAlign) params.set(PARAM_KEYS.alignment, oldAlign);
   setSelect("alignment", ["start", "center", "end"]);
   setSelect("direction", ["ltr", "rtl", "ttb"]);
   setCheckbox("loop");

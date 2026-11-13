@@ -4,7 +4,7 @@ import { imageRequests } from "./helpers/requests";
 // src before loading: cloning a live image in this order is what used to start the fetch.
 const lazyImages = (set: string, count = 20) =>
   slider("s", count, {
-    style: "--slides-per-view:4",
+    style: "--aero-slides-per-view:4",
     dots: false,
     inner: (i) => `<img src="/img/${set}/${i}.png" loading="lazy" width="150" height="150" alt="">`,
   });
@@ -37,7 +37,7 @@ test("a looping slider far below the fold fetches no images", async ({ page }) =
 test("a looping slider in view fetches nothing farther away than a plain one", async ({ page }) => {
   const requests = await imageRequests(page);
   await mount(page, lazyImages("a", 40));
-  await create(page, "s", { alignment: "left" });
+  await create(page, "s", { alignment: "start" });
   await page.waitForTimeout(500);
   const fetched = new Set(requests());
   const plain = (await imagePlaces(page)).filter((image) => fetched.has(image.path));
@@ -45,7 +45,7 @@ test("a looping slider in view fetches nothing farther away than a plain one", a
 
   const before = requests().length;
   await mount(page, lazyImages("b", 40));
-  await create(page, "s", { alignment: "left", loop: true });
+  await create(page, "s", { alignment: "start", loop: true });
   await page.waitForTimeout(500);
   const places = await imagePlaces(page);
   const far = requests()
@@ -91,11 +91,11 @@ const VIDEO = `<video muted loop playsinline preload="auto" width="150" height="
 for (const [where, markup] of [
   [
     "inside a slide",
-    slider("s", 4, { style: "--slides-per-view:2", dots: false, inner: () => VIDEO }),
+    slider("s", 4, { style: "--aero-slides-per-view:2", dots: false, inner: () => VIDEO }),
   ],
   [
     "that is the slide itself",
-    `<div id="s" class="aero-slider" style="width:600px;--slides-per-view:2"><div class="aero-slider__viewport"><div class="aero-slider__track">${VIDEO.repeat(4)}</div></div></div>`,
+    `<div id="s" class="aero-slider" style="width:600px;--aero-slides-per-view:2"><div class="aero-slider__viewport"><div class="aero-slider__track">${VIDEO.repeat(4)}</div></div></div>`,
   ],
 ] as const) {
   test(`looped clones of a video ${where} load`, async ({ page }) => {
