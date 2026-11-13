@@ -56,12 +56,12 @@ Class names are fixed. Roles and names are yours to write; the slider does not a
 
 CSS variables on the slider or any ancestor, except `--aero-layout-width`, which goes on the slider itself. Change them in media or container queries. Never size slides in JavaScript.
 
-| Variable                 | Default | Meaning                                              |
-| ------------------------ | ------- | ---------------------------------------------------- |
-| `--aero-slides-per-view` | `1`     | Slides in view, 1 or more. `1.5` shows a peek.       |
-| `--aero-slide-gap`       | `0px`   | Space between slides.                                |
-| `--aero-slide-aspect`    | `5 / 3` | Aspect ratio of each slide.                          |
-| `--aero-layout-width`    | `100%`  | Content column width, for a breakout slider.         |
+| Variable                 | Default | Meaning                                        |
+| ------------------------ | ------- | ---------------------------------------------- |
+| `--aero-slides-per-view` | `1`     | Slides in view, 1 or more. `1.5` shows a peek. |
+| `--aero-slide-gap`       | `0px`   | Space between slides.                          |
+| `--aero-slide-aspect`    | `5 / 3` | Aspect ratio of each slide.                    |
+| `--aero-layout-width`    | `100%`  | Content column width, for a breakout slider.   |
 
 ```css
 .products {
