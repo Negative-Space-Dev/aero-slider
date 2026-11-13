@@ -181,3 +181,20 @@ test("a loop with one wider slide rests on, steps to and reports the right slide
     expect(await offsetOf(page, slide)).toBe(0);
   }
 });
+
+// Without snapping the browser does not pull the track off the stale target, so the move ends on
+// another slide's new position: the re-measure must still rest on the slide that was asked for.
+test('a goTo() after a new gap rests on the slide asked for, with snap: "none"', async ({
+  page,
+}) => {
+  await mount(page, mixed(8));
+  await create(page, "s", { alignment: "start", snap: "none" });
+  await settled(page, "s");
+  await page.evaluate(() => {
+    document.getElementById("s")!.style.setProperty("--aero-slide-gap", "200px");
+    window.sliders.s!.goTo(4);
+  });
+  await settled(page, "s");
+  await expect.poll(() => offsetOf(page, 4)).toBe(0);
+  expect(await page.evaluate(() => window.sliders.s!.currentIndex)).toBe(4);
+});

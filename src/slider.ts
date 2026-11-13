@@ -326,12 +326,15 @@ export function createSlider(
   }
 
   let remeasureQueued = false;
+  let remeasureAtRest = false;
   /**
    * Re-measures after a change no observer reports: a new gap between fixed-width slides resizes
    * no element, and only the track's scroll range shows it. Called once the track rests, so it
-   * never moves the track under a scroll.
+   * never moves the track under a scroll. After a user's scroll (`atRest`) the track stays put and
+   * the index follows it; after a goTo() the index stays and the track is put on it.
    */
-  function remeasureUnobserved(): void {
+  function remeasureUnobserved(atRest: boolean): void {
+    remeasureAtRest = atRest;
     if (remeasureQueued) return;
     remeasureQueued = true;
     // The observer delivers after layout, which a settle can precede. Two frames on it has had
@@ -339,7 +342,7 @@ export function createSlider(
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
         remeasureQueued = false;
-        if (!destroyed && extent() !== seenExtent) resized(true);
+        if (!destroyed && extent() !== seenExtent) resized(remeasureAtRest);
       })
     );
   }
@@ -595,7 +598,7 @@ export function createSlider(
     // A resize can settle before the observer re-measures: the re-measure then places the track
     // and the index, which the stale positions here would get wrong.
     const stale = scrolled && extentChanged();
-    if (stale) remeasureUnobserved();
+    if (stale) remeasureUnobserved(!programmaticScroll);
     // A scrollend from an instant scroll issued just before goTo() lands mid-animation; wait for ours.
     if (programmaticScroll && Math.abs(scrollPosition() - scrollTarget) > 1) return;
     const userScroll = !programmaticScroll;
