@@ -1,6 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="7" fill="#08090a" />
-  <rect x="3" y="11" width="5" height="10" rx="1.5" fill="#eceef1" opacity="0.4" />
-  <rect x="11" y="7" width="10" height="18" rx="2.5" fill="#6aa5ff" />
-  <rect x="24" y="11" width="5" height="10" rx="1.5" fill="#eceef1" opacity="0.4" />
+  <style>
+    .side { fill: #08090a; opacity: 0.35; }
+    @media (prefers-color-scheme: dark) { .side { fill: #eceef1; } }
+  </style>
+  <rect class="side" x="1" y="10" width="6" height="12" rx="2" />
+  <rect x="10" y="5" width="12" height="22" rx="3" fill="#6aa5ff" />
+  <rect class="side" x="25" y="10" width="6" height="12" rx="2" />
 </svg>
