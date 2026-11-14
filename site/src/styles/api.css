@@ -37,6 +37,33 @@
   border-bottom: 0;
 }
 
+/* An extension's requirements and files: label-and-value pairs, side by side where there is room. */
+.api-facts {
+  display: grid;
+  gap: 1.75rem 2.5rem;
+  max-width: 48rem;
+}
+@media (min-width: 640px) {
+  .api-facts {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.api-facts dt {
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid var(--line-strong);
+}
+.api-facts dd {
+  padding-top: 0.75rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.api-facts dd.api-facts__files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 /* Code wraps instead of scrolling sideways, so nothing in the section needs a
    horizontal swipe, even a recipe in the narrow events column. */
 #api .code-tabs pre {

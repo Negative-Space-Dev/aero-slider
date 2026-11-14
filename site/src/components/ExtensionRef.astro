@@ -22,13 +22,15 @@ const events = eventEntryGroups(extension).flatMap((group) => group.entries);
   <div class="copy">
     <slot />
   </div>
-  <dl class="api-throws">
-    <dt class="caption">Requires</dt>
-    <dd><span set:html={requires ?? "The core."} /></dd>
-    <dt class="caption">Files</dt>
-    <dd>
-      {files.map((file) => <code>dist/extensions/{file}</code>)}
-    </dd>
+  <dl class="api-facts">
+    <div>
+      <dt class="caption">Requires</dt>
+      <dd set:html={requires ?? "The core."} />
+    </div>
+    <div>
+      <dt class="caption">Files</dt>
+      <dd class="api-facts__files">{files.map((file) => <code>dist/extensions/{file}</code>)}</dd>
+    </div>
   </dl>
   <slot name="reference" />
   <RefList groups={extensionRefGroups(extension)} />
