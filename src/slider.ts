@@ -973,8 +973,12 @@ export function createSlider(
 
     readSlidesPerView();
     clonesBefore = cloneCount();
-    for (let i = 1; i <= clonesBefore; i++) track.prepend(cloneOf(slides[wrap(-i)]!));
-    for (let i = 0; i < clonesBefore; i++) track.append(cloneOf(slides[i % slideCount]!));
+    // One insertion per side: custom elements in clones upgrade as they go in, and a constructor
+    // that measures itself would lay the page out once per insertion.
+    const clones = (from: number) =>
+      Array.from({ length: clonesBefore }, (_, i) => cloneOf(slides[wrap(from + i)]!));
+    track.prepend(...clones(-clonesBefore));
+    track.append(...clones(0));
     // WebKit never starts loading media that arrived from another document with <source> children.
     // The clone can be the media element itself.
     for (const media of track.querySelectorAll<HTMLMediaElement>("video, audio")) {

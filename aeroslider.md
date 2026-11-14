@@ -51,6 +51,7 @@ Class names are fixed. Roles and names are yours to write; the slider does not a
 
 - A slide that is a link, list item or image keeps its own semantics. Do not add `role="group"` to it.
 - Real slides carry `data-aero-slider-index`. Loop clones carry `data-aero-slider-clone`. Select real slides with `.aero-slider__track > [data-aero-slider-index]`, never all track children.
+- Loop clones are cleaned in an inert document, then inserted in one batch per side. Custom elements in clones upgrade on insertion, so a component that measures itself should do it in a `ResizeObserver`, not in its constructor.
 
 ## Layout
 
