@@ -1,5 +1,5 @@
 ---
-import Entry from "../../components/Entry.astro";
+import ExtensionRef from "../../components/ExtensionRef.astro";
 import RefList from "../../components/RefList.astro";
 import type { RefGroup } from "../../data/api";
 
@@ -18,7 +18,8 @@ const groups: RefGroup[] = [
         name: "options.loop",
         type: "boolean",
         default: "true",
-        description: "Whether the strip loops.",
+        description:
+          'Whether the strip loops. Looping needs the <a href="#api-loop">loop extension</a>.',
       },
     ],
   },
@@ -45,22 +46,28 @@ const behaviours = [
 ];
 ---
 
-<Entry tag="Function" title="syncThumbnails(primary, thumbnails, options?)" mono id="api-sync">
-  <div class="copy">
-    <p>
-      Links a thumbnail strip to a main slider: a click on a thumbnail shows that slide, and the
-      strip follows the main slider however it moves. Both are ordinary sliders made with
-      <code>createSlider</code>. The <a href="#ex-gallery">gallery example</a> has a working demo
-      and its code.
-    </p>
-  </div>
+<ExtensionRef
+  extension="thumbnails"
+  title="Thumbnails"
+  id="api-thumbnails"
+  requires='The core, and the <a href="#api-loop">loop extension</a> for a looping strip, which is the default.'
+  files={["thumbnails.min.js"]}
+>
+  <p>
+    Links a thumbnail strip to a main slider: a click on a thumbnail shows that slide, and the
+    strip follows the main slider however it moves. Both are ordinary sliders made with
+    <code>createSlider</code>. The <a href="#ex-gallery">gallery example</a> has a working demo
+    and its code.
+  </p>
 
-  <RefList groups={groups} />
-
-  <div>
-    <h4 class="caption api-behaviours__title">What it does</h4>
-    <ul class="api-behaviours">
-      {behaviours.map((item) => <li set:html={item} />)}
-    </ul>
+  <div slot="reference" class="space-y-5">
+    <h4 class="font-mono text-lg" id="api-sync">syncThumbnails(primary, thumbnails, options?)</h4>
+    <RefList groups={groups} />
+    <div>
+      <h4 class="caption api-behaviours__title">What it does</h4>
+      <ul class="api-behaviours">
+        {behaviours.map((item) => <li set:html={item} />)}
+      </ul>
+    </div>
   </div>
-</Entry>
+</ExtensionRef>

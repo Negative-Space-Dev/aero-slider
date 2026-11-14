@@ -3,13 +3,27 @@ import { bundleSize } from "../lib/bundle-size";
 
 const kb = (value: number) => value.toFixed(1);
 
-// The size bar is drawn to scale: one KB is `unit` drawing units wide.
+// The size bar is drawn to scale: one KB is `unit` drawing units wide. The core's JavaScript and
+// CSS come first, and the extensions' JavaScript and CSS follow on the same bar.
+const { core, full } = bundleSize;
 const barX = 12;
-const unit = Math.min(36, 300 / bundleSize.total);
-const jsWidth = bundleSize.js * unit;
-const cssWidth = bundleSize.css * unit;
-const barEnd = barX + jsWidth + cssWidth;
-const barMid = (barX + barEnd) / 2;
+const unit = Math.min(36, 296 / full.total);
+const segments = [
+  { width: core.js * unit, fill: "url(#fig4-hatch)" },
+  { width: core.css * unit, fill: "url(#fig4-hatch-dense)" },
+  { width: (full.js - core.js) * unit, fill: "url(#fig4-hatch-muted)" },
+  { width: (full.css - core.css) * unit, fill: "url(#fig4-hatch-muted-dense)" },
+].map((segment, i, all) => ({
+  ...segment,
+  x: barX + all.slice(0, i).reduce((sum, { width }) => sum + width, 0),
+}));
+const coreEnd = barX + core.total * unit;
+const barEnd = barX + full.total * unit;
+/** A dimension line from `from` to `to` at height `y`, broken in the middle for a label `gap` wide. */
+const dimension = (from: number, to: number, y: number, gap: number) => {
+  const mid = (from + to) / 2;
+  return `M${from + 0.5} ${y - 6}V${y + 6}M${to - 0.5} ${y - 6}V${y + 6}M${from + 0.5} ${y + 0.5}H${mid - gap / 2}M${mid + gap / 2} ${y + 0.5}H${to - 0.5}`;
+};
 
 // Breakpoints drawing: three viewport widths, each a frame holding 1, 2 and 3 slides.
 const viewports = [
@@ -126,10 +140,11 @@ const inFrame = (x: number) => x >= 86 && x + 56 <= 218;
     </article>
 
     <article class="draft-cell lg:col-span-7">
-      <h3>{kb(bundleSize.total)} KB, zero dependencies or plugins</h3>
+      <h3>{kb(core.total)} KB core, {kb(full.total)} KB full, 0 dependencies</h3>
       <p>
-        {kb(bundleSize.js)} KB of JavaScript and {kb(bundleSize.css)} KB of CSS, gzipped. Nothing else
-        to install.
+        The core is {kb(core.js)} KB of JavaScript and {kb(core.css)} KB of CSS, gzipped. Looping,
+        autoplay, windowed dots and thumbnail sync are <a href="#api-extensions">extensions</a>:
+        ship only the ones you use, or the full file with all of them.
       </p>
       <svg class="draft-fig" viewBox="0 0 320 146" aria-hidden="true">
         <defs>
@@ -139,21 +154,33 @@ const inFrame = (x: number) => x >= 86 && x + 56 <= 218;
           <pattern id="fig4-hatch-dense" width="2.5" height="2.5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
             <path class="dr-faint" d="M0 0V2.5" />
           </pattern>
+          <pattern id="fig4-hatch-muted" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+            <path class="dr-faint" d="M0 0V5" />
+          </pattern>
+          <pattern id="fig4-hatch-muted-dense" width="2.5" height="2.5" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+            <path class="dr-faint" d="M0 0V2.5" />
+          </pattern>
         </defs>
-        <text x={barX} y="40">js {kb(bundleSize.js)} KB</text>
-        <text x={barEnd} y="40" text-anchor="end">css {kb(bundleSize.css)} KB</text>
-        <path class="dr-strong" d={`M${barX + 0.5} 44V50M${barEnd - 0.5} 44V50`} />
-        <rect x={barX + 0.5} y="52.5" width={jsWidth} height="22" fill="url(#fig4-hatch)" />
-        <rect x={barX + jsWidth + 0.5} y="52.5" width={cssWidth - 1} height="22" fill="url(#fig4-hatch-dense)" />
-        <rect class="dr-faint" x={barX + 0.5} y="52.5" width={jsWidth + cssWidth - 1} height="22" rx="1" />
-        <path class="dr-faint" d={`M${barX + jsWidth + 0.5} 52.5V74.5`} />
-        <path class="dr-accent" d={`M${barX + 0.5} 82V94M${barEnd - 0.5} 82V94M${barX + 0.5} 88.5H${barMid - 40}M${barMid + 40} 88.5H${barEnd - 0.5}`} />
-        <text x={barMid} y="92" text-anchor="middle" class="dr-accent-text">
-          {kb(bundleSize.total)} KB gzip
+        <text x={barX} y="22">core js + css</text>
+        <text x={barEnd} y="22" text-anchor="end">extensions</text>
+        <path class="dr-strong" d={`M${barX + 0.5} 28V34M${barEnd - 0.5} 28V34`} />
+        {segments.map((segment) => (
+          <rect x={segment.x + 0.5} y="36.5" width={Math.max(0, segment.width - 1)} height="22" fill={segment.fill} />
+        ))}
+        <rect class="dr-faint" x={barX + 0.5} y="36.5" width={coreEnd - barX - 1} height="22" rx="1" />
+        <rect class="dr-faint dr-dashed-fine" x={coreEnd + 0.5} y="36.5" width={barEnd - coreEnd - 1} height="22" rx="1" />
+        <path class="dr-faint" d={`M${segments[1]!.x + 0.5} 36.5V58.5M${segments[3]!.x + 0.5} 36.5V58.5`} />
+        <path class="dr-strong" d={dimension(barX, coreEnd, 74, 76)} />
+        <text x={(barX + coreEnd) / 2} y="77.5" text-anchor="middle" class="dr-value">
+          {kb(core.total)} KB core
+        </text>
+        <path class="dr-accent" d={dimension(barX, barEnd, 98, 76)} />
+        <text x={(barX + barEnd) / 2} y="101.5" text-anchor="middle" class="dr-accent-text">
+          {kb(full.total)} KB full
         </text>
         <path class="dr-strong" d={`M${barX + 0.5} 120V128M${barX + unit + 0.5} 120V128M${barX + 0.5} 124.5H${barX + unit + 0.5}`} />
         <text x={barX + unit + 8} y="128">1 KB</text>
-        <text x={barEnd} y="128" text-anchor="end" class="dr-value">0 dependencies, 0 plugins</text>
+        <text x={barEnd} y="128" text-anchor="end" class="dr-value">0 dependencies</text>
       </svg>
     </article>
   </div>

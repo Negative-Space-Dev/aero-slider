@@ -12,7 +12,7 @@ const kb = (value: number) => value.toFixed(1);
   <div class="mb-6 flex flex-wrap items-center justify-center gap-3">
     <span class="caption inline-flex items-center gap-2 rounded-full border border-line bg-surface text-subtle px-3 py-1.5">
       <BoxIcon class="size-3.5 text-accent" />
-      {kb(bundleSize.total)} KB gzipped
+      {kb(bundleSize.core.total)} KB core · {kb(bundleSize.full.total)} KB full · 0 dependencies
     </span>
   </div>
 

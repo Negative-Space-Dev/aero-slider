@@ -1,0 +1,103 @@
+---
+import CodeTabs from "../../components/CodeTabs.astro";
+import DocTable from "../../components/DocTable.astro";
+import Entry from "../../components/Entry.astro";
+import { bundleSize, extensionSize } from "../../lib/bundle-size";
+import type { CodeTab } from "../../lib/code";
+
+const CDN = "https://unpkg.com/aero-slider/dist";
+const kb = (value: number) => `${value.toFixed(1)} KB`;
+
+const rows = [
+  ["loop", "<code>loop</code>", "core", "loop.min.js, loop.min.css", kb(extensionSize("loop"))],
+  [
+    "autoplay",
+    "<code>autoplay</code>, interval and continuous",
+    "<strong>core + loop</strong>",
+    "autoplay.min.js",
+    kb(extensionSize("autoplay")),
+  ],
+  ["maxDots", "<code>maxDots</code>", "core", "dots.min.js, dots.min.css", kb(extensionSize("dots"))],
+  [
+    "thumbnails",
+    "<code>syncThumbnails()</code>",
+    "core, and loop for a looping strip",
+    "thumbnails.min.js",
+    kb(extensionSize("thumbnails")),
+  ],
+].map(([name, serves, requires, files, size]) => [
+  `<a href="#api-${name === "maxDots" ? "max-dots" : name}">${name}</a>`,
+  serves!,
+  requires!,
+  files!,
+  size!,
+]);
+
+const load: CodeTab[] = [
+  {
+    label: "Package",
+    lang: "javascript",
+    code: `import { createSlider, use, loop, autoplay } from "aero-slider";
+import "aero-slider/slider.css";
+
+// Once, before creating sliders. Extensions you never import
+// are left out of your bundle.
+use({ loop, autoplay });
+
+createSlider(el, { autoplay: true });`,
+  },
+  {
+    label: "CDN",
+    lang: "html",
+    code: `<link rel="stylesheet" href="${CDN}/aero-slider.core.min.css" />
+<link rel="stylesheet" href="${CDN}/extensions/loop.min.css" />
+<script type="module" src="${CDN}/aero-slider.core.min.js"></script>
+<script type="module" src="${CDN}/extensions/loop.min.js"></script>
+<script type="module" src="${CDN}/extensions/autoplay.min.js"></script>`,
+  },
+  {
+    label: "One file",
+    lang: "bash",
+    code: `# Core first, then each extension, in the order the table lists them.
+cat aero-slider.core.min.js extensions/loop.min.js extensions/autoplay.min.js > slider.js
+cat aero-slider.core.min.css extensions/loop.min.css > slider.css`,
+  },
+];
+---
+
+<Entry tag="Extensions" title="Core and extensions" id="api-extensions">
+  <div class="api-split">
+    <div class="copy">
+      <p>
+        The core, {kb(bundleSize.core.total)} gzipped, has slides, arrows, dots, the keyboard, drag,
+        snapping and every event. Looping, autoplay, windowed dots and thumbnail sync are
+        extensions. The full file, {kb(bundleSize.full.total)}, has all of them, ready to use.
+      </p>
+      <p>
+        Options keep working as they are: an extension makes its option do something. An option
+        whose extension isn't loaded does nothing, and the console says which extension it needs.
+      </p>
+      <p>
+        <strong>Autoplay requires the loop extension.</strong> Both kinds of autoplay always loop:
+        setting <code>autoplay</code> turns looping on, whatever <code>loop</code> is set to.
+      </p>
+      <p>
+        Without a bundler, load the core file and then each extension file after it, or join them
+        into one file in that order.
+      </p>
+    </div>
+    <CodeTabs tabs={load} group="extensions-load" />
+  </div>
+
+  <DocTable
+    columns={[
+      { label: "Extension", mono: true, nowrap: true },
+      { label: "Adds" },
+      { label: "Requires" },
+      { label: "Files in dist/extensions", mono: "soft" },
+      { label: "Gzipped", nowrap: true },
+    ]}
+    rows={rows}
+    minWidth={640}
+  />
+</Entry>

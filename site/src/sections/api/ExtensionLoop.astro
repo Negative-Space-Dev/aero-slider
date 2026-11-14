@@ -1,0 +1,15 @@
+---
+import ExtensionRef from "../../components/ExtensionRef.astro";
+---
+
+<ExtensionRef extension="loop" title="Loop" id="api-loop" files={["loop.min.js", "loop.min.css"]}>
+  <p>
+    Wraps from the last slide back to the first. Copies of the slides sit on both sides of the
+    track, so scrolling never hits an end, and the slider moves back onto the real slides once the
+    track comes to rest. The copies are hidden from screen readers, the tab order and forms.
+  </p>
+  <p>
+    Copies of custom elements upgrade when they are inserted. A component that measures itself
+    should do it in a <code>ResizeObserver</code>, not in its constructor.
+  </p>
+</ExtensionRef>

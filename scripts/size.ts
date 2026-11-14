@@ -1,4 +1,4 @@
-const JS_BUDGET = 9_000;
+const JS_BUDGET = 9_250; // the full file: core and every extension
 const CSS_BUDGET = 1_500;
 
 const report = (path: string, bytes: Uint8Array<ArrayBuffer>, note: string) =>
@@ -13,6 +13,14 @@ for (const [path, budget] of [
   const gzipped = Bun.gzipSync(bytes).length;
   report(path, bytes, `(budget ${budget})  ${gzipped > budget ? "OVER BUDGET" : "ok"}`);
   over ||= gzipped > budget;
+}
+
+for (const path of [
+  "dist/aero-slider.core.min.js",
+  "dist/aero-slider.core.min.css",
+  ...[...new Bun.Glob("dist/extensions/*.min.{js,css}").scanSync()].sort(),
+]) {
+  report(path, await Bun.file(path).bytes(), "");
 }
 
 const minified = await Bun.build({ entrypoints: ["dist/index.js"], minify: true });

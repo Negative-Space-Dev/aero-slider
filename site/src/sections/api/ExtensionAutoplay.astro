@@ -1,0 +1,23 @@
+---
+import ExtensionRef from "../../components/ExtensionRef.astro";
+---
+
+<ExtensionRef
+  extension="autoplay"
+  title="Autoplay"
+  id="api-autoplay"
+  requires='<strong>The core and the <a href="#api-loop">loop extension</a>.</strong> Load loop first.'
+  files={["autoplay.min.js"]}
+>
+  <p>
+    Moves the slider on its own: one move every interval, or a continuous drift like a ticker.
+    Both kinds always loop, so setting <code>autoplay</code> turns looping on and this extension
+    needs the loop extension too. Without it, autoplay stops at the last slide and the console says
+    so.
+  </p>
+  <p>
+    Autoplay pauses while the slider is pressed, dragged or has keyboard focus, while the tab is
+    hidden, and on <code>pause()</code>. Interval autoplay also pauses on hover. Neither kind runs
+    under reduced motion.
+  </p>
+</ExtensionRef>

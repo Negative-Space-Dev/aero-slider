@@ -2,8 +2,14 @@ import type { SliderConfig, SliderEvent, SliderInstance } from "aero-slider";
 import type { CodeTab } from "../lib/code";
 import type { ExampleId } from "./anchors";
 
+/** The extensions, each documented in its own section. */
+export const extensionKeys = ["loop", "autoplay", "maxDots", "thumbnails"] as const;
+export type ExtensionKey = (typeof extensionKeys)[number];
+
 /** One documented identifier, as a reference row renders it. */
 export interface RefEntry {
+  /** Listed under this extension rather than in the core reference. */
+  extension?: ExtensionKey;
   /** The identifier as shown, e.g. `loop`, `.goTo(index, options?)` or `aero:slideChange`. */
   name: string;
   type?: string;
@@ -45,11 +51,12 @@ export const eventGroups = [
 // build until it is documented here.
 export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[number]>> = {
   loop: {
+    extension: "loop",
     group: "Layout",
     type: "boolean",
     default: "false",
     description:
-      "Wraps from the last slide back to the first. Clones of the slides sit on both sides of the track, so scrolling never hits an end. Needs the <code>loop</code> extension.",
+      "Wraps from the last slide back to the first. Clones of the slides sit on both sides of the track, so scrolling never hits an end.",
   },
   alignment: {
     group: "Layout",
@@ -76,14 +83,16 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     example: "ex-product-row",
   },
   autoplay: {
+    extension: "autoplay",
     group: "Autoplay",
     type: 'boolean | "continuous"',
     default: "false",
     description:
-      '<strong>Requires the <code>loop</code> extension</strong> as well as the <code>autoplay</code> extension: autoplay always loops, so setting it turns looping on. <code>true</code> advances one move every <code>autoplayInterval</code>. <code>"continuous"</code> drifts the track like a ticker at <code>autoplaySpeed</code>, and implies <code>snap: "none"</code>. Neither runs under reduced motion.',
+      'Always loops: setting it turns looping on, whatever <code>loop</code> is set to. <code>true</code> advances one move every <code>autoplayInterval</code>. <code>"continuous"</code> drifts the track like a ticker at <code>autoplaySpeed</code>, and implies <code>snap: "none"</code>. Neither runs under reduced motion.',
     example: "ex-autoplay",
   },
   autoplayInterval: {
+    extension: "autoplay",
     group: "Autoplay",
     type: "number",
     default: "5000",
@@ -92,6 +101,7 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     example: "ex-autoplay",
   },
   autoplaySpeed: {
+    extension: "autoplay",
     group: "Autoplay",
     type: "number",
     default: "40",
@@ -135,11 +145,12 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
       "Maps progress from 0 to 1 onto eased progress for <code>scrollDuration</code> scrolls. <code>(t) =&gt; t</code> is linear.",
   },
   maxDots: {
+    extension: "maxDots",
     group: "Pagination",
     type: "number",
     default: "0",
     description:
-      "Shows at most this many pagination dots and slides the window along, iOS style. <code>0</code> shows them all. Needs the <code>maxDots</code> extension.",
+      "Shows at most this many pagination dots and slides the window along, iOS style. <code>0</code> shows them all.",
     example: "ex-max-dots",
   },
 };
@@ -164,12 +175,14 @@ export const instanceMembers: Record<keyof SliderInstance, Doc<InstanceGroup>> =
       "Scrolls to slide <code>index</code>. Out-of-range indexes wrap on a loop and clamp otherwise. <code>{ instant: true }</code> jumps there with no animation. It reads no layout, so it is cheap to call from an <code>aero:slideChange</code> handler, as a synced thumbnail strip does. Move the track with it rather than by scrolling the track yourself: the slider keeps its own record of the scroll offset.",
   },
   pause: {
+    extension: "autoplay",
     group: "Autoplay",
     name: ".pause()",
     description:
       "Holds autoplay until <code>resume()</code>. Hover, focus and drag pauses still apply on top.",
   },
   resume: {
+    extension: "autoplay",
     group: "Autoplay",
     name: ".resume()",
     description: "Releases <code>pause()</code> and starts a fresh autoplay countdown.",
@@ -215,6 +228,7 @@ type EventGroup = (typeof eventGroups)[number];
 
 /** An event's reference row: when it fires, what it is for, and a working recipe. */
 export interface EventDoc {
+  extension?: ExtensionKey;
   group: EventGroup;
   /** The type of `event.detail`. */
   type: string;
@@ -301,6 +315,7 @@ el.addEventListener("aero:dragStart", () => hint.remove(), { once: true });`),
 });`),
   },
   autoplayStart: {
+    extension: "autoplay",
     group: "Autoplay",
     type: "{}",
     description:
@@ -328,6 +343,7 @@ el.addEventListener("aero:autoplayStop", () => {
 createSlider(el, { autoplay: true, autoplayInterval: interval, loop: true });`),
   },
   autoplayStop: {
+    extension: "autoplay",
     group: "Autoplay",
     type: "{}",
     description:
@@ -405,14 +421,16 @@ export interface EventEntry extends EventDoc {
   key: SliderEvent;
 }
 
-export const eventEntryGroups: { title: EventGroup; entries: EventEntry[] }[] = eventGroups.map(
-  (title) => ({
-    title,
-    entries: (Object.entries(events) as [SliderEvent, EventDoc][])
-      .filter(([, doc]) => doc.group === title)
-      .map(([key, doc]) => ({ key, ...doc })),
-  })
-);
+/** The events in group order: the core's, or one extension's. */
+export const eventEntryGroups = (extension?: ExtensionKey) =>
+  eventGroups
+    .map((title) => ({
+      title,
+      entries: (Object.entries(events) as [SliderEvent, EventDoc][])
+        .filter(([, doc]) => doc.group === title && doc.extension === extension)
+        .map(([key, doc]) => ({ key, ...doc })),
+    }))
+    .filter((group) => group.entries.length);
 
 export const cssVariables: RefEntry[] = [
   {
@@ -439,6 +457,7 @@ export const cssVariables: RefEntry[] = [
 
 export const attributes: RefEntry[] = [
   {
+    extension: "loop",
     name: "data-aero-defer-visibility",
     description:
       "Reserves the space that loop clones will take before the slider starts, so a looping slider doesn't shift when JavaScript runs. Removed once it starts.",
@@ -492,11 +511,13 @@ export const controlStates: RefEntry[] = [
       "Set on <code>aero-slider__nav--prev</code> or <code>--next</code> when it cannot go further. Never with <code>loop</code>",
   },
   {
+    extension: "maxDots",
     name: "aero-slider__dot--edge",
     description:
       "With <code>maxDots</code>: the outermost dot of the window when more dots lie beyond it. <code>aero-slider__dot--near-edge</code> marks the next one in, and <code>aero-slider__dot--hidden</code> the dots outside the window",
   },
   {
+    extension: "thumbnails",
     name: "aero-slider__thumb--active",
     description: "Set by <code>syncThumbnails</code> on the thumbnail of the current slide",
   },
@@ -506,16 +527,42 @@ export const controlStates: RefEntry[] = [
 export function toRefGroups<G extends string, K extends string>(
   registry: Record<K, Doc<G>>,
   order: readonly G[],
-  display: (key: K) => string = (key) => key
+  display: (key: K) => string = (key) => key,
+  extension?: ExtensionKey
 ): RefGroup[] {
   const docs = Object.entries(registry) as [K, Doc<G>][];
-  return order.map((title) => ({
-    title,
-    entries: docs
-      .filter(([, doc]) => doc.group === title)
-      .map(([key, { group: _, name, ...rest }]) => ({ ...rest, name: name ?? display(key) })),
-  }));
+  return order
+    .map((title) => ({
+      title,
+      entries: docs
+        .filter(([, doc]) => doc.group === title && doc.extension === extension)
+        .map(([key, { group: _, name, ...rest }]) => ({ ...rest, name: name ?? display(key) })),
+    }))
+    .filter((group) => group.entries.length);
 }
 
 export const optionRefGroups = toRefGroups(options, optionGroups);
 export const instanceRefGroups = toRefGroups(instanceMembers, instanceGroups);
+
+/** Entries of a flat list that belong to the core, or to one extension. */
+export const forExtension = (entries: RefEntry[], extension?: ExtensionKey) =>
+  entries.filter((entry) => entry.extension === extension);
+
+/** One extension's mini reference: its options, methods, attributes and classes. */
+export function extensionRefGroups(extension: ExtensionKey): RefGroup[] {
+  const groups: RefGroup[] = [
+    {
+      title: "Options",
+      entries: toRefGroups(options, optionGroups, undefined, extension).flatMap((g) => g.entries),
+    },
+    {
+      title: "Methods",
+      entries: toRefGroups(instanceMembers, instanceGroups, undefined, extension).flatMap(
+        (g) => g.entries
+      ),
+    },
+    { title: "HTML attributes", entries: forExtension(attributes, extension) },
+    { title: "Classes", entries: forExtension(controlStates, extension) },
+  ];
+  return groups.filter((group) => group.entries.length);
+}

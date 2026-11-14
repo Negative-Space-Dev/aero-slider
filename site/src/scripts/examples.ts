@@ -1,8 +1,11 @@
-import { createSlider, syncThumbnails } from "aero-slider";
+import { autoplay, createSlider, loop, maxDots, syncThumbnails, use } from "aero-slider";
 import type { SliderConfig, SliderInstance } from "aero-slider";
 import { examples, type DemoSlider } from "../data/examples";
 import { getRequiredElementById } from "../lib/dom";
 import { nameSlides } from "../lib/slide";
+
+// The demos use every extension.
+use({ loop, autoplay, maxDots });
 
 // Each wire function below runs the steps its example prints in the JS tab.
 

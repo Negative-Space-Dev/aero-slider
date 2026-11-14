@@ -5,6 +5,10 @@ import Events from "./api/Events.astro";
 import Methods from "./api/Methods.astro";
 import Options from "./api/Options.astro";
 import States from "./api/States.astro";
+import ExtensionAutoplay from "./api/ExtensionAutoplay.astro";
+import ExtensionLoop from "./api/ExtensionLoop.astro";
+import ExtensionMaxDots from "./api/ExtensionMaxDots.astro";
+import Extensions from "./api/Extensions.astro";
 import Sync from "./api/Sync.astro";
 import "../styles/api.css";
 ---
@@ -14,11 +18,15 @@ import "../styles/api.css";
 
   <div class="space-y-16 sm:space-y-20">
     <Create />
-    <Sync />
     <Options />
     <Css />
     <States />
     <Methods />
     <Events />
+    <Extensions />
+    <ExtensionLoop />
+    <ExtensionAutoplay />
+    <ExtensionMaxDots />
+    <Sync />
   </div>
 </section>

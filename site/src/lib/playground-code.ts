@@ -1,4 +1,5 @@
 import type { SliderAlignment } from "aero-slider";
+import { extensionsFor, importLines } from "./code";
 
 export type PlaygroundDirection = "ltr" | "rtl" | "ttb";
 
@@ -131,10 +132,12 @@ function sliderOptions(s: PlaygroundSettings): [string, string][] {
 }
 
 function js(s: PlaygroundSettings): string {
-  const imports = s.thumbnails ? "createSlider, syncThumbnails" : "createSlider";
+  const extensions = extensionsFor(
+    [{ loop: s.loop, autoplay: s.autoplay, maxDots: s.pagination ? s.maxDots : 0 }],
+    s.thumbnails && s.loop
+  );
   const lines = [
-    `import { ${imports} } from "aero-slider";`,
-    ``,
+    ...importLines(s.thumbnails ? ["syncThumbnails"] : [], extensions),
     `const slider = createSlider(document.getElementById("slider")${objectLiteral(sliderOptions(s))});`,
   ];
   if (s.thumbnails) {

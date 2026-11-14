@@ -4,7 +4,7 @@
 // bundles this module too.
 
 import type { SliderConfig } from "aero-slider";
-import type { CodeTab } from "../lib/code";
+import { extensionsFor, importLines, type CodeTab } from "../lib/code";
 import { slideRole, thumbRole, type SlideContent } from "../lib/slide";
 import { exampleIds, type ExampleId } from "./anchors";
 
@@ -562,7 +562,7 @@ sync();`,
       'Make each thumbnail a <code>&lt;button type="button"&gt;</code> with its own <code>aria-label</code>, so it can be reached and named.',
       'The active thumbnail gets <code>aero-slider__thumb--active</code> and <code>aria-current="true"</code>. Style it yourself.',
       "It returns a teardown function. Call it before <code>destroy()</code>.",
-      'Reference: <a href="#api-sync"><code>syncThumbnails</code> in the API</a>.',
+      'Reference: <a href="#api-thumbnails">the thumbnails extension</a> in the API.',
     ],
   },
 
@@ -848,10 +848,15 @@ export function configSource(config: SliderConfig = {}): string {
 }
 
 function js(example: Example): string {
-  const imports = ["createSlider", ...(example.js?.imports ?? [])].join(", ");
+  const imports = example.js?.imports ?? [];
+  const syncsLoopedStrip =
+    imports.includes("syncThumbnails") && !example.js?.after?.includes("loop: false");
+  const extensions = extensionsFor(
+    example.sliders.map((slider) => slider.config ?? {}),
+    syncsLoopedStrip
+  );
   const lines = [
-    `import { ${imports} } from "aero-slider";`,
-    ``,
+    ...importLines(imports, extensions),
     ...(example.js?.body
       ? [example.js.body]
       : example.sliders.map(

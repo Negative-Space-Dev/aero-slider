@@ -1,0 +1,36 @@
+---
+import ApiEventList from "./ApiEventList.astro";
+import Entry from "./Entry.astro";
+import RefList from "./RefList.astro";
+import { eventEntryGroups, extensionRefGroups, type ExtensionKey } from "../data/api";
+
+interface Props {
+  extension: ExtensionKey;
+  title: string;
+  id: string;
+  /** What it needs besides the core, as HTML. */
+  requires?: string;
+  /** Its files in `dist/extensions/`. */
+  files: string[];
+}
+
+const { extension, title, id, requires, files } = Astro.props;
+const events = eventEntryGroups(extension).flatMap((group) => group.entries);
+---
+
+<Entry tag="Extension" title={title} id={id}>
+  <div class="copy">
+    <slot />
+  </div>
+  <dl class="api-throws">
+    <dt class="caption">Requires</dt>
+    <dd><span set:html={requires ?? "The core."} /></dd>
+    <dt class="caption">Files</dt>
+    <dd>
+      {files.map((file) => <code>dist/extensions/{file}</code>)}
+    </dd>
+  </dl>
+  <slot name="reference" />
+  <RefList groups={extensionRefGroups(extension)} />
+  {events.length > 0 && <ApiEventList groups={[{ title: "Events", entries: events }]} />}
+</Entry>

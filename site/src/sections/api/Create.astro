@@ -7,8 +7,9 @@ const usage: CodeTab[] = [
   {
     label: "JavaScript",
     lang: "javascript",
-    code: `import { createSlider } from "aero-slider";
+    code: `import { createSlider, use, loop } from "aero-slider";
 
+use({ loop }); // the loop option needs the loop extension
 const el = document.querySelector(".aero-slider");
 const slider = createSlider(el, { loop: true });
 
@@ -31,7 +32,8 @@ const errors = [
         <code>element.aeroSlider</code>, so other code can reach it from the DOM.
       </p>
       <p>
-        Arrows and dots are not options. Put them in the markup and the slider wires them up; see
+        Looping, autoplay, windowed dots and thumbnail sync are
+        <a href="#api-extensions">extensions</a>. Arrows and dots are not options. Put them in the markup and the slider wires them up; see
         <a href="#ex-styling">arrows and dots</a>.
       </p>
     </div>
