@@ -478,7 +478,7 @@ sync();`,
       },
     ],
     notes: [
-      '<code>autoplay: "continuous"</code> drifts the track at <code>autoplaySpeed</code> pixels per second. It implies <code>loop</code> and <code>snap: "none"</code>.',
+      '<code>autoplay: "continuous"</code> drifts the track at <code>autoplaySpeed</code> pixels per second. Like all autoplay it loops, so it needs the <code>loop</code> extension, and it implies <code>snap: "none"</code>.',
       "The drift runs as animations on the slides with no per-frame JavaScript, so a busy main thread does not stall it.",
       "It keeps drifting under the pointer. It holds while the slider is pressed or keyboard focus is inside, and <code>pause()</code> / <code>resume()</code> apply on top.",
       "Wheel and trackpad scrolling add to the drift.",

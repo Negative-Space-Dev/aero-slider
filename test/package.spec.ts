@@ -42,7 +42,11 @@ test("a CDN URL with no file path resolves to the file that sets the global", ()
   expect(conditions.indexOf("unpkg")).toBeLessThan(conditions.indexOf("import"));
 });
 
-test("the bundler entry exports both functions and sets no global", async ({ page }) => {
+const EXPORTS = ["autoplay", "createSlider", "loop", "maxDots", "syncThumbnails", "use"];
+
+test("the bundler entry exports the core and every extension and sets no global", async ({
+  page,
+}) => {
   await blankPage(page);
   expect(
     await page.evaluate(async () => {
@@ -52,7 +56,7 @@ test("the bundler entry exports both functions and sets no global", async ({ pag
         global: "AeroSlider" in window,
       };
     })
-  ).toEqual({ exports: ["createSlider", "syncThumbnails"], global: false });
+  ).toEqual({ exports: EXPORTS, global: false });
 });
 
 test("importing the bundler entry in Node defines no global", () => {
@@ -64,7 +68,7 @@ test("importing the bundler entry in Node defines no global", () => {
     console.log(JSON.stringify({ exports: Object.keys(entry).sort(), added }));
   `;
   const output = execFileSync("node", ["--input-type=module", "-e", script], { encoding: "utf8" });
-  expect(JSON.parse(output)).toEqual({ exports: ["createSlider", "syncThumbnails"], added: [] });
+  expect(JSON.parse(output)).toEqual({ exports: EXPORTS, added: [] });
 });
 
 test("a bundle that imports only createSlider drops the thumbnail sync code", () => {

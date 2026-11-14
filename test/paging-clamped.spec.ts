@@ -111,21 +111,6 @@ test("one slide per view keeps a stop per slide", async ({ page }) => {
   await expect(page.locator("#s .aero-slider__nav--next")).toBeDisabled();
 });
 
-test("interval autoplay wraps after the last stop", async ({ page }) => {
-  await mount(page, slider("s", 6, threeUp));
-  await recordEvents(page, "s");
-  await create(page, "s", { autoplay: true, autoplayInterval: 100 });
-  const changes = async () =>
-    (await page.evaluate(() => window.events.s!)).filter((e) => e.startsWith("slideChange"));
-  await expect.poll(async () => (await changes()).length).toBeGreaterThanOrEqual(4);
-  expect((await changes()).slice(0, 4)).toEqual([
-    "slideChange:2",
-    "slideChange:3",
-    "slideChange:4",
-    "slideChange:0",
-  ]);
-});
-
 test("windowed dots slide in stop positions", async ({ page }) => {
   await mount(page, slider("s", 12, { style: "--aero-slides-per-view:3" }));
   await create(page, "s", { maxDots: 5 });

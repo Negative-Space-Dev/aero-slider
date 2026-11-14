@@ -156,9 +156,15 @@ export function use(added: Partial<Extensions>): void {
 
 /** An option set without the extension that serves it does nothing; say so. */
 function warnMissing(config: Config): void {
-  for (const option of ["loop", "autoplay", "maxDots"] as const) {
-    if (config[option] && !extensions[option])
-      console.warn(`aero-slider: ${option} needs the ${option} extension`);
+  // Autoplay always loops, so it needs the loop extension as well as its own.
+  for (const [option, extension] of [
+    ["loop", "loop"],
+    ["autoplay", "autoplay"],
+    ["autoplay", "loop"],
+    ["maxDots", "maxDots"],
+  ] as const) {
+    if (config[option] && !extensions[extension])
+      console.warn(`aero-slider: ${option} needs the ${extension} extension`);
   }
 }
 
@@ -233,10 +239,14 @@ export function createSlider(
     return Math.max(0, pagesByStart ? slideCount - slidesPerView : slideCount - 1);
   }
   const continuous = () => config.autoplay === "continuous";
-  // Continuous autoplay loops by nature and moves the track by hand, so snapping stays off. Any
-  // other loop needs slides to overflow the view, or its clones would sit beside the real ones.
+  // Autoplay always loops. Continuous autoplay loops by nature and moves the track by hand, so
+  // snapping stays off. Any other loop needs slides to overflow the view, or its clones would sit
+  // beside the real ones.
   const loop = () =>
-    !!looper && (continuous() ? slideCount > 1 : config.loop && slideCount > slidesPerView);
+    !!looper &&
+    (continuous()
+      ? slideCount > 1
+      : (config.loop || !!config.autoplay) && slideCount > slidesPerView);
   const snapMode = () => (continuous() ? "none" : config.snap);
   const cloneCount = () => (loop() ? looper!.count() : 0);
 

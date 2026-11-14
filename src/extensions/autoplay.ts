@@ -1,6 +1,8 @@
 import type { SliderCore } from "../slider.ts";
 
 // ── Autoplay ───────────────────────────────────────────────────────────
+// Both kinds of autoplay loop, so this extension needs the loop extension too: setting autoplay
+// turns looping on.
 // Interval autoplay advances one move per autoplayInterval, restarting its countdown whenever the
 // slide changes. Continuous autoplay drifts every slide with one shared compositor animation, so
 // main-thread work never stalls it; each lap travels exactly one set of slides and the clones on
@@ -46,10 +48,8 @@ export function autoplay(core: SliderCore) {
 
   function advance(): void {
     if (core.easing()) return; // scrollDuration outlasts the interval: let the move land first
-    const atEnd = !core.loop() && core.stop() >= core.stopCount() - 1;
     core.quiet = true; // the status line names only the moves a user makes
-    if (atEnd) core.goTo(0);
-    else core.next();
+    core.next();
     core.quiet = false;
   }
 

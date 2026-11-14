@@ -11,11 +11,9 @@ await Bun.$`rm -rf dist`;
 const direct = [
   ["src/global.ts", "aero-slider.min.js", "esm"],
   ["src/direct/core.ts", "aero-slider.core.min.js", "esm"],
-  ...["loop", "autoplay", "dots", "thumbnails"].map((name) => [
-    `src/direct/${name}.ts`,
-    `extensions/${name}.min.js`,
-    "iife",
-  ]),
+  ...["loop", "autoplay", "dots", "thumbnails"].map(
+    (name) => [`src/direct/${name}.ts`, `extensions/${name}.min.js`, "iife"] as const
+  ),
 ] as const;
 const styles = [
   ["src/full.css", "aero-slider.min.css"],

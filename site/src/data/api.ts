@@ -49,7 +49,7 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     type: "boolean",
     default: "false",
     description:
-      "Wraps from the last slide back to the first. Clones of the slides sit on both sides of the track, so scrolling never hits an end.",
+      "Wraps from the last slide back to the first. Clones of the slides sit on both sides of the track, so scrolling never hits an end. Needs the <code>loop</code> extension.",
   },
   alignment: {
     group: "Layout",
@@ -80,7 +80,7 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     type: 'boolean | "continuous"',
     default: "false",
     description:
-      '<code>true</code> advances one move every <code>autoplayInterval</code>. <code>"continuous"</code> drifts the track like a ticker at <code>autoplaySpeed</code>, and implies <code>loop</code> and <code>snap: "none"</code>. Neither runs under reduced motion.',
+      '<strong>Requires the <code>loop</code> extension</strong> as well as the <code>autoplay</code> extension: autoplay always loops, so setting it turns looping on. <code>true</code> advances one move every <code>autoplayInterval</code>. <code>"continuous"</code> drifts the track like a ticker at <code>autoplaySpeed</code>, and implies <code>snap: "none"</code>. Neither runs under reduced motion.',
     example: "ex-autoplay",
   },
   autoplayInterval: {
@@ -139,7 +139,7 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     type: "number",
     default: "0",
     description:
-      "Shows at most this many pagination dots and slides the window along, iOS style. <code>0</code> shows them all.",
+      "Shows at most this many pagination dots and slides the window along, iOS style. <code>0</code> shows them all. Needs the <code>maxDots</code> extension.",
     example: "ex-max-dots",
   },
 };

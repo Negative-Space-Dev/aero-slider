@@ -30,9 +30,17 @@ npm install aero-slider
 Then import the package and styles:
 
 ```js
-import { createSlider } from "aero-slider";
+import { createSlider, use, loop, autoplay } from "aero-slider";
 import "aero-slider/slider.css";
+
+use({ loop, autoplay }); // only the extensions you use end up in your bundle
 ```
+
+### Extensions
+
+The core covers slides, arrows, dots, keyboard, drag and snapping. Looping, autoplay, windowed dots (`maxDots`) and thumbnail sync are extensions. Each one has its own file in `dist/extensions/`, so you can load only what you use, or concatenate the core and your extensions into one file.
+
+**Autoplay requires the loop extension.** Autoplay, interval or continuous, always loops: setting `autoplay` turns looping on.
 
 ### Global script (no bundler)
 

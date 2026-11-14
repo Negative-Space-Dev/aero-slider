@@ -66,6 +66,35 @@ test("interval autoplay advances one slide per interval and wraps", async ({ pag
   ]);
 });
 
+test("autoplay loops without loop: true", async ({ page }) => {
+  await mount(page, slider("s", 6, { style: "--aero-slides-per-view:3" }));
+  const changes = await recordEvents(page, "s", ["slideChange"]);
+  await create(page, "s", { autoplay: true, autoplayInterval: 100 });
+  await expect.poll(async () => (await changes()).length).toBeGreaterThanOrEqual(6);
+  expect((await changes()).slice(0, 6)).toEqual([
+    "slideChange1",
+    "slideChange2",
+    "slideChange3",
+    "slideChange4",
+    "slideChange5",
+    "slideChange0",
+  ]);
+  await expect(page.locator("#s [data-aero-slider-clone]")).not.toHaveCount(0);
+});
+
+test("autoplay without the loop extension says it needs it", async ({ page }) => {
+  await mount(page, slider("s", 6, { style: "--aero-slides-per-view:3" }));
+  const warnings: string[] = [];
+  page.on("console", (message) => message.type() === "warning" && warnings.push(message.text()));
+  // The core file replaces the full file's global with one that has only the extensions after it.
+  await page.addScriptTag({ url: "/dist/aero-slider.core.min.js", type: "module" });
+  await page.addScriptTag({ url: "/dist/extensions/autoplay.min.js" });
+  await page.evaluate(() =>
+    window.AeroSlider!.createSlider(document.getElementById("s")!, { autoplay: true })
+  );
+  await expect.poll(() => warnings).toEqual(["aero-slider: autoplay needs the loop extension"]);
+});
+
 test("a manual change earns a full interval before the next automatic one", async ({ page }) => {
   await autoplaying(page, 400);
   const gap = await page.evaluate(

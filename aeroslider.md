@@ -5,13 +5,31 @@
 ## Install
 
 ```js
-import { createSlider, syncThumbnails } from "aero-slider";
+import { createSlider, use, loop } from "aero-slider";
 import "aero-slider/slider.css"; // required: nothing lays out without it
 
+use({ loop }); // once, before creating sliders
 const slider = createSlider(element, { loop: true });
 ```
 
-No bundler: load `dist/aero-slider.min.css` and `dist/aero-slider.min.js` (`type="module"`), then call `window.AeroSlider.createSlider`. The package import sets no global.
+No bundler: load `dist/aero-slider.min.css` and `dist/aero-slider.min.js` (`type="module"`), then call `window.AeroSlider.createSlider`. That full file has every extension. The package import sets no global.
+
+## Extensions
+
+The core has slides, arrows, dots, keyboard, drag, snapping and events. Everything else is an extension:
+
+| Extension  | Options it serves                        | Requires | Files in `dist/`                                    |
+| ---------- | ---------------------------------------- | -------- | --------------------------------------------------- |
+| `loop`     | `loop`                                   | core     | `extensions/loop.min.js`, `extensions/loop.min.css` |
+| `autoplay` | `autoplay` (interval and `"continuous"`) | `loop`   | `extensions/autoplay.min.js`                        |
+| `maxDots`  | `maxDots`                                | core     | `extensions/dots.min.js`, `extensions/dots.min.css` |
+| thumbnails | `syncThumbnails()`                       | core     | `extensions/thumbnails.min.js`                      |
+
+**Autoplay requires the loop extension.** Both kinds of autoplay always loop: setting `autoplay` turns looping on, whatever `loop` is set to. Without the loop extension, autoplay stops at the last slide and the console says so.
+
+- An option whose extension is missing does nothing, and the console warns.
+- Bundler: `use({ loop, autoplay })` once, before creating sliders. Unused extensions are dropped from the bundle.
+- No bundler: load `aero-slider.core.min.js` (`type="module"`), then each extension file after it. To ship one file, concatenate the core file and the extension files in that order, and the core CSS with the extension CSS. Example for autoplay: core, `loop`, `autoplay`.
 
 `createSlider` throws if the container has no `.aero-slider__track` or the track has no children. Bad option values never throw; they fall back to defaults.
 
@@ -87,18 +105,18 @@ CSS variables on the slider or any ancestor, except `--aero-layout-width`, which
 
 | Option             | Default        | Notes                                                                                               |
 | ------------------ | -------------- | --------------------------------------------------------------------------------------------------- |
-| `loop`             | `false`        | Turns itself off when every slide already fits in view.                                             |
+| `loop`             | `false`        | Needs the `loop` extension. Turns itself off when every slide already fits in view.                 |
 | `alignment`        | `"center"`     | `"start"`, `"center"`, `"end"`. Logical: `"start"` is the right edge in RTL, the top when vertical. |
 | `vertical`         | `false`        | Scrolls top to bottom, ignoring `dir`. Horizontal sliders follow `dir`; `refresh()` if it changes.  |
 | `perMove`          | `1`            | Stops advanced by `next()`, `prev()`, the arrows, the arrow keys and autoplay.                      |
 | `snap`             | `"native"`     | `"settle"` scrolls freely, then eases onto a slide. `"none"` rests anywhere.                        |
 | `draggable`        | `true`         | Mouse drag. Touch always scrolls natively.                                                          |
 | `noDrag`           | form fields    | Selector for slide content that must not start a drag. Replaces the default, listed below.          |
-| `autoplay`         | `false`        | `true` steps every `autoplayInterval`. `"continuous"` drifts like a ticker and implies `loop`.      |
-|                    |                | `"continuous"` also forces `snap: "none"`, whatever `snap` is set to.                               |
+| `autoplay`         | `false`        | Needs the `autoplay` and `loop` extensions, and always loops. `true` steps every interval.          |
+|                    |                | `"continuous"` drifts like a ticker and forces `snap: "none"`, whatever `snap` is set to.           |
 | `autoplayInterval` | `5000`         | Milliseconds, at least 100.                                                                         |
 | `autoplaySpeed`    | `40`           | Pixels per second for `"continuous"`.                                                               |
-| `maxDots`          | `0`            | Show at most this many dots, windowed. `0` shows all.                                               |
+| `maxDots`          | `0`            | Needs the `maxDots` extension. Show at most this many dots, windowed. `0` shows all.                |
 | `scrollDuration`   | `0`            | Milliseconds for scripted moves. `0` uses native smooth scrolling.                                  |
 | `scrollEasing`     | ease-out cubic | `(progress) => eased`, used with `scrollDuration`.                                                  |
 
