@@ -42,8 +42,9 @@ window.addEventListener(
   },
   { passive: true }
 );
-window.addEventListener("resize", update);
-update();
+// Called back after layout, so the first read doesn't lay the page out mid-script, and again
+// whenever the page's width or height changes.
+new ResizeObserver(() => update()).observe(document.documentElement);
 
 // ── Examples menu ──────────────────────────────────────────────────────
 // Opens on mouse hover and on keyboard focus. The trigger stays a link to the
