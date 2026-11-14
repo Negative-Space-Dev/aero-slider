@@ -5,13 +5,15 @@ import type {
   SliderEventData,
   SliderInstance,
 } from "./types.ts";
-import { autoplay, keyboard, navigation, pagination } from "./features.ts";
+import { keyboard, navigation, pagination } from "./features.ts";
+import type { Loop } from "./extensions/loop.ts";
+import type { Autoplay } from "./extensions/autoplay.ts";
+import type { DotWindow } from "./extensions/dots.ts";
 
-export const SLIDE_INDEX_ATTR = "data-aero-slider-index";
-export const CLONE_ATTR = "data-aero-slider-clone";
+import { CLONE_ATTR, SLIDE_INDEX_ATTR } from "./attributes.ts";
+
+export { CLONE_ATTR, SLIDE_INDEX_ATTR };
 const SLIDE_CLASS = "aero-slider__slide";
-const FOCUSABLE =
-  "a, area, button, input, select, textarea, iframe, summary, audio[controls], video[controls], embed, object, [contenteditable], [tabindex]";
 
 const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
 
@@ -120,6 +122,16 @@ export interface SliderCore {
   jumpTo(position: number): void;
   /** One full lap of real slides: where its teleport-safe band starts, and its length. */
   cycle(): { start: number; width: number } | null;
+  // What the loop extension needs.
+  slides(): HTMLElement[];
+  perView(): number;
+  snaps(): number[];
+  indexOfDom(domIndex: number): number;
+  reachable(position: number): boolean;
+  lap(): number;
+  cancelEase(): void;
+  // What autoplay needs: quiet while it moves the slider itself.
+  quiet: boolean;
 }
 
 function requireTrack(container: HTMLElement): HTMLElement {
@@ -127,6 +139,27 @@ function requireTrack(container: HTMLElement): HTMLElement {
   if (!track) throw new Error("aero-slider: missing .aero-slider__track");
   if (!track.children.length) throw new Error("aero-slider: no slides found");
   return track;
+}
+
+/** Each extension by the option it serves. */
+export interface Extensions {
+  loop: (core: SliderCore) => Loop;
+  autoplay: (core: SliderCore) => Autoplay;
+  maxDots: (core: SliderCore) => DotWindow;
+}
+const extensions: Partial<Extensions> = {};
+
+/** Adds extensions to every slider created from now on: `use({ loop, autoplay })`. */
+export function use(added: Partial<Extensions>): void {
+  Object.assign(extensions, added);
+}
+
+/** An option set without the extension that serves it does nothing; say so. */
+function warnMissing(config: Config): void {
+  for (const option of ["loop", "autoplay", "maxDots"] as const) {
+    if (config[option] && !extensions[option])
+      console.warn(`aero-slider: ${option} needs the ${option} extension`);
+  }
 }
 
 export function createSlider(
@@ -138,6 +171,7 @@ export function createSlider(
 
   const config = { ...DEFAULTS };
   configure(config, userConfig);
+  warnMissing(config);
   const controller = new AbortController();
   const { signal } = controller;
 
@@ -166,8 +200,6 @@ export function createSlider(
   let stopPositions: number[] = [];
 
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
-  // Clones are made here, where nothing loads: cloning a live lazy image can start its fetch.
-  const inertDocument = document.implementation.createHTMLDocument("");
 
   // Scroll state
   let programmaticScroll = false; // a goTo() animation is in flight
@@ -203,16 +235,10 @@ export function createSlider(
   const continuous = () => config.autoplay === "continuous";
   // Continuous autoplay loops by nature and moves the track by hand, so snapping stays off. Any
   // other loop needs slides to overflow the view, or its clones would sit beside the real ones.
-  const loop = () => (continuous() ? slideCount > 1 : config.loop && slideCount > slidesPerView);
+  const loop = () =>
+    !!looper && (continuous() ? slideCount > 1 : config.loop && slideCount > slidesPerView);
   const snapMode = () => (continuous() ? "none" : config.snap);
-  // A continuous lap travels one full set of slides past wherever it starts, so it needs a whole
-  // set of clones beyond the real slides plus a viewport's worth.
-  const cloneCount = () =>
-    !loop()
-      ? 0
-      : continuous()
-        ? slideCount + Math.ceil(slidesPerView) + 2
-        : Math.max(slideCount, Math.ceil(slidesPerView) + 2);
+  const cloneCount = () => (loop() ? looper!.count() : 0);
 
   function emit<E extends SliderEvent>(event: E, detail: SliderEventData<E>): void {
     container.dispatchEvent(new CustomEvent(`aero:${event}`, { detail, bubbles: true }));
@@ -443,6 +469,12 @@ export function createSlider(
   function setCurrent(index: number): void {
     if (index === current) return;
     current = index;
+    // data-aero-status on the container words it for other languages.
+    status.textContent = core.quiet
+      ? ""
+      : (container.dataset.aeroStatus ?? "{index} of {count}")
+          .replace("{index}", String(index + 1))
+          .replace("{count}", String(slideCount));
     emit("slideChange", { index });
     dots.refresh();
     nav.refresh();
@@ -480,55 +512,8 @@ export function createSlider(
     scrollTo(scrollTarget, smooth);
   }
 
-  function cloneOf(slide: HTMLElement): HTMLElement {
-    const clone = inertDocument.importNode(slide, true);
-    clone.removeAttribute(SLIDE_INDEX_ATTR);
-    clone.setAttribute(CLONE_ATTR, "");
-    clone.setAttribute("aria-hidden", "true");
-    // A clone looks, plays and clicks like its slide but stays out of the tab order, forms and
-    // labels; an image map in it is only a picture. The slide itself can be a link (a card). A
-    // required control without its name is a group of its own, never filled in: it would block
-    // the form it sits in, so a clone is not required either.
-    for (const el of [clone, ...clone.querySelectorAll<HTMLElement>("*")]) {
-      for (const name of ["id", "name", "for", "form", "usemap", "required"])
-        el.removeAttribute(name);
-      if (el.matches(FOCUSABLE)) el.tabIndex = -1;
-    }
-    return clone;
-  }
-
   /** With several slides in view, the outermost clones rest past the scrollable range. */
   const reachable = (position: number) => position >= -1 && position <= maxScroll + 1;
-  /** Where each copy of slide `index` the track can reach rests. */
-  const copiesOf = (index: number) =>
-    snaps.filter((position, domIndex) => indexOfDom(domIndex) === index && reachable(position));
-
-  /**
-   * Steps queued faster than the track moves can run a lap or more past the reachable clones. Head for the
-   * copy of `index` nearest the track in direction `dir` instead; extra laps would only spin past.
-   * With no copy left ahead, hop the track a lap back first: the copies look identical, and a lap
-   * from the runway's far end stays on it. Mid-move the track sits between slides, where mandatory
-   * snapping would pull the hop, so snapping stays off until the move settles.
-   */
-  function headFor(index: number, dir: number): number {
-    // No direction (a zero step onto an unreachable copy): the nearest reachable copy will do.
-    if (!dir) {
-      const position = scrollPosition();
-      return copiesOf(index).reduce((a, b) =>
-        Math.abs(b - position) < Math.abs(a - position) ? b : a
-      );
-    }
-    const copiesAhead = (position: number) =>
-      copiesOf(index).filter((p) => (dir > 0 ? p > position + 1 : p < position - 1));
-    let ahead = copiesAhead(scrollPosition());
-    if (!ahead.length) {
-      cancelEase();
-      track.style.scrollSnapType = "none";
-      scrollTo(scrollPosition() - dir * cycleWidth());
-      ahead = copiesAhead(scrollPosition());
-    }
-    return dir > 0 ? Math.min(...ahead) : Math.max(...ahead);
-  }
 
   // ── Navigation ───────────────────────────────────────────────────────
 
@@ -536,7 +521,7 @@ export function createSlider(
   function goTo(index: number, options: GoToOptions = {}, towards = 0): void {
     if (destroyed || !slideCount || !Number.isFinite(index)) return;
     // Continuous autoplay hands its lap back to the scroll offset before we measure from it.
-    play.interrupt();
+    play?.interrupt();
     const logical = loop() ? wrap(Math.trunc(index)) : clamp(Math.trunc(index), 0, maxIndex());
     setCurrent(logical);
     if (!slideStride) return; // no layout yet (display: none); relayout() lands here once shown
@@ -552,7 +537,7 @@ export function createSlider(
       const back = forward * 2 > slideCount || (forward * 2 === slideCount && towards < 0);
       const steps = back ? forward - slideCount : forward;
       const queuedAt = snaps[fromDom + steps] ?? NaN;
-      target = reachable(queuedAt) ? queuedAt : headFor(logical, Math.sign(steps));
+      target = reachable(queuedAt) ? queuedAt : looper!.headFor(logical, Math.sign(steps));
     } else {
       target = restPositionOf(logical);
     }
@@ -567,7 +552,7 @@ export function createSlider(
 
   /** Steps from the slide that's showing: a continuous lap hands back first, so sync to it. */
   function stepBy(delta: number): void {
-    if (play.interrupt()) setCurrent(indexAt(scrollPosition()));
+    if (play?.interrupt()) setCurrent(indexAt(scrollPosition()));
     if (loop()) goTo(current + delta, {}, delta);
     else goTo(stops[clamp(stopOf(current) + delta, 0, stops.length - 1)]!);
   }
@@ -578,7 +563,7 @@ export function createSlider(
 
   function onScroll(): void {
     forgetPosition();
-    play.scrolled();
+    play?.scrolled();
     if (!programmaticScroll && !scrollFrame) {
       scrollFrame = requestAnimationFrame(() => {
         scrollFrame = 0;
@@ -637,7 +622,7 @@ export function createSlider(
     // A clamped edge can park several indices at one spot; keep the requested one there.
     const moved = loop() || Math.abs(position - restPositionOf(current)) > 1;
     if (landed !== current && moved && !stale) setCurrent(landed);
-    play.settled();
+    play?.settled();
   }
 
   /**
@@ -736,7 +721,7 @@ export function createSlider(
         track.setPointerCapture(move.pointerId);
         track.style.scrollSnapType = "none";
         container.classList.add("aero-slider--dragging");
-        play.hold("drag");
+        play?.hold("drag");
         emit("dragStart", { index: fromIndex });
       }
       const elapsed = move.timeStamp - lastTime;
@@ -788,7 +773,7 @@ export function createSlider(
           } else onSettle();
         }
         emit("dragEnd", { index: current, fromIndex });
-        play.release("drag");
+        play?.release("drag");
         return;
       }
 
@@ -805,7 +790,7 @@ export function createSlider(
         goTo(stops[clamp(stop + nudge, 0, stops.length - 1)]!);
       }
       emit("dragEnd", { index: current, fromIndex });
-      play.release("drag");
+      play?.release("drag");
     }
 
     // On window: until the drag threshold captures the pointer, a move or release off the track
@@ -903,13 +888,13 @@ export function createSlider(
     let index = current;
     // The index doesn't follow a continuous drift, so keep the slide that's actually showing.
     // Its box includes the drift, so the slide resting nearest the scroll offset is the one on screen.
-    if (play.drifting()) {
+    if (play?.drifting()) {
       const position = scrollPosition();
       const distances = readSnaps().map((snap) => Math.abs(snap - position));
       index = indexOfDom(distances.indexOf(Math.min(...distances)));
       after = "resize";
     }
-    play.reset(); // continuous autoplay's transforms would skew every measurement
+    play?.reset(); // continuous autoplay's transforms would skew every measurement
     readSlidesPerView();
     if (cloneCount() !== clonesBefore) return rebuild(index);
     measure();
@@ -921,14 +906,14 @@ export function createSlider(
       // Going to the same slide again eases the rest of the way, as that move would have.
       programmaticScroll = false;
       goTo(index, { instant: !moveSmooth });
-      return play.start();
+      return play?.start();
     }
     if (after === "input") {
       // The input's settle places the index. A press that never moves the track has none to come,
       // so one is owed on its release, or now if it has already lifted.
       if (pressed.size || touches.size) settleDeferred = true;
       else settleSoon();
-      return play.start();
+      return play?.start();
     }
     // A coast whose target a narrower track no longer reaches never settled: it ends here.
     if (after === "scroll" && coasting) programmaticScroll = coasting = false;
@@ -942,7 +927,7 @@ export function createSlider(
       teleportToRealSlides();
       setCurrent(index);
     } else rest(index);
-    play.start();
+    play?.start();
   }
 
   /** Rests the track on slide `index`, brought into range, and makes it the current slide. */
@@ -955,7 +940,8 @@ export function createSlider(
 
   /** Full path: re-read slides from the DOM, rebuild clones and UI, and rest on slide `index`. */
   function rebuild(index = current): void {
-    play.reset(true);
+    play?.reset();
+    status.textContent = ""; // it would go on naming the old slide count until the next change
     for (const clone of track.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
     slides = Array.from(track.children) as HTMLElement[];
     slideCount = slides.length;
@@ -972,26 +958,14 @@ export function createSlider(
     container.classList.toggle("aero-slider--free", snapMode() !== "native");
 
     readSlidesPerView();
-    clonesBefore = cloneCount();
-    // One insertion per side: custom elements in clones upgrade as they go in, and a constructor
-    // that measures itself would lay the page out once per insertion.
-    const clones = (from: number) =>
-      Array.from({ length: clonesBefore }, (_, i) => cloneOf(slides[wrap(from + i)]!));
-    track.prepend(...clones(-clonesBefore));
-    track.append(...clones(0));
-    // WebKit never starts loading media that arrived from another document with <source> children.
-    // The clone can be the media element itself.
-    for (const media of track.querySelectorAll<HTMLMediaElement>("video, audio")) {
-      if (media.closest(`[${CLONE_ATTR}]`) && media.networkState === media.NETWORK_EMPTY)
-        media.load();
-    }
+    clonesBefore = loop() ? looper!.build() : 0;
 
     measure();
     dots.build();
     nav.refresh();
     rest(index);
     observe();
-    if (ready) play.restart(); // the lap was already reset above
+    if (ready) play?.restart(); // the lap was already reset above
   }
 
   // ── Public API ───────────────────────────────────────────────────────
@@ -999,6 +973,7 @@ export function createSlider(
   function update(changes?: SliderConfig): void {
     if (destroyed) return;
     configure(config, changes);
+    warnMissing(config);
     rebuild();
   }
 
@@ -1017,6 +992,7 @@ export function createSlider(
     cancelAnimationFrame(scrollFrame);
     cancelEase();
     for (const clone of track.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
+    status.remove();
     for (const slide of slides) {
       slide.removeAttribute(SLIDE_INDEX_ATTR);
       if (classed.has(slide)) slide.classList.remove(SLIDE_CLASS);
@@ -1047,8 +1023,8 @@ export function createSlider(
     next,
     prev,
     goTo,
-    pause: () => play.hold("api"),
-    resume: () => play.release("api"),
+    pause: () => play?.hold("api"),
+    resume: () => play?.release("api"),
     update,
     refresh,
     destroy,
@@ -1082,13 +1058,28 @@ export function createSlider(
       // Centred on the real slides, so resting anywhere in it never triggers a teleport.
       return width > 0 ? { start: restPositionOf(0) - slideStride / 2, width } : null;
     },
+    slides: () => slides,
+    perView: () => slidesPerView,
+    snaps: () => snaps,
+    indexOfDom,
+    reachable,
+    lap: cycleWidth,
+    cancelEase,
+    quiet: false,
   };
   // Before the features: they tell their own controls from a nested slider's by this class.
   container.classList.add("aero-slider");
   track.classList.add("aero-slider__track");
+  const looper = extensions.loop?.(core);
   const nav = navigation(core);
-  const dots = pagination(core);
-  const play = autoplay(core);
+  const dots = pagination(core, extensions.maxDots);
+  // Scrolling changes nothing a screen reader can hear, so a hidden status line names the slide
+  // the user moved to. It stays quiet for the moves autoplay makes on its own.
+  const status = document.createElement("div");
+  status.className = "aero-slider__status";
+  status.setAttribute("aria-live", "polite");
+  container.append(status);
+  const play = extensions.autoplay?.(core);
   keyboard(core);
 
   container.removeAttribute("data-aero-defer-visibility");
@@ -1204,6 +1195,6 @@ export function createSlider(
   container.classList.add("aero-slider--ready");
   emit("ready", {});
   ready = true;
-  play.start();
+  play?.start();
   return api;
 }

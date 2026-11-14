@@ -1,5 +1,5 @@
 import type { SliderInstance } from "./types.ts";
-import { SLIDE_INDEX_ATTR } from "./slider.ts";
+import { SLIDE_INDEX_ATTR } from "./attributes.ts";
 
 const ACTIVE_CLASS = "aero-slider__thumb--active";
 

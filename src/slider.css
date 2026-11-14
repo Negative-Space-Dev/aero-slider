@@ -9,42 +9,6 @@
   --aero-layout-width: 100%;
 }
 
-/* Loop pre-init spacer. Loop mode prepends clones at init, which would shift
-   the first slide. Add data-aero-defer-visibility in HTML to reserve that space
-   up front (JS removes it once clones are in place). Also set
-   data-aero-alignment in HTML if not using the default center. */
-.aero-slider[data-aero-defer-visibility] {
-  --aero-defer-offset: calc(
-    var(--aero-layout-width, 100%) / 2 -
-      (
-        var(--aero-layout-width, 100%) - var(--aero-slide-gap, 0px) *
-          (var(--aero-slides-per-view, 1) - 1)
-      ) /
-      (2 * var(--aero-slides-per-view, 1))
-  );
-}
-
-.aero-slider[data-aero-defer-visibility][data-aero-alignment="start"] {
-  --aero-defer-offset: 0px;
-}
-
-.aero-slider[data-aero-defer-visibility][data-aero-alignment="end"] {
-  --aero-defer-offset: calc(
-    var(--aero-layout-width, 100%) -
-      (
-        var(--aero-layout-width, 100%) - var(--aero-slide-gap, 0px) *
-          (var(--aero-slides-per-view, 1) - 1)
-      ) /
-      var(--aero-slides-per-view, 1)
-  );
-}
-
-.aero-slider[data-aero-defer-visibility] .aero-slider__track::before {
-  content: "";
-  flex: 0 0 max(0px, calc(var(--aero-defer-offset, 0px) - var(--aero-slide-gap, 0px)));
-  scroll-snap-align: none;
-}
-
 /* === Viewport === */
 .aero-slider__viewport {
   position: relative;
@@ -198,40 +162,8 @@
     opacity 0.2s ease-out;
 }
 
-/* Windowed (maxDots) pagination: a fixed-width window over a sliding track */
-.aero-slider__pagination--windowed {
-  width: calc(var(--pagination-width) + 12px);
-  max-width: calc(100% + 12px);
-  margin-inline: auto;
-  overflow: hidden;
-  justify-content: flex-start;
-  padding-inline: 6px;
-}
-
-.aero-slider__pagination-track {
-  display: flex;
-  gap: inherit;
-  align-items: center;
-  transform: translateX(var(--track-offset, 0));
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.aero-slider__dot--hidden {
-  transform: scale(0.4);
-  opacity: 0;
-}
-
-.aero-slider__dot--edge {
-  transform: scale(0.6);
-}
-
-.aero-slider__dot--near-edge {
-  transform: scale(0.8);
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .aero-slider__dot,
-  .aero-slider__pagination-track {
+  .aero-slider__dot {
     transition: none;
   }
 }

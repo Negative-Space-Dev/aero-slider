@@ -1,13 +1,10 @@
-import { createSlider, syncThumbnails } from "./index.ts";
+import { autoplay, createSlider, loop, maxDots, syncThumbnails, use } from "./index.ts";
 
 export * from "./index.ts";
+import "./global-type.ts";
 
-declare global {
-  interface Window {
-    AeroSlider?: { createSlider: typeof createSlider; syncThumbnails: typeof syncThumbnails };
-  }
-}
-
+// The full file: every extension, ready to use.
+use({ loop, autoplay, maxDots });
 if (typeof window !== "undefined") {
-  window.AeroSlider = { createSlider, syncThumbnails };
+  window.AeroSlider = { createSlider, use, syncThumbnails };
 }
