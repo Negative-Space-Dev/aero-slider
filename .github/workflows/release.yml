@@ -24,6 +24,9 @@ jobs:
         run: |
           mkdir -p release-artifacts
           cp dist/aero-slider.min.js dist/aero-slider.min.css aeroslider.md release-artifacts/
+          cp dist/aero-slider.core.min.js dist/aero-slider.core.min.css release-artifacts/
+          mkdir -p release-artifacts/extensions
+          cp dist/extensions/*.min.js dist/extensions/*.min.css release-artifacts/extensions/
 
       - name: Create zip
         run: |
