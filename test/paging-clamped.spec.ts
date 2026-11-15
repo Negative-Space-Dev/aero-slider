@@ -111,7 +111,7 @@ test("one slide per view keeps a stop per slide", async ({ page }) => {
   await expect(page.locator("#s .aero-slider__nav--next")).toBeDisabled();
 });
 
-test("windowed dots slide in stop positions", async ({ page }) => {
+test("scrolling dots slide in stop positions", async ({ page }) => {
   await mount(page, slider("s", 12, { style: "--aero-slides-per-view:3" }));
   await create(page, "s", { maxDots: 5 });
   await expect(page.locator("#s .aero-slider__dot:visible")).toHaveCount(10);

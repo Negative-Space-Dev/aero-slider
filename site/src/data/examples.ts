@@ -777,10 +777,10 @@ export const extensionDemos: Record<ExtensionKey, Demo> = {
     },
   },
 
-  maxDots: {
+  scrollingDots: {
     sliders: [
       {
-        id: "ext-max-dots",
+        id: "ext-scrolling-dots",
         label: "Many slides",
         vars: { "--aero-slides-per-view": "2.5", "--aero-slide-gap": "12px" },
         config: { maxDots: 5 },

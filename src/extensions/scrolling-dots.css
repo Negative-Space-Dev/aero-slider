@@ -1,5 +1,5 @@
-/* Windowed (maxDots) pagination: a fixed-width window over a sliding track */
-.aero-slider__pagination--windowed {
+/* Scrolling dots (maxDots): a fixed-width window over a sliding track */
+.aero-slider__pagination--scrolling {
   width: calc(var(--pagination-width) + 12px);
   max-width: calc(100% + 12px);
   margin-inline: auto;

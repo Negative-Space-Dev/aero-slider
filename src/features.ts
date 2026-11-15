@@ -1,5 +1,5 @@
 import type { SliderCore } from "./slider.ts";
-import type { DotWindow } from "./extensions/dots.ts";
+import type { DotWindow } from "./extensions/scrolling-dots.ts";
 
 // ── Prev / next buttons ────────────────────────────────────────────────
 
@@ -39,7 +39,7 @@ export function navigation(core: SliderCore) {
 
 // ── Pagination dots ────────────────────────────────────────────────────
 // The markup supplies one .aero-slider__dot as a template. It leaves the page while the slider runs,
-// and a copy of it stands in per stop. The maxDots extension shows a sliding window of them.
+// and a copy of it stands in per stop. The scrolling dots extension shows a sliding window of them.
 
 export function pagination(core: SliderCore, windowing?: (core: SliderCore) => DotWindow) {
   const box = core.container.querySelector<HTMLElement>(".aero-slider__pagination");

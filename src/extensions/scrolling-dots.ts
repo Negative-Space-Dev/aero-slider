@@ -3,7 +3,7 @@ import type { SliderCore } from "../slider.ts";
 // With maxDots set, the dots sit in a sliding track and only a window of them shows, iOS style.
 // The track does the sliding, so a theme is free to restyle and animate the dots themselves.
 
-export function maxDots(core: SliderCore) {
+export function scrollingDots(core: SliderCore) {
   const { config } = core;
   let dotTrack: HTMLElement | null = null;
   let dotPitch = 0; // distance between neighbouring dots; negative in RTL
@@ -15,13 +15,13 @@ export function maxDots(core: SliderCore) {
       dotTrack = document.createElement("div");
       dotTrack.className = "aero-slider__pagination-track";
       dotTrack.append(holder);
-      box.classList.add("aero-slider__pagination--windowed");
+      box.classList.add("aero-slider__pagination--scrolling");
       return dotTrack;
     },
     clear(box: HTMLElement): void {
       dotTrack?.remove();
       dotTrack = null;
-      box.classList.remove("aero-slider__pagination--windowed");
+      box.classList.remove("aero-slider__pagination--scrolling");
       box.style.removeProperty("--pagination-width");
     },
     measure(box: HTMLElement, dots: HTMLElement[]): void {
@@ -61,4 +61,4 @@ export function maxDots(core: SliderCore) {
   };
 }
 
-export type DotWindow = ReturnType<typeof maxDots>;
+export type DotWindow = ReturnType<typeof scrollingDots>;

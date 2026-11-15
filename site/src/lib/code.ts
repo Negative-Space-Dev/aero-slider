@@ -29,7 +29,7 @@ export function extensionsFor(configs: ExtensionNeeds[], loopedStrip = false): s
   return [
     (loopedStrip || any((config) => !!config.loop || !!config.autoplay)) && "loop",
     any((config) => !!config.autoplay) && "autoplay",
-    any((config) => (config.maxDots ?? 0) > 0) && "maxDots",
+    any((config) => (config.maxDots ?? 0) > 0) && "scrollingDots",
   ].filter((name): name is string => !!name);
 }
 

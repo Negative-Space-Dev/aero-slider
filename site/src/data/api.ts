@@ -3,7 +3,7 @@ import type { CodeTab } from "../lib/code";
 import type { ExampleId } from "./anchors";
 
 /** The extensions, each documented in its own section. */
-export const extensionKeys = ["loop", "autoplay", "maxDots", "thumbnails"] as const;
+export const extensionKeys = ["loop", "autoplay", "scrollingDots", "thumbnails"] as const;
 export type ExtensionKey = (typeof extensionKeys)[number];
 
 /** One documented identifier, as a reference row renders it. */
@@ -145,7 +145,7 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
       "Maps progress from 0 to 1 onto eased progress for <code>scrollDuration</code> scrolls. <code>(t) =&gt; t</code> is linear.",
   },
   maxDots: {
-    extension: "maxDots",
+    extension: "scrollingDots",
     group: "Pagination",
     type: "number",
     default: "0",
@@ -511,7 +511,7 @@ export const controlStates: RefEntry[] = [
       "Set on <code>aero-slider__nav--prev</code> or <code>--next</code> when it cannot go further. Never with <code>loop</code>",
   },
   {
-    extension: "maxDots",
+    extension: "scrollingDots",
     name: "aero-slider__dot--edge",
     description:
       "With <code>maxDots</code>: the outermost dot of the window when more dots lie beyond it. <code>aero-slider__dot--near-edge</code> marks the next one in, and <code>aero-slider__dot--hidden</code> the dots outside the window",

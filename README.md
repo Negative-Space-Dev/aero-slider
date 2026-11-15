@@ -9,7 +9,7 @@ A lightweight, CSS-first slider library for the modern web: about 7.7 KB for the
 - **Minimal JS Footprint** — Only handles events, loop cloning, pagination, autoplay
 - **Zero Dependencies** — No external libraries required
 - **Thumbnail Syncing** — Link primary sliders with thumbnail navigation
-- **iOS-Style Pagination** — Optional `maxDots` for windowed dot navigation
+- **iOS-Style Pagination** — Optional `maxDots` for scrolling dots
 
 **Documentation:** [aeroslider.com](https://aeroslider.com)
 
@@ -38,7 +38,7 @@ use({ loop, autoplay }); // only the extensions you use end up in your bundle
 
 ### Extensions
 
-The core covers slides, arrows, dots, keyboard, drag and snapping. Looping, autoplay, windowed dots (`maxDots`) and thumbnail sync are extensions. Each one has its own file in `dist/extensions/`, so you can load only what you use, or concatenate the core and your extensions into one file.
+The core covers slides, arrows, dots, keyboard, drag and snapping. Looping, autoplay, scrolling dots (`maxDots`) and thumbnail sync are extensions. Each one has its own file in `dist/extensions/`, so you can load only what you use, or concatenate the core and your extensions into one file.
 
 **Autoplay requires the loop extension.** Autoplay, interval or continuous, always loops: setting `autoplay` turns looping on.
 
@@ -47,7 +47,7 @@ The core covers slides, arrows, dots, keyboard, drag and snapping. Looping, auto
 ```js
 import "aero-slider/core.css";
 import "aero-slider/extensions/loop.css"; // loop, autoplay
-import "aero-slider/extensions/dots.css"; // maxDots
+import "aero-slider/extensions/scrolling-dots.css"; // maxDots
 ```
 
 ### Global script (no bundler)

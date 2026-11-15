@@ -11,7 +11,7 @@ await Bun.$`rm -rf dist`;
 const direct = [
   ["src/global.ts", "aero-slider.min.js", "esm"],
   ["src/direct/core.ts", "aero-slider.core.min.js", "esm"],
-  ...["loop", "autoplay", "dots", "thumbnails"].map(
+  ...["loop", "autoplay", "scrolling-dots", "thumbnails"].map(
     (name) => [`src/direct/${name}.ts`, `extensions/aero-slider.${name}.min.js`, "iife"] as const
   ),
 ] as const;
@@ -19,7 +19,7 @@ const styles = [
   ["src/full.css", "aero-slider.min.css"],
   ["src/slider.css", "aero-slider.core.min.css"],
   ["src/extensions/loop.css", "extensions/aero-slider.loop.min.css"],
-  ["src/extensions/dots.css", "extensions/aero-slider.dots.min.css"],
+  ["src/extensions/scrolling-dots.css", "extensions/aero-slider.scrolling-dots.min.css"],
 ] as const;
 
 const results = await Promise.all([

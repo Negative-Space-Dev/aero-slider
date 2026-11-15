@@ -1,11 +1,11 @@
-import { autoplay, createSlider, loop, maxDots, syncThumbnails, use } from "aero-slider";
+import { autoplay, createSlider, loop, scrollingDots, syncThumbnails, use } from "aero-slider";
 import type { SliderConfig, SliderInstance } from "aero-slider";
 import { examples, extensionDemos, type DemoSlider } from "../data/examples";
 import { getRequiredElementById } from "../lib/dom";
 import { nameSlides } from "../lib/slide";
 
 // The demos use every extension.
-use({ loop, autoplay, maxDots });
+use({ loop, autoplay, scrollingDots });
 
 // Each wire function below runs the steps its example prints in the JS tab.
 
@@ -151,7 +151,7 @@ function wireExtensionDemos(): void {
     instance("ext-autoplay").update({ autoplay: value === "continuous" ? "continuous" : true })
   );
   onPick("dots-window", "data-max", (value) =>
-    instance("ext-max-dots").update({ maxDots: +value })
+    instance("ext-scrolling-dots").update({ maxDots: +value })
   );
 
   const main = instance("ext-main");

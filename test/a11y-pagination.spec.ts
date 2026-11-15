@@ -42,7 +42,7 @@ test("a template with no name or role gets none from the slider", async ({ page 
 
 // Playwright's role queries don't honour inert, though browsers drop inert elements from the
 // accessibility tree. So this checks the attribute, and real Tab presses for the tab order.
-test("windowed dots outside the window are inert and skipped by Tab", async ({ page }) => {
+test("scrolling dots outside the window are inert and skipped by Tab", async ({ page }) => {
   await mount(page, withDots("s", 12, { nav: false }) + "<button id=after>after</button>");
   await create(page, "s", { maxDots: 5 });
   const pagination = page.locator("#s .aero-slider__pagination");
@@ -80,7 +80,7 @@ test("destroy() restores the pagination markup", async ({ page }) => {
   expect(await markup()).toEqual(before);
 });
 
-test("End from the first windowed dot moves focus to the last dot", async ({ page }) => {
+test("End from the first scrolling dot moves focus to the last dot", async ({ page }) => {
   await mount(page, withDots("s", 12));
   await create(page, "s", { maxDots: 5 });
   await page.getByRole("button", { name: "Go to slide 1", exact: true }).focus();

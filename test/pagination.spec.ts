@@ -38,7 +38,7 @@ test.describe("twelve slides, three in view, two per move, at most five dots", (
 
   test("shows a window of five dots, shrinking toward the far edge", async ({ page }) => {
     await expect(page.locator("#s .aero-slider__pagination")).toHaveClass(
-      /aero-slider__pagination--windowed/
+      /aero-slider__pagination--scrolling/
     );
     expect(await dotSizes(page)).toBe("A..ne_______");
   });

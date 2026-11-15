@@ -8,7 +8,7 @@ import type {
 import { keyboard, navigation, pagination } from "./features.ts";
 import type { Loop } from "./extensions/loop.ts";
 import type { Autoplay } from "./extensions/autoplay.ts";
-import type { DotWindow } from "./extensions/dots.ts";
+import type { DotWindow } from "./extensions/scrolling-dots.ts";
 
 import { CLONE_ATTR, SLIDE_INDEX_ATTR } from "./attributes.ts";
 
@@ -145,7 +145,7 @@ function requireTrack(container: HTMLElement): HTMLElement {
 export interface Extensions {
   loop: (core: SliderCore) => Loop;
   autoplay: (core: SliderCore) => Autoplay;
-  maxDots: (core: SliderCore) => DotWindow;
+  scrollingDots: (core: SliderCore) => DotWindow;
 }
 const extensions: Partial<Extensions> = {};
 
@@ -161,7 +161,7 @@ function warnMissing(config: Config): void {
     ["loop", "loop"],
     ["autoplay", "autoplay"],
     ["autoplay", "loop"],
-    ["maxDots", "maxDots"],
+    ["maxDots", "scrollingDots"],
   ] as const) {
     if (config[option] && !extensions[extension])
       console.warn(`aero-slider: ${option} needs the ${extension} extension`);
@@ -1082,7 +1082,7 @@ export function createSlider(
   track.classList.add("aero-slider__track");
   const looper = extensions.loop?.(core);
   const nav = navigation(core);
-  const dots = pagination(core, extensions.maxDots);
+  const dots = pagination(core, extensions.scrollingDots);
   // Scrolling changes nothing a screen reader can hear, so a hidden status line names the slide
   // the user moved to. It stays quiet for the moves autoplay makes on its own.
   const status = document.createElement("div");

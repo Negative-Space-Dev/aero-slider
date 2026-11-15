@@ -1,4 +1,4 @@
-import { autoplay, createSlider, loop, maxDots, syncThumbnails, use } from "aero-slider";
+import { autoplay, createSlider, loop, scrollingDots, syncThumbnails, use } from "aero-slider";
 import type { SliderConfig, SliderInstance } from "aero-slider";
 import { getRequiredElementById } from "../lib/dom";
 import { highlight, type LiveLang } from "../lib/highlight";
@@ -10,7 +10,7 @@ import {
 import { createSlideElement, heroToneFor, nameSlides } from "../lib/slide";
 
 // The demos use every extension.
-use({ loop, autoplay, maxDots });
+use({ loop, autoplay, scrollingDots });
 
 // Discrete steps for slidesPerView with exponential curve
 const SPV_STEPS = [1, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.45, 1.5, 1.75, 2, 2.5, 3, 4, 5];

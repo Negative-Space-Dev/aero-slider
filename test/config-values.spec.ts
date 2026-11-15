@@ -99,7 +99,7 @@ test("a negative maxDots shows every dot", async ({ page }) => {
   await mount(page, slider("s", 5));
   await create(page, "s", { maxDots: -2 });
   await expect(page.locator("#s .aero-slider__dot")).toHaveCount(5);
-  await expect(page.locator("#s .aero-slider__pagination--windowed")).toHaveCount(0);
+  await expect(page.locator("#s .aero-slider__pagination--scrolling")).toHaveCount(0);
 });
 
 test("a non-finite autoplaySpeed uses the default speed", async ({ page }) => {
@@ -133,7 +133,7 @@ test("goTo() with a non-finite index does nothing", async ({ page }) => {
 test("numbers passed as strings are read as numbers", async ({ page }) => {
   await mount(page, slider("s", 12));
   await create(page, "s", { perMove: "3", maxDots: "5" } as never);
-  await expect(page.locator("#s .aero-slider__pagination")).toHaveClass(/--windowed/);
+  await expect(page.locator("#s .aero-slider__pagination")).toHaveClass(/--scrolling/);
   await page.evaluate(() => window.sliders.s!.next());
   await settled(page, "s");
   expect(await state(page, "s")).toEqual({ index: 3, position: 1800 });

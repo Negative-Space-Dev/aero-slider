@@ -17,7 +17,7 @@ const rows = [
     "aero-slider.autoplay.min.js",
     kb(extensionSize("autoplay")),
   ],
-  ["maxDots", "<code>maxDots</code>", "core", "aero-slider.dots.min.js, aero-slider.dots.min.css", kb(extensionSize("dots"))],
+  ["scrollingDots", "<code>maxDots</code>", "core", "aero-slider.scrolling-dots.min.js, aero-slider.scrolling-dots.min.css", kb(extensionSize("scrolling-dots"))],
   [
     "thumbnails",
     "<code>syncThumbnails()</code>",
@@ -26,7 +26,7 @@ const rows = [
     kb(extensionSize("thumbnails")),
   ],
 ].map(([name, serves, requires, files, size]) => [
-  `<a href="#api-${name === "maxDots" ? "max-dots" : name}">${name}</a>`,
+  `<a href="#api-${name === "scrollingDots" ? "scrolling-dots" : name}">${name}</a>`,
   serves!,
   requires!,
   files!,
@@ -72,7 +72,7 @@ cat aero-slider.core.min.css extensions/aero-slider.loop.min.css > slider.css`,
     <div class="copy">
       <p>
         The core, {kb(bundleSize.core.total)} gzipped, has slides, arrows, dots, the keyboard, drag,
-        snapping and every event. Looping, autoplay, windowed dots and thumbnail sync are
+        snapping and every event. Looping, autoplay, scrolling dots and thumbnail sync are
         extensions. The full file, {kb(bundleSize.full.total)}, has all of them, ready to use.
       </p>
       <p>

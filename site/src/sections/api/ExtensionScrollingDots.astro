@@ -4,17 +4,17 @@ import ExtensionRef from "../../components/ExtensionRef.astro";
 ---
 
 <ExtensionRef
-  extension="maxDots"
-  title="Windowed dots"
-  id="api-max-dots"
-  files={["aero-slider.dots.min.js", "aero-slider.dots.min.css"]}
+  extension="scrollingDots"
+  title="Scrolling dots"
+  id="api-scrolling-dots"
+  files={["aero-slider.scrolling-dots.min.js", "aero-slider.scrolling-dots.min.css"]}
 >
   <p>
-    Shows at most <code>maxDots</code> pagination dots and slides the window along as the slider
-    moves, iOS style. Plain dots are in the core; this extension adds only the window. See
-    <a href="#ex-max-dots">the windowed dots example</a>.
+    Shows at most <code>maxDots</code> pagination dots and scrolls the rest into view as the slider
+    moves, the way iOS page indicators do. Plain dots are in the core; this extension adds the
+    scrolling. See <a href="#ex-max-dots">the example with many slides</a>.
   </p>
-  <ExtensionDemo slot="demo" extension="maxDots">
+  <ExtensionDemo slot="demo" extension="scrollingDots">
     <div slot="controls" class="ex-controls">
       <div class="ex-controls__row">
         <span class="caption">Dots</span>
