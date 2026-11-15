@@ -1,4 +1,5 @@
 ---
+import ExtensionDemo from "../../components/ExtensionDemo.astro";
 import ExtensionRef from "../../components/ExtensionRef.astro";
 import RefList from "../../components/RefList.astro";
 import type { RefGroup } from "../../data/api";
@@ -56,9 +57,21 @@ const behaviours = [
   <p>
     Links a thumbnail strip to a main slider: a click on a thumbnail shows that slide, and the
     strip follows the main slider however it moves. Both are ordinary sliders made with
-    <code>createSlider</code>. The <a href="#ex-gallery">gallery example</a> has a working demo
-    and its code.
+    <code>createSlider</code>. The <a href="#ex-gallery">gallery example</a> shows a full
+    product gallery.
   </p>
+
+  <ExtensionDemo slot="demo" extension="thumbnails">
+    <div slot="controls" class="ex-controls">
+      <div class="ex-controls__row">
+        <span class="caption">Strip loops</span>
+        <div id="strip-loop" class="segmented" role="group" aria-label="Strip loops">
+          <button type="button" data-loop="on" data-active aria-pressed="true">On</button>
+          <button type="button" data-loop="off" aria-pressed="false">Off</button>
+        </div>
+      </div>
+    </div>
+  </ExtensionDemo>
 
   <div slot="reference" class="space-y-5">
     <h4 class="font-mono text-lg" id="api-sync">syncThumbnails(primary, thumbnails, options?)</h4>

@@ -1,4 +1,5 @@
 ---
+import ExtensionDemo from "../../components/ExtensionDemo.astro";
 import ExtensionRef from "../../components/ExtensionRef.astro";
 ---
 
@@ -20,4 +21,15 @@ import ExtensionRef from "../../components/ExtensionRef.astro";
     hidden, and on <code>pause()</code>. Interval autoplay also pauses on hover. Neither kind runs
     under reduced motion.
   </p>
+  <ExtensionDemo slot="demo" extension="autoplay">
+    <div slot="controls" class="ex-controls">
+      <div class="ex-controls__row">
+        <span class="caption">Mode</span>
+        <div id="autoplay-mode" class="segmented" role="group" aria-label="Autoplay mode">
+          <button type="button" data-mode="interval" data-active aria-pressed="true">Interval</button>
+          <button type="button" data-mode="continuous" aria-pressed="false">Continuous</button>
+        </div>
+      </div>
+    </div>
+  </ExtensionDemo>
 </ExtensionRef>

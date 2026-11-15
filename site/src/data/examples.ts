@@ -7,6 +7,7 @@ import type { SliderConfig } from "aero-slider";
 import { extensionsFor, importLines, type CodeTab } from "../lib/code";
 import { slideRole, thumbRole, type SlideContent } from "../lib/slide";
 import { exampleIds, type ExampleId } from "./anchors";
+import type { ExtensionKey } from "./api";
 
 export const exampleGroups = [
   { key: "layout", id: "examples-layout", title: "Layout" },
@@ -59,11 +60,8 @@ export interface DemoSlider {
   manual?: boolean;
 }
 
-export interface Example {
-  group: ExampleGroup;
-  title: string;
-  /** One sentence: what this is for. HTML. */
-  lead: string;
+/** A demo and the code tabs printed from it. */
+export interface Demo {
   sliders: DemoSlider[];
   /** How several sliders sit: side by side from the small breakpoint up, or stacked. */
   layout?: "row" | "stack";
@@ -81,6 +79,13 @@ export interface Example {
    * in scripts/examples.ts runs the same steps.
    */
   js?: { imports?: string[]; body?: string; after?: string };
+}
+
+export interface Example extends Demo {
+  group: ExampleGroup;
+  title: string;
+  /** One sentence: what this is for. HTML. */
+  lead: string;
   /** "Good to know" bullets. HTML. */
   notes?: string[];
 }
@@ -444,7 +449,7 @@ sync();`,
       "It pauses on hover, on keyboard focus, while pressed or dragged, and while the tab is hidden.",
       "It does not run under <code>prefers-reduced-motion</code>, and stops as soon as that is turned on.",
       "<code>pause()</code> and <code>resume()</code> hold it from code, on top of those pauses.",
-      "Without <code>loop</code> it returns to the first slide after the last.",
+      'Autoplay always loops, so it needs the <a href="#api-loop">loop extension</a> as well as its own.',
       "Autoplay that runs for more than five seconds needs a pause control. Wire your own button to <code>pause()</code> and <code>resume()</code>.",
       "A loop puts copies of the last slides in front of the first. Where the neighbours show, as here, slide 1 would start at the edge and jump to the centre when JavaScript runs. <code>data-aero-defer-visibility</code> reserves that space in CSS from the first paint, and the slider removes the attribute when it starts.",
       'The reserved space is worked out from <code>--aero-slides-per-view</code> and <code>--aero-slide-gap</code> for center alignment. With another <code>alignment</code>, repeat it in the HTML as <code>data-aero-alignment="start"</code> or <code>"end"</code>.',
@@ -740,6 +745,90 @@ show(); // no slideChange fires for the starting slide`,
 
 // ── Code samples ─────────────────────────────────────────────────────────
 
+/** One small demo per extension, in its section of the API reference. */
+export const extensionDemos: Record<ExtensionKey, Demo> = {
+  loop: {
+    sliders: [
+      {
+        id: "ext-loop",
+        label: "Looping slides",
+        vars: { "--aero-slides-per-view": "2.5", "--aero-slide-gap": "12px" },
+        config: { loop: true },
+        nav: true,
+        dots: true,
+        slides: numbered(6),
+      },
+    ],
+    js: { after: `// The switch above the slider:\nslider.update({ loop: false });` },
+  },
+
+  autoplay: {
+    sliders: [
+      {
+        id: "ext-autoplay",
+        label: "Autoplaying slides",
+        vars: { "--aero-slides-per-view": "3", "--aero-slide-gap": "12px" },
+        config: { autoplay: true, autoplayInterval: 2500, autoplaySpeed: 48 },
+        slides: numbered(8),
+      },
+    ],
+    js: {
+      after: `// The switch above the slider:\nslider.update({ autoplay: "continuous" }); // drift at autoplaySpeed\nslider.update({ autoplay: true }); // one move every autoplayInterval`,
+    },
+  },
+
+  maxDots: {
+    sliders: [
+      {
+        id: "ext-max-dots",
+        label: "Many slides",
+        vars: { "--aero-slides-per-view": "2.5", "--aero-slide-gap": "12px" },
+        config: { maxDots: 5 },
+        nav: true,
+        dots: true,
+        slides: numbered(14),
+      },
+    ],
+    js: { after: `// The switch above the slider:\nslider.update({ maxDots: 0 }); // every dot` },
+  },
+
+  thumbnails: {
+    layout: "stack",
+    sliders: [
+      {
+        id: "ext-main",
+        label: "Product images",
+        name: "main",
+        vars: { "--aero-slide-aspect": "16 / 9", "--aero-slide-gap": "12px" },
+        nav: true,
+        slides: plates([1, 2, 3, 4, 5, 6], { label: "View" }),
+      },
+      {
+        id: "ext-thumbs",
+        label: "Product image thumbnails",
+        thumbs: true,
+        name: "thumbs",
+        chrome: "aero-slider--thumbnails",
+        vars: {
+          "--aero-slides-per-view": "4",
+          "--aero-slide-gap": "8px",
+          "--aero-slide-aspect": "16 / 9",
+        },
+        config: { alignment: "center" },
+        slides: numbered(6),
+      },
+    ],
+    js: {
+      imports: ["syncThumbnails"],
+      after: `let teardown = syncThumbnails(main, thumbs);
+
+// The switch above the gallery:
+teardown();
+teardown = syncThumbnails(main, thumbs, { loop: false });`,
+    },
+  },
+};
+
 const SHOWN_SLIDES = 3;
 
 export function styleOf(vars: CssVars = {}): string | undefined {
@@ -811,7 +900,7 @@ function sliderHtml(slider: DemoSlider): string[] {
   return slider.wrapperClass ? [`<div class="${slider.wrapperClass}">`, ...lines, `</div>`] : lines;
 }
 
-function html(example: Example): string {
+function html(example: Demo): string {
   if (typeof example.html === "string") return example.html;
   const sliders = example.sliders;
   return sliders
@@ -825,7 +914,7 @@ function html(example: Example): string {
     .join("\n\n");
 }
 
-function css(example: Example): string {
+function css(example: Demo): string {
   const rules = example.sliders
     .filter((slider) => slider.vars)
     .map((slider) => {
@@ -847,10 +936,10 @@ export function configSource(config: SliderConfig = {}): string {
   return `, {\n${entries.map(([key, value]) => `  ${key}: ${literal(value)},`).join("\n")}\n}`;
 }
 
-function js(example: Example): string {
+function js(example: Demo): string {
   const imports = example.js?.imports ?? [];
-  const syncsLoopedStrip =
-    imports.includes("syncThumbnails") && !example.js?.after?.includes("loop: false");
+  // A call without options leaves the strip looping, which needs the loop extension.
+  const syncsLoopedStrip = /syncThumbnails\(\w+, \w+\)/.test(example.js?.after ?? "");
   const extensions = extensionsFor(
     example.sliders.map((slider) => slider.config ?? {}),
     syncsLoopedStrip
@@ -869,7 +958,7 @@ function js(example: Example): string {
 }
 
 /** The example's code tabs, each rendered from the same entry the demo runs. */
-export function exampleTabs(example: Example): CodeTab[] {
+export function exampleTabs(example: Demo): CodeTab[] {
   const tabs: CodeTab[] = [];
   if (example.html) tabs.push({ label: "HTML", lang: "html", code: html(example) });
   const style = css(example);

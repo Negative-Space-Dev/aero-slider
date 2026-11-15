@@ -1,6 +1,6 @@
 import { autoplay, createSlider, loop, maxDots, syncThumbnails, use } from "aero-slider";
 import type { SliderConfig, SliderInstance } from "aero-slider";
-import { examples, type DemoSlider } from "../data/examples";
+import { examples, extensionDemos, type DemoSlider } from "../data/examples";
 import { getRequiredElementById } from "../lib/dom";
 import { nameSlides } from "../lib/slide";
 
@@ -9,7 +9,9 @@ use({ loop, autoplay, maxDots });
 
 // Each wire function below runs the steps its example prints in the JS tab.
 
-const sliders = Object.values(examples).flatMap((example) => example.sliders);
+const sliders = [...Object.values(examples), ...Object.values(extensionDemos)].flatMap(
+  (demo) => demo.sliders
+);
 const instances = new Map<string, SliderInstance>();
 
 function start(slider: DemoSlider): SliderInstance {
@@ -131,6 +133,36 @@ function wireCounter(): void {
   show();
 }
 
+/** Calls `change` with the value of each button pressed in a segmented control. */
+function onPick(id: string, attr: string, change: (value: string) => void): void {
+  const group = getRequiredElementById(id);
+  group.addEventListener("click", (event) => {
+    const value = pick(group, event, attr)?.getAttribute(attr);
+    if (value) change(value);
+  });
+}
+
+// The extension demos in the API reference, each with its switch.
+function wireExtensionDemos(): void {
+  onPick("loop-switch", "data-loop", (value) =>
+    instance("ext-loop").update({ loop: value === "on" })
+  );
+  onPick("autoplay-mode", "data-mode", (value) =>
+    instance("ext-autoplay").update({ autoplay: value === "continuous" ? "continuous" : true })
+  );
+  onPick("dots-window", "data-max", (value) =>
+    instance("ext-max-dots").update({ maxDots: +value })
+  );
+
+  const main = instance("ext-main");
+  const thumbs = instance("ext-thumbs");
+  let teardown = syncThumbnails(main, thumbs);
+  onPick("strip-loop", "data-loop", (value) => {
+    teardown();
+    teardown = syncThumbnails(main, thumbs, { loop: value === "on" });
+  });
+}
+
 // Deferred so the playground paints first.
 requestAnimationFrame(() => {
   for (const slider of sliders) if (!slider.manual) start(slider);
@@ -140,4 +172,5 @@ requestAnimationFrame(() => {
   wireMobileOnly();
   wireVariants();
   wireCounter();
+  wireExtensionDemos();
 });

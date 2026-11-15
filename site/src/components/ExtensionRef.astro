@@ -32,6 +32,7 @@ const events = eventEntryGroups(extension).flatMap((group) => group.entries);
       <dd class="api-facts__files">{files.map((file) => <code>dist/extensions/{file}</code>)}</dd>
     </div>
   </dl>
+  <slot name="demo" />
   <slot name="reference" />
   <RefList groups={extensionRefGroups(extension)} />
   {events.length > 0 && <ApiEventList groups={[{ title: "Events", entries: events }]} />}
