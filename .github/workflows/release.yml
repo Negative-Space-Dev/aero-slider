@@ -57,7 +57,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version-file: .tool-versions
+          node-version: latest
           registry-url: https://registry.npmjs.org
 
       # Trusted publishing needs npm 11.5.1 or later.
