@@ -238,15 +238,15 @@ export function createSlider(
     const pagesByStart = config.alignment === "start" && Number.isInteger(slidesPerView);
     return Math.max(0, pagesByStart ? slideCount - slidesPerView : slideCount - 1);
   }
-  const continuous = () => config.autoplay === "continuous";
+  // Without its extension, autoplay does nothing at all, not even loop or change the snapping.
+  const autoplay = () => !!config.autoplay && !!extensions.autoplay;
+  const continuous = () => autoplay() && config.autoplay === "continuous";
   // Autoplay always loops. Continuous autoplay loops by nature and moves the track by hand, so
   // snapping stays off. Any other loop needs slides to overflow the view, or its clones would sit
   // beside the real ones.
   const loop = () =>
     !!looper &&
-    (continuous()
-      ? slideCount > 1
-      : (config.loop || !!config.autoplay) && slideCount > slidesPerView);
+    (continuous() ? slideCount > 1 : (config.loop || autoplay()) && slideCount > slidesPerView);
   const snapMode = () => (continuous() ? "none" : config.snap);
   const cloneCount = () => (loop() ? looper!.count() : 0);
 

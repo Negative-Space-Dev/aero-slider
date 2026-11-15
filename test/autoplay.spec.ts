@@ -95,6 +95,25 @@ test("autoplay without the loop extension says it needs it", async ({ page }) =>
   await expect.poll(() => warnings).toEqual(["aero-slider: autoplay needs the loop extension"]);
 });
 
+test("autoplay without its extension neither loops nor turns snapping off", async ({ page }) => {
+  await mount(page, slider("s", 6, { style: "--aero-slides-per-view:3" }));
+  await page.addScriptTag({ url: "/dist/aero-slider.core.min.js", type: "module" });
+  await page.addScriptTag({ url: "/dist/extensions/aero-slider.loop.min.js" });
+  const state = (autoplay: true | "continuous") =>
+    page.evaluate((autoplay) => {
+      const el = document.getElementById("s")!;
+      const s = window.AeroSlider!.createSlider(el, { autoplay });
+      const result = {
+        clones: el.querySelectorAll("[data-aero-slider-clone]").length,
+        free: el.classList.contains("aero-slider--free"),
+      };
+      s.destroy();
+      return result;
+    }, autoplay);
+  expect(await state(true)).toEqual({ clones: 0, free: false });
+  expect(await state("continuous")).toEqual({ clones: 0, free: false });
+});
+
 test("a manual change earns a full interval before the next automatic one", async ({ page }) => {
   await autoplaying(page, 400);
   const gap = await page.evaluate(
