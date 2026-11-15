@@ -42,6 +42,14 @@ The core covers slides, arrows, dots, keyboard, drag and snapping. Looping, auto
 
 **Autoplay requires the loop extension.** Autoplay, interval or continuous, always loops: setting `autoplay` turns looping on.
 
+`aero-slider/slider.css` has the CSS for the core and every extension. To load only what you use, import the core stylesheet and your extensions' instead:
+
+```js
+import "aero-slider/core.css";
+import "aero-slider/extensions/loop.css"; // loop, autoplay
+import "aero-slider/extensions/dots.css"; // maxDots
+```
+
 ### Global script (no bundler)
 
 Add the JavaScript and CSS files. `dist/aero-slider.min.js` sets `window.AeroSlider`; load it with `type="module"`:

@@ -38,7 +38,9 @@ const load: CodeTab[] = [
     label: "Package",
     lang: "javascript",
     code: `import { createSlider, use, loop, autoplay } from "aero-slider";
-import "aero-slider/slider.css";
+// The core's CSS and loop's. "aero-slider/slider.css" has every extension's.
+import "aero-slider/core.css";
+import "aero-slider/extensions/loop.css";
 
 // Once, before creating sliders. Extensions you never import
 // are left out of your bundle.

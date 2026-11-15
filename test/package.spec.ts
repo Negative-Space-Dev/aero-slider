@@ -42,6 +42,24 @@ test("a CDN URL with no file path resolves to the file that sets the global", ()
   expect(conditions.indexOf("unpkg")).toBeLessThan(conditions.indexOf("import"));
 });
 
+// Bundler users import the stylesheet that matches what they use(): the full one, or the core
+// and each extension's. Resolved by the package's own name, as a bundler would.
+test("each stylesheet import resolves to its built file", () => {
+  const script = `
+    const names = ["slider.css", "core.css", "extensions/loop.css", "extensions/dots.css"];
+    console.log(JSON.stringify(names.map((name) => import.meta.resolve("aero-slider/" + name).split("/dist/")[1])));
+  `;
+  const output = execFileSync("node", ["--input-type=module", "-e", script], { encoding: "utf8" });
+  const files = JSON.parse(output) as string[];
+  expect(files).toEqual([
+    "aero-slider.min.css",
+    "aero-slider.core.min.css",
+    "extensions/aero-slider.loop.min.css",
+    "extensions/aero-slider.dots.min.css",
+  ]);
+  for (const file of files) expect(readFileSync(`dist/${file}`, "utf8").length).toBeGreaterThan(0);
+});
+
 const EXPORTS = ["autoplay", "createSlider", "loop", "maxDots", "syncThumbnails", "use"];
 
 test("the bundler entry exports the core and every extension and sets no global", async ({

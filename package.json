@@ -38,6 +38,9 @@
       "default": "./dist/index.js"
     },
     "./slider.css": "./dist/aero-slider.min.css",
+    "./core.css": "./dist/aero-slider.core.min.css",
+    "./extensions/loop.css": "./dist/extensions/aero-slider.loop.min.css",
+    "./extensions/dots.css": "./dist/extensions/aero-slider.dots.min.css",
     "./package.json": "./package.json"
   },
   "files": [

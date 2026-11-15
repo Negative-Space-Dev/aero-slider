@@ -29,6 +29,7 @@ The core has slides, arrows, dots, keyboard, drag, snapping and events. Everythi
 
 - An option whose extension is missing does nothing, and the console warns.
 - Bundler: `use({ loop, autoplay })` once, before creating sliders. Unused extensions are dropped from the bundle.
+- Bundler CSS: `aero-slider/slider.css` has the core and every extension. To match what you `use()`, import `aero-slider/core.css` instead, plus `aero-slider/extensions/loop.css` for loop or autoplay and `aero-slider/extensions/dots.css` for `maxDots`.
 - No bundler: load `aero-slider.core.min.js` (`type="module"`), then each extension file after it. To ship one file, concatenate the core file and the extension files in that order, and the core CSS with the extension CSS. Example for autoplay: core, `loop`, `autoplay`.
 
 `createSlider` throws if the container has no `.aero-slider__track` or the track has no children. Bad option values never throw; they fall back to defaults.
