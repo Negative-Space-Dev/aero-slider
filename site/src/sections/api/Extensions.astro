@@ -9,20 +9,20 @@ const CDN = "https://unpkg.com/aero-slider/dist";
 const kb = (value: number) => `${value.toFixed(1)} KB`;
 
 const rows = [
-  ["loop", "<code>loop</code>", "core", "loop.min.js, loop.min.css", kb(extensionSize("loop"))],
+  ["loop", "<code>loop</code>", "core", "aero-slider.loop.min.js, aero-slider.loop.min.css", kb(extensionSize("loop"))],
   [
     "autoplay",
     "<code>autoplay</code>, interval and continuous",
     "<strong>core + loop</strong>",
-    "autoplay.min.js",
+    "aero-slider.autoplay.min.js",
     kb(extensionSize("autoplay")),
   ],
-  ["maxDots", "<code>maxDots</code>", "core", "dots.min.js, dots.min.css", kb(extensionSize("dots"))],
+  ["maxDots", "<code>maxDots</code>", "core", "aero-slider.dots.min.js, aero-slider.dots.min.css", kb(extensionSize("dots"))],
   [
     "thumbnails",
     "<code>syncThumbnails()</code>",
     "core, and loop for a looping strip",
-    "thumbnails.min.js",
+    "aero-slider.thumbnails.min.js",
     kb(extensionSize("thumbnails")),
   ],
 ].map(([name, serves, requires, files, size]) => [
@@ -50,17 +50,17 @@ createSlider(el, { autoplay: true });`,
     label: "CDN",
     lang: "html",
     code: `<link rel="stylesheet" href="${CDN}/aero-slider.core.min.css" />
-<link rel="stylesheet" href="${CDN}/extensions/loop.min.css" />
+<link rel="stylesheet" href="${CDN}/extensions/aero-slider.loop.min.css" />
 <script type="module" src="${CDN}/aero-slider.core.min.js"></script>
-<script type="module" src="${CDN}/extensions/loop.min.js"></script>
-<script type="module" src="${CDN}/extensions/autoplay.min.js"></script>`,
+<script type="module" src="${CDN}/extensions/aero-slider.loop.min.js"></script>
+<script type="module" src="${CDN}/extensions/aero-slider.autoplay.min.js"></script>`,
   },
   {
     label: "One file",
     lang: "bash",
     code: `# Core first, then each extension, in the order the table lists them.
-cat aero-slider.core.min.js extensions/loop.min.js extensions/autoplay.min.js > slider.js
-cat aero-slider.core.min.css extensions/loop.min.css > slider.css`,
+cat aero-slider.core.min.js extensions/aero-slider.loop.min.js extensions/aero-slider.autoplay.min.js > slider.js
+cat aero-slider.core.min.css extensions/aero-slider.loop.min.css > slider.css`,
   },
 ];
 ---

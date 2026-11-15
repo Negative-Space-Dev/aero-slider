@@ -18,12 +18,12 @@ No bundler: load `dist/aero-slider.min.css` and `dist/aero-slider.min.js` (`type
 
 The core has slides, arrows, dots, keyboard, drag, snapping and events. Everything else is an extension:
 
-| Extension  | Options it serves                        | Requires | Files in `dist/`                                    |
-| ---------- | ---------------------------------------- | -------- | --------------------------------------------------- |
-| `loop`     | `loop`                                   | core     | `extensions/loop.min.js`, `extensions/loop.min.css` |
-| `autoplay` | `autoplay` (interval and `"continuous"`) | `loop`   | `extensions/autoplay.min.js`                        |
-| `maxDots`  | `maxDots`                                | core     | `extensions/dots.min.js`, `extensions/dots.min.css` |
-| thumbnails | `syncThumbnails()`                       | core     | `extensions/thumbnails.min.js`                      |
+| Extension  | Options it serves                        | Requires | Files in `dist/`                                                            |
+| ---------- | ---------------------------------------- | -------- | --------------------------------------------------------------------------- |
+| `loop`     | `loop`                                   | core     | `extensions/aero-slider.loop.min.js`, `extensions/aero-slider.loop.min.css` |
+| `autoplay` | `autoplay` (interval and `"continuous"`) | `loop`   | `extensions/aero-slider.autoplay.min.js`                                    |
+| `maxDots`  | `maxDots`                                | core     | `extensions/aero-slider.dots.min.js`, `extensions/aero-slider.dots.min.css` |
+| thumbnails | `syncThumbnails()`                       | core     | `extensions/aero-slider.thumbnails.min.js`                                  |
 
 **Autoplay requires the loop extension.** Both kinds of autoplay always loop: setting `autoplay` turns looping on, whatever `loop` is set to. Without the loop extension, autoplay stops at the last slide and the console says so.
 

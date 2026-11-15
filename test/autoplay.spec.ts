@@ -88,7 +88,7 @@ test("autoplay without the loop extension says it needs it", async ({ page }) =>
   page.on("console", (message) => message.type() === "warning" && warnings.push(message.text()));
   // The core file replaces the full file's global with one that has only the extensions after it.
   await page.addScriptTag({ url: "/dist/aero-slider.core.min.js", type: "module" });
-  await page.addScriptTag({ url: "/dist/extensions/autoplay.min.js" });
+  await page.addScriptTag({ url: "/dist/extensions/aero-slider.autoplay.min.js" });
   await page.evaluate(() =>
     window.AeroSlider!.createSlider(document.getElementById("s")!, { autoplay: true })
   );

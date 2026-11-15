@@ -26,5 +26,5 @@ const extensionFiles = import.meta.glob("../../../dist/extensions/*.min.{js,css}
 /** Gzipped size of one extension's files in `dist/extensions/`, JavaScript and CSS together, in KB. */
 export const extensionSize = (file: string) =>
   Object.entries(extensionFiles)
-    .filter(([path]) => path.includes(`/extensions/${file}.min.`))
+    .filter(([path]) => path.includes(`/extensions/aero-slider.${file}.min.`))
     .reduce((sum, [, source]) => sum + gzipKB(source), 0);

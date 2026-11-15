@@ -12,14 +12,14 @@ const direct = [
   ["src/global.ts", "aero-slider.min.js", "esm"],
   ["src/direct/core.ts", "aero-slider.core.min.js", "esm"],
   ...["loop", "autoplay", "dots", "thumbnails"].map(
-    (name) => [`src/direct/${name}.ts`, `extensions/${name}.min.js`, "iife"] as const
+    (name) => [`src/direct/${name}.ts`, `extensions/aero-slider.${name}.min.js`, "iife"] as const
   ),
 ] as const;
 const styles = [
   ["src/full.css", "aero-slider.min.css"],
   ["src/slider.css", "aero-slider.core.min.css"],
-  ["src/extensions/loop.css", "extensions/loop.min.css"],
-  ["src/extensions/dots.css", "extensions/dots.min.css"],
+  ["src/extensions/loop.css", "extensions/aero-slider.loop.min.css"],
+  ["src/extensions/dots.css", "extensions/aero-slider.dots.min.css"],
 ] as const;
 
 const results = await Promise.all([
