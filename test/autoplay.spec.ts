@@ -114,6 +114,22 @@ test("autoplay without its extension neither loops nor turns snapping off", asyn
   expect(await state("continuous")).toEqual({ clones: 0, free: false });
 });
 
+test("registering autoplay later leaves an existing slider as it was made", async ({ page }) => {
+  await mount(page, slider("s", 6, { style: "--aero-slides-per-view:3" }));
+  await page.addScriptTag({ url: "/dist/aero-slider.core.min.js", type: "module" });
+  await page.addScriptTag({ url: "/dist/extensions/aero-slider.loop.min.js" });
+  await page.evaluate(() => {
+    window.sliders = {
+      s: window.AeroSlider!.createSlider(document.getElementById("s")!, { autoplay: true }),
+    };
+  });
+  await page.addScriptTag({ url: "/dist/extensions/aero-slider.autoplay.min.js" });
+  // Without loop geometry, prev() from the first slide must stay put rather than wrap.
+  await page.evaluate(() => window.sliders.s!.prev());
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => window.sliders.s!.currentIndex)).toBe(0);
+});
+
 test("switching mode under the pointer follows the new mode's hover rule", async ({ page }) => {
   await autoplaying(page);
   const events = await recordEvents(page, "s", ["autoplayStart", "autoplayStop"]);

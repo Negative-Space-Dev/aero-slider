@@ -238,8 +238,10 @@ export function createSlider(
     const pagesByStart = config.alignment === "start" && Number.isInteger(slidesPerView);
     return Math.max(0, pagesByStart ? slideCount - slidesPerView : slideCount - 1);
   }
-  // Without its extension, autoplay does nothing at all, not even loop or change the snapping.
-  const autoplay = () => !!config.autoplay && !!extensions.autoplay;
+  // Without its extension, autoplay does nothing at all, not even loop or change the snapping. Read
+  // the registry once: use() applies to sliders created after it, never half of an existing one.
+  const autoplayLoaded = !!extensions.autoplay;
+  const autoplay = () => !!config.autoplay && autoplayLoaded;
   const continuous = () => autoplay() && config.autoplay === "continuous";
   // Autoplay always loops. Continuous autoplay loops by nature and moves the track by hand, so
   // snapping stays off. Any other loop needs slides to overflow the view, or its clones would sit
