@@ -773,7 +773,13 @@ export const extensionDemos: Record<ExtensionKey, Demo> = {
       },
     ],
     js: {
-      after: `// The switch above the slider:\nslider.update({ autoplay: "continuous" }); // drift at autoplaySpeed\nslider.update({ autoplay: true }); // one move every autoplayInterval`,
+      after: `// The mode switch above the slider:
+slider.update({ autoplay: "continuous" }); // drift at autoplaySpeed
+slider.update({ autoplay: true }); // one move every autoplayInterval
+
+// The pause switch. Autoplay that runs for more than five seconds needs one.
+slider.pause();
+slider.resume();`,
     },
   },
 

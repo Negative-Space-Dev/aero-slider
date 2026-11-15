@@ -30,6 +30,13 @@ import ExtensionRef from "../../components/ExtensionRef.astro";
           <button type="button" data-mode="continuous" aria-pressed="false">Continuous</button>
         </div>
       </div>
+      <div class="ex-controls__row">
+        <span class="caption">Autoplay</span>
+        <div id="autoplay-play" class="segmented" role="group" aria-label="Autoplay">
+          <button type="button" data-play="on" data-active aria-pressed="true">Playing</button>
+          <button type="button" data-play="off" aria-pressed="false">Paused</button>
+        </div>
+      </div>
     </div>
   </ExtensionDemo>
 </ExtensionRef>

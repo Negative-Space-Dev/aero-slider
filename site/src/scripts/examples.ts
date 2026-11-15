@@ -150,6 +150,9 @@ function wireExtensionDemos(): void {
   onPick("autoplay-mode", "data-mode", (value) =>
     instance("ext-autoplay").update({ autoplay: value === "continuous" ? "continuous" : true })
   );
+  onPick("autoplay-play", "data-play", (value) =>
+    value === "on" ? instance("ext-autoplay").resume() : instance("ext-autoplay").pause()
+  );
   onPick("dots-window", "data-max", (value) =>
     instance("ext-scrolling-dots").update({ maxDots: +value })
   );
