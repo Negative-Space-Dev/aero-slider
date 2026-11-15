@@ -114,6 +114,22 @@ test("autoplay without its extension neither loops nor turns snapping off", asyn
   expect(await state("continuous")).toEqual({ clones: 0, free: false });
 });
 
+test("switching mode under the pointer follows the new mode's hover rule", async ({ page }) => {
+  await autoplaying(page);
+  const events = await recordEvents(page, "s", ["autoplayStart", "autoplayStop"]);
+  // Start the pointer below the slider, so moving onto it is an entry in every browser.
+  const box = (await page.locator("#s").boundingBox())!;
+  await page.mouse.move(box.x + 10, box.y + box.height + 20);
+  await page.hover("#s");
+  await expect.poll(events).toEqual(["autoplayStop"]);
+  // A ticker keeps drifting under the pointer, so continuous starts while it stays there...
+  await page.evaluate(() => window.sliders.s!.update({ autoplay: "continuous" }));
+  await expect.poll(events).toEqual(["autoplayStop", "autoplayStart"]);
+  // ...and interval autoplay holds again, still under the pointer.
+  await page.evaluate(() => window.sliders.s!.update({ autoplay: true }));
+  await expect.poll(events).toEqual(["autoplayStop", "autoplayStart", "autoplayStop"]);
+});
+
 test("a manual change earns a full interval before the next automatic one", async ({ page }) => {
   await autoplaying(page, 400);
   const gap = await page.evaluate(

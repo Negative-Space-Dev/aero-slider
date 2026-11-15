@@ -30,6 +30,7 @@ export function autoplay(core: SliderCore) {
   let running = false; // autoplayStart has been announced and autoplayStop hasn't followed it
   let settleFallback = 0;
   const pressed = new Set<number>(); // pointerIds currently down on the track
+  let hovered = false; // kept whatever the mode, so a switch of mode finds the pointer where it is
 
   /** Announces a change of state only: a lap swapped on resize stays running throughout. */
   function announce(on: boolean): void {
@@ -42,6 +43,7 @@ export function autoplay(core: SliderCore) {
     signal.aborted ||
     !config.autoplay ||
     holds.size > 0 ||
+    (hovered && !continuous()) || // a ticker keeps drifting under the pointer
     document.hidden ||
     reducedMotion.matches ||
     (continuous() && !(config.autoplaySpeed > 0)); // a ticker at 0 px/s stays still
@@ -138,9 +140,14 @@ export function autoplay(core: SliderCore) {
 
   const listen = (target: EventTarget, type: string, handler: (event: Event) => void) =>
     target.addEventListener(type, handler, { passive: true, signal });
-  // A ticker keeps drifting under the pointer; only interval autoplay pauses on hover.
-  listen(container, "pointerenter", () => !continuous() && hold("pointer"));
-  listen(container, "pointerleave", () => release("pointer"));
+  listen(container, "pointerenter", () => {
+    hovered = true;
+    if (!continuous()) stop();
+  });
+  listen(container, "pointerleave", () => {
+    hovered = false;
+    start();
+  });
   listen(track, "pointerdown", (event) => {
     if (!config.autoplay) return;
     pressed.add((event as PointerEvent).pointerId);
