@@ -1,0 +1,35 @@
+/* Loop pre-init spacer. Loop mode prepends clones at init, which would shift
+   the first slide. Add data-aero-defer-visibility in HTML to reserve that space
+   up front (JS removes it once clones are in place). Also set
+   data-aero-alignment in HTML if not using the default center. */
+.aero-slider[data-aero-defer-visibility] {
+  --aero-defer-offset: calc(
+    var(--aero-layout-width, 100%) / 2 -
+      (
+        var(--aero-layout-width, 100%) - var(--aero-slide-gap, 0px) *
+          (var(--aero-slides-per-view, 1) - 1)
+      ) /
+      (2 * var(--aero-slides-per-view, 1))
+  );
+}
+
+.aero-slider[data-aero-defer-visibility][data-aero-alignment="start"] {
+  --aero-defer-offset: 0px;
+}
+
+.aero-slider[data-aero-defer-visibility][data-aero-alignment="end"] {
+  --aero-defer-offset: calc(
+    var(--aero-layout-width, 100%) -
+      (
+        var(--aero-layout-width, 100%) - var(--aero-slide-gap, 0px) *
+          (var(--aero-slides-per-view, 1) - 1)
+      ) /
+      var(--aero-slides-per-view, 1)
+  );
+}
+
+.aero-slider[data-aero-defer-visibility] .aero-slider__track::before {
+  content: "";
+  flex: 0 0 max(0px, calc(var(--aero-defer-offset, 0px) - var(--aero-slide-gap, 0px)));
+  scroll-snap-align: none;
+}

@@ -1,0 +1,42 @@
+---
+import ExtensionDemo from "../../components/ExtensionDemo.astro";
+import ExtensionRef from "../../components/ExtensionRef.astro";
+---
+
+<ExtensionRef
+  extension="autoplay"
+  title="Autoplay"
+  id="api-autoplay"
+  requires='<strong>The core and the <a href="#api-loop">loop extension</a>.</strong> Load loop first.'
+  files={["aero-slider.autoplay.min.js"]}
+>
+  <p>
+    Moves the slider on its own: one move every interval, or a continuous drift like a ticker.
+    Both kinds always loop, so setting <code>autoplay</code> turns looping on and this extension
+    needs the loop extension too. Without it, autoplay stops at the last slide and the console says
+    so.
+  </p>
+  <p>
+    Autoplay pauses while the slider is pressed, dragged or has keyboard focus, while the tab is
+    hidden, and on <code>pause()</code>. Interval autoplay also pauses on hover. Neither kind runs
+    under reduced motion.
+  </p>
+  <ExtensionDemo slot="demo" extension="autoplay">
+    <div slot="controls" class="ex-controls">
+      <div class="ex-controls__row">
+        <span class="caption">Mode</span>
+        <div id="autoplay-mode" class="segmented" role="group" aria-label="Autoplay mode">
+          <button type="button" data-mode="interval" data-active aria-pressed="true">Interval</button>
+          <button type="button" data-mode="continuous" aria-pressed="false">Continuous</button>
+        </div>
+      </div>
+      <div class="ex-controls__row">
+        <span class="caption">Autoplay</span>
+        <div id="autoplay-play" class="segmented" role="group" aria-label="Autoplay">
+          <button type="button" data-play="on" data-active aria-pressed="true">Playing</button>
+          <button type="button" data-play="off" aria-pressed="false">Paused</button>
+        </div>
+      </div>
+    </div>
+  </ExtensionDemo>
+</ExtensionRef>

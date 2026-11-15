@@ -1,0 +1,27 @@
+---
+import CodeDisclosure from "./CodeDisclosure.astro";
+import ExampleSlider from "./ExampleSlider.astro";
+import { exampleTabs, extensionDemos } from "../data/examples";
+import type { ExtensionKey } from "../data/api";
+import "../styles/examples.css";
+
+interface Props {
+  extension: ExtensionKey;
+}
+
+const demo = extensionDemos[Astro.props.extension];
+const multi = demo.sliders.length > 1;
+---
+
+<div class="ext-demo">
+  <h4 class="caption">Example</h4>
+  <div class="ex__demo">
+    <slot name="controls" />
+    <div class:list={["ex__sliders", multi && `ex__sliders--${demo.layout ?? "row"}`]}>
+      {demo.sliders.map((slider) => <ExampleSlider slider={slider} />)}
+    </div>
+  </div>
+  <div class="ex__more">
+    <CodeDisclosure tabs={exampleTabs(demo)} />
+  </div>
+</div>

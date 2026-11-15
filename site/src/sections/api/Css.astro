@@ -1,11 +1,11 @@
 ---
 import Entry from "../../components/Entry.astro";
 import RefList from "../../components/RefList.astro";
-import { attributes, cssVariables } from "../../data/api";
+import { attributes, cssVariables, forExtension } from "../../data/api";
 
 const groups = [
   { title: "Custom properties", entries: cssVariables },
-  { title: "HTML attributes", entries: attributes },
+  { title: "HTML attributes", entries: forExtension(attributes) },
 ];
 ---
 

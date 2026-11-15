@@ -1,6 +1,6 @@
 # Aero Slider
 
-A lightweight (under 9 KB of JavaScript and about 1 KB of CSS, gzipped), CSS-first slider library for the modern web.
+A lightweight, CSS-first slider library for the modern web: about 7.7 KB for the core and 10.3 KB with every extension, JavaScript and CSS gzipped, with no dependencies.
 
 - **CSS-First Architecture** — Layout via custom properties, responsive via media queries
 - **Native Scroll Snapping** — Hardware-accelerated, smooth scrolling
@@ -9,7 +9,7 @@ A lightweight (under 9 KB of JavaScript and about 1 KB of CSS, gzipped), CSS-fir
 - **Minimal JS Footprint** — Only handles events, loop cloning, pagination, autoplay
 - **Zero Dependencies** — No external libraries required
 - **Thumbnail Syncing** — Link primary sliders with thumbnail navigation
-- **iOS-Style Pagination** — Optional `maxDots` for windowed dot navigation
+- **iOS-Style Pagination** — Optional `maxDots` for scrolling dots
 
 **Documentation:** [aeroslider.com](https://aeroslider.com)
 
@@ -30,8 +30,24 @@ npm install aero-slider
 Then import the package and styles:
 
 ```js
-import { createSlider } from "aero-slider";
+import { createSlider, use, loop, autoplay } from "aero-slider";
 import "aero-slider/slider.css";
+
+use({ loop, autoplay }); // only the extensions you use end up in your bundle
+```
+
+### Extensions
+
+The core covers slides, arrows, dots, keyboard, drag and snapping. Looping, autoplay, scrolling dots (`maxDots`) and thumbnail sync are extensions. Each one has its own file in `dist/extensions/`, so you can load only what you use, or concatenate the core and your extensions into one file.
+
+**Autoplay requires the loop extension.** Autoplay, interval or continuous, always loops: setting `autoplay` turns looping on.
+
+`aero-slider/slider.css` has the CSS for the core and every extension. To load only what you use, import the core stylesheet and your extensions' instead:
+
+```js
+import "aero-slider/core.css";
+import "aero-slider/extensions/loop.css"; // loop, autoplay
+import "aero-slider/extensions/scrolling-dots.css"; // maxDots
 ```
 
 ### Global script (no bundler)

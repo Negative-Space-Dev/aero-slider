@@ -1,0 +1,27 @@
+---
+import ExtensionDemo from "../../components/ExtensionDemo.astro";
+import ExtensionRef from "../../components/ExtensionRef.astro";
+---
+
+<ExtensionRef extension="loop" title="Loop" id="api-loop" files={["aero-slider.loop.min.js", "aero-slider.loop.min.css"]}>
+  <p>
+    Wraps from the last slide back to the first. Copies of the slides sit on both sides of the
+    track, so scrolling never hits an end, and the slider moves back onto the real slides once the
+    track comes to rest. The copies are hidden from screen readers, the tab order and forms.
+  </p>
+  <p>
+    Copies of custom elements upgrade when they are inserted. A component that measures itself
+    should do it in a <code>ResizeObserver</code>, not in its constructor.
+  </p>
+  <ExtensionDemo slot="demo" extension="loop">
+    <div slot="controls" class="ex-controls">
+      <div class="ex-controls__row">
+        <span class="caption">Loop</span>
+        <div id="loop-switch" class="segmented" role="group" aria-label="Loop">
+          <button type="button" data-loop="on" data-active aria-pressed="true">On</button>
+          <button type="button" data-loop="off" aria-pressed="false">Off</button>
+        </div>
+      </div>
+    </div>
+  </ExtensionDemo>
+</ExtensionRef>

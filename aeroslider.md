@@ -5,13 +5,32 @@
 ## Install
 
 ```js
-import { createSlider, syncThumbnails } from "aero-slider";
+import { createSlider, use, loop } from "aero-slider";
 import "aero-slider/slider.css"; // required: nothing lays out without it
 
+use({ loop }); // once, before creating sliders
 const slider = createSlider(element, { loop: true });
 ```
 
-No bundler: load `dist/aero-slider.min.css` and `dist/aero-slider.min.js` (`type="module"`), then call `window.AeroSlider.createSlider`. The package import sets no global.
+No bundler: load `dist/aero-slider.min.css` and `dist/aero-slider.min.js` (`type="module"`), then call `window.AeroSlider.createSlider`. That full file has every extension. The package import sets no global.
+
+## Extensions
+
+The core has slides, arrows, dots, keyboard, drag, snapping and events. Everything else is an extension:
+
+| Extension       | Options it serves                        | Requires | Files in `dist/`                                                                                |
+| --------------- | ---------------------------------------- | -------- | ----------------------------------------------------------------------------------------------- |
+| `loop`          | `loop`                                   | core     | `extensions/aero-slider.loop.min.js`, `extensions/aero-slider.loop.min.css`                     |
+| `autoplay`      | `autoplay` (interval and `"continuous"`) | `loop`   | `extensions/aero-slider.autoplay.min.js`                                                        |
+| `scrollingDots` | `maxDots`                                | core     | `extensions/aero-slider.scrolling-dots.min.js`, `extensions/aero-slider.scrolling-dots.min.css` |
+| thumbnails      | `syncThumbnails()`                       | core     | `extensions/aero-slider.thumbnails.min.js`                                                      |
+
+**Autoplay requires the loop extension.** Both kinds of autoplay always loop: setting `autoplay` turns looping on, whatever `loop` is set to. Without the loop extension, autoplay stops at the last slide and the console says so.
+
+- An option whose extension is missing does nothing, and the console warns.
+- Bundler: `use({ loop, autoplay })` once, before creating sliders. Unused extensions are dropped from the bundle.
+- Bundler CSS: `aero-slider/slider.css` has the core and every extension. To match what you `use()`, import `aero-slider/core.css` instead, plus `aero-slider/extensions/loop.css` for loop or autoplay and `aero-slider/extensions/scrolling-dots.css` for `maxDots`.
+- No bundler: load `aero-slider.core.min.js`, then each extension file, then your own script, all with `type="module"` and none `async`. Module scripts run in page order once the page is read; a plain script runs straight away, before the core exists. To ship one file, concatenate the core file and the extension files in that order, and the core CSS with the extension CSS. Example for autoplay: core, `loop`, `autoplay`.
 
 `createSlider` throws if the container has no `.aero-slider__track` or the track has no children. Bad option values never throw; they fall back to defaults.
 
@@ -85,22 +104,22 @@ CSS variables on the slider or any ancestor, except `--aero-layout-width`, which
 
 `createSlider(element, options)`; change later with `slider.update(options)`.
 
-| Option             | Default        | Notes                                                                                               |
-| ------------------ | -------------- | --------------------------------------------------------------------------------------------------- |
-| `loop`             | `false`        | Turns itself off when every slide already fits in view.                                             |
-| `alignment`        | `"center"`     | `"start"`, `"center"`, `"end"`. Logical: `"start"` is the right edge in RTL, the top when vertical. |
-| `vertical`         | `false`        | Scrolls top to bottom, ignoring `dir`. Horizontal sliders follow `dir`; `refresh()` if it changes.  |
-| `perMove`          | `1`            | Stops advanced by `next()`, `prev()`, the arrows, the arrow keys and autoplay.                      |
-| `snap`             | `"native"`     | `"settle"` scrolls freely, then eases onto a slide. `"none"` rests anywhere.                        |
-| `draggable`        | `true`         | Mouse drag. Touch always scrolls natively.                                                          |
-| `noDrag`           | form fields    | Selector for slide content that must not start a drag. Replaces the default, listed below.          |
-| `autoplay`         | `false`        | `true` steps every `autoplayInterval`. `"continuous"` drifts like a ticker and implies `loop`.      |
-|                    |                | `"continuous"` also forces `snap: "none"`, whatever `snap` is set to.                               |
-| `autoplayInterval` | `5000`         | Milliseconds, at least 100.                                                                         |
-| `autoplaySpeed`    | `40`           | Pixels per second for `"continuous"`.                                                               |
-| `maxDots`          | `0`            | Show at most this many dots, windowed. `0` shows all.                                               |
-| `scrollDuration`   | `0`            | Milliseconds for scripted moves. `0` uses native smooth scrolling.                                  |
-| `scrollEasing`     | ease-out cubic | `(progress) => eased`, used with `scrollDuration`.                                                  |
+| Option             | Default        | Notes                                                                                                       |
+| ------------------ | -------------- | ----------------------------------------------------------------------------------------------------------- |
+| `loop`             | `false`        | Needs the `loop` extension. Turns itself off when every slide already fits in view.                         |
+| `alignment`        | `"center"`     | `"start"`, `"center"`, `"end"`. Logical: `"start"` is the right edge in RTL, the top when vertical.         |
+| `vertical`         | `false`        | Scrolls top to bottom, ignoring `dir`. Horizontal sliders follow `dir`; `refresh()` if it changes.          |
+| `perMove`          | `1`            | Stops advanced by `next()`, `prev()`, the arrows, the arrow keys and autoplay.                              |
+| `snap`             | `"native"`     | `"settle"` scrolls freely, then eases onto a slide. `"none"` rests anywhere.                                |
+| `draggable`        | `true`         | Mouse drag. Touch always scrolls natively.                                                                  |
+| `noDrag`           | form fields    | Selector for slide content that must not start a drag. Replaces the default, listed below.                  |
+| `autoplay`         | `false`        | Needs the `autoplay` and `loop` extensions, and always loops. `true` steps every interval.                  |
+|                    |                | `"continuous"` drifts like a ticker and forces `snap: "none"`, whatever `snap` is set to.                   |
+| `autoplayInterval` | `5000`         | Milliseconds, at least 100.                                                                                 |
+| `autoplaySpeed`    | `40`           | Pixels per second for `"continuous"`.                                                                       |
+| `maxDots`          | `0`            | Needs the `scrollingDots` extension. Show at most this many dots; the rest scroll into view. `0` shows all. |
+| `scrollDuration`   | `0`            | Milliseconds for scripted moves. `0` uses native smooth scrolling.                                          |
+| `scrollEasing`     | ease-out cubic | `(progress) => eased`, used with `scrollDuration`.                                                          |
 
 `noDrag` defaults to `"input, textarea, select, [contenteditable]"`: fields that are dragged themselves. Links and buttons are left out, so a slide that is a link still drags. Add them if a slide's links must never start a drag. Video and audio with native controls are safe to drag, because browsers keep a press on the control bar inside their own controls: the picture drags the slider and the scrubber still scrubs. Firefox does not let a mouse drag a video with `controls` at all.
 

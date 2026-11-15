@@ -19,7 +19,7 @@ export default defineConfig({
     plugins: [tailwindcss()],
     resolve: {
       alias: {
-        "aero-slider/slider.css": resolve(root, "src/slider.css"),
+        "aero-slider/slider.css": resolve(root, "src/full.css"),
         "aero-slider": resolve(root, "src/index.ts"),
       },
     },

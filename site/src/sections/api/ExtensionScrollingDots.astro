@@ -1,0 +1,28 @@
+---
+import ExtensionDemo from "../../components/ExtensionDemo.astro";
+import ExtensionRef from "../../components/ExtensionRef.astro";
+---
+
+<ExtensionRef
+  extension="scrollingDots"
+  title="Scrolling dots"
+  id="api-scrolling-dots"
+  files={["aero-slider.scrolling-dots.min.js", "aero-slider.scrolling-dots.min.css"]}
+>
+  <p>
+    Shows at most <code>maxDots</code> pagination dots and scrolls the rest into view as the slider
+    moves, the way iOS page indicators do. Plain dots are in the core; this extension adds the
+    scrolling. See <a href="#ex-max-dots">the example with many slides</a>.
+  </p>
+  <ExtensionDemo slot="demo" extension="scrollingDots">
+    <div slot="controls" class="ex-controls">
+      <div class="ex-controls__row">
+        <span class="caption">Dots</span>
+        <div id="dots-window" class="segmented" role="group" aria-label="Dots shown">
+          <button type="button" data-max="5" data-active aria-pressed="true">5 dots</button>
+          <button type="button" data-max="0" aria-pressed="false">Every dot</button>
+        </div>
+      </div>
+    </div>
+  </ExtensionDemo>
+</ExtensionRef>

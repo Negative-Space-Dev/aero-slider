@@ -12,7 +12,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version-file: .tool-versions
+          bun-version: latest
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -24,6 +24,9 @@ jobs:
         run: |
           mkdir -p release-artifacts
           cp dist/aero-slider.min.js dist/aero-slider.min.css aeroslider.md release-artifacts/
+          cp dist/aero-slider.core.min.js dist/aero-slider.core.min.css release-artifacts/
+          mkdir -p release-artifacts/extensions
+          cp dist/extensions/*.min.js dist/extensions/*.min.css release-artifacts/extensions/
 
       - name: Create zip
         run: |
@@ -50,11 +53,11 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version-file: .tool-versions
+          bun-version: latest
 
       - uses: actions/setup-node@v4
         with:
-          node-version-file: .tool-versions
+          node-version: latest
           registry-url: https://registry.npmjs.org
 
       # Trusted publishing needs npm 11.5.1 or later.

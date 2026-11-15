@@ -9,7 +9,9 @@ try {
   if (!tarball) throw new Error(`bun pm pack wrote no tarball to ${dir}`);
   await Bun.$`publint run ${tarball} --strict`;
   // ESM-only by design, and attw cannot resolve a CSS file as a module.
-  await Bun.$`attw ${tarball} --ignore-rules cjs-resolves-to-esm --exclude-entrypoints ./slider.css`;
+  const { exports } = await Bun.file("package.json").json();
+  const stylesheets = Object.keys(exports).filter((path) => path.endsWith(".css"));
+  await Bun.$`attw ${tarball} --ignore-rules cjs-resolves-to-esm --exclude-entrypoints ${stylesheets}`;
 } finally {
   await rm(dir, { recursive: true, force: true });
 }

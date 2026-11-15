@@ -66,6 +66,86 @@ test("interval autoplay advances one slide per interval and wraps", async ({ pag
   ]);
 });
 
+test("autoplay loops without loop: true", async ({ page }) => {
+  await mount(page, slider("s", 6, { style: "--aero-slides-per-view:3" }));
+  const changes = await recordEvents(page, "s", ["slideChange"]);
+  await create(page, "s", { autoplay: true, autoplayInterval: 100 });
+  await expect.poll(async () => (await changes()).length).toBeGreaterThanOrEqual(6);
+  expect((await changes()).slice(0, 6)).toEqual([
+    "slideChange1",
+    "slideChange2",
+    "slideChange3",
+    "slideChange4",
+    "slideChange5",
+    "slideChange0",
+  ]);
+  await expect(page.locator("#s [data-aero-slider-clone]")).not.toHaveCount(0);
+});
+
+test("autoplay without the loop extension says it needs it", async ({ page }) => {
+  await mount(page, slider("s", 6, { style: "--aero-slides-per-view:3" }));
+  const warnings: string[] = [];
+  page.on("console", (message) => message.type() === "warning" && warnings.push(message.text()));
+  // The core file replaces the full file's global with one that has only the extensions after it.
+  await page.addScriptTag({ url: "/dist/aero-slider.core.min.js", type: "module" });
+  await page.addScriptTag({ url: "/dist/extensions/aero-slider.autoplay.min.js" });
+  await page.evaluate(() =>
+    window.AeroSlider!.createSlider(document.getElementById("s")!, { autoplay: true })
+  );
+  await expect.poll(() => warnings).toEqual(["aero-slider: autoplay needs the loop extension"]);
+});
+
+test("autoplay without its extension neither loops nor turns snapping off", async ({ page }) => {
+  await mount(page, slider("s", 6, { style: "--aero-slides-per-view:3" }));
+  await page.addScriptTag({ url: "/dist/aero-slider.core.min.js", type: "module" });
+  await page.addScriptTag({ url: "/dist/extensions/aero-slider.loop.min.js" });
+  const state = (autoplay: true | "continuous") =>
+    page.evaluate((autoplay) => {
+      const el = document.getElementById("s")!;
+      const s = window.AeroSlider!.createSlider(el, { autoplay });
+      const result = {
+        clones: el.querySelectorAll("[data-aero-slider-clone]").length,
+        free: el.classList.contains("aero-slider--free"),
+      };
+      s.destroy();
+      return result;
+    }, autoplay);
+  expect(await state(true)).toEqual({ clones: 0, free: false });
+  expect(await state("continuous")).toEqual({ clones: 0, free: false });
+});
+
+test("registering autoplay later leaves an existing slider as it was made", async ({ page }) => {
+  await mount(page, slider("s", 6, { style: "--aero-slides-per-view:3" }));
+  await page.addScriptTag({ url: "/dist/aero-slider.core.min.js", type: "module" });
+  await page.addScriptTag({ url: "/dist/extensions/aero-slider.loop.min.js" });
+  await page.evaluate(() => {
+    window.sliders = {
+      s: window.AeroSlider!.createSlider(document.getElementById("s")!, { autoplay: true }),
+    };
+  });
+  await page.addScriptTag({ url: "/dist/extensions/aero-slider.autoplay.min.js" });
+  // Without loop geometry, prev() from the first slide must stay put rather than wrap.
+  await page.evaluate(() => window.sliders.s!.prev());
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => window.sliders.s!.currentIndex)).toBe(0);
+});
+
+test("switching mode under the pointer follows the new mode's hover rule", async ({ page }) => {
+  await autoplaying(page);
+  const events = await recordEvents(page, "s", ["autoplayStart", "autoplayStop"]);
+  // Start the pointer below the slider, so moving onto it is an entry in every browser.
+  const box = (await page.locator("#s").boundingBox())!;
+  await page.mouse.move(box.x + 10, box.y + box.height + 20);
+  await page.hover("#s");
+  await expect.poll(events).toEqual(["autoplayStop"]);
+  // A ticker keeps drifting under the pointer, so continuous starts while it stays there...
+  await page.evaluate(() => window.sliders.s!.update({ autoplay: "continuous" }));
+  await expect.poll(events).toEqual(["autoplayStop", "autoplayStart"]);
+  // ...and interval autoplay holds again, still under the pointer.
+  await page.evaluate(() => window.sliders.s!.update({ autoplay: true }));
+  await expect.poll(events).toEqual(["autoplayStop", "autoplayStart", "autoplayStop"]);
+});
+
 test("a manual change earns a full interval before the next automatic one", async ({ page }) => {
   await autoplaying(page, 400);
   const gap = await page.evaluate(

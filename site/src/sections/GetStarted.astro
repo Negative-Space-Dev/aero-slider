@@ -27,8 +27,10 @@ const load: CodeTab[] = [
   {
     label: "Package",
     lang: "javascript",
-    code: `import { createSlider } from "aero-slider";
-import "aero-slider/slider.css";`,
+    code: `import { createSlider, use, loop } from "aero-slider";
+import "aero-slider/slider.css";
+
+use({ loop }); // only the extensions you use`,
   },
   {
     label: "CDN",
@@ -65,7 +67,7 @@ const steps = [
   },
   {
     title: "Load it",
-    text: "From the package, or from a CDN without a bundler. The CDN module puts an <code>AeroSlider</code> object on <code>window</code>.",
+    text: 'From the package, or from a CDN without a bundler. The package needs <code>use()</code> for each <a href="#api-extensions">extension</a> you use, such as loop. The full CDN file has every extension and puts an <code>AeroSlider</code> object on <code>window</code>; the core and extension files are there too, to load only what you need.',
     tabs: load,
   },
   {
@@ -89,7 +91,7 @@ const layers = [
   {
     tag: "JS",
     title: "JS config decides how it behaves",
-    body: '<code>loop</code>, <code>autoplay</code>, <code>snap</code>, <code>vertical</code> and the rest of the <a href="#api-options">options</a>.',
+    body: '<code>snap</code>, <code>vertical</code> and the rest of the <a href="#api-options">options</a>, plus those of the <a href="#api-extensions">extensions</a> you load, such as <code>loop</code> and <code>autoplay</code>.',
   },
 ];
 
