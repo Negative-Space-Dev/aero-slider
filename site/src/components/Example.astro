@@ -1,5 +1,5 @@
 ---
-import CodeTabs from "./CodeTabs.astro";
+import CodeDisclosure from "./CodeDisclosure.astro";
 import Disclosure from "./Disclosure.astro";
 import ExampleSlider from "./ExampleSlider.astro";
 import { exampleGroups, exampleTabs, examples } from "../data/examples";
@@ -39,9 +39,7 @@ const css = example.css;
   </div>
 
   <div class="ex__more">
-    <Disclosure>
-      <CodeTabs tabs={exampleTabs(example)} />
-    </Disclosure>
+    <CodeDisclosure tabs={exampleTabs(example)} />
     {
       example.notes && (
         <Disclosure label="Good to know">

@@ -1,6 +1,5 @@
 ---
-import CodeTabs from "./CodeTabs.astro";
-import Disclosure from "./Disclosure.astro";
+import CodeDisclosure from "./CodeDisclosure.astro";
 import ExampleSlider from "./ExampleSlider.astro";
 import { exampleTabs, extensionDemos } from "../data/examples";
 import type { ExtensionKey } from "../data/api";
@@ -23,8 +22,6 @@ const multi = demo.sliders.length > 1;
     </div>
   </div>
   <div class="ex__more">
-    <Disclosure>
-      <CodeTabs tabs={exampleTabs(demo)} />
-    </Disclosure>
+    <CodeDisclosure tabs={exampleTabs(demo)} />
   </div>
 </div>

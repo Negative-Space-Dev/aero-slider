@@ -1,0 +1,32 @@
+---
+import CodeTabs from "./CodeTabs.astro";
+import TerminalIcon from "./icons/TerminalIcon.astro";
+import type { CodeTab } from "../lib/code";
+
+interface Props {
+  tabs: CodeTab[];
+  /** What the code is, e.g. "Recipe". */
+  label?: string;
+}
+
+const { tabs, label = "Code" } = Astro.props;
+const languages: Record<CodeTab["lang"], string> = {
+  html: "HTML",
+  css: "CSS",
+  javascript: "JS",
+  typescript: "TS",
+  bash: "Shell",
+};
+const hint = [...new Set(tabs.map((tab) => languages[tab.lang]))].join(" · ");
+---
+
+<details class="disclosure disclosure--code">
+  <summary>
+    <TerminalIcon class="disclosure__icon" />
+    <span class="disclosure__label">{label}</span>
+    <span class="disclosure__hint">{hint}</span>
+  </summary>
+  <div class="disclosure__body">
+    <CodeTabs tabs={tabs} />
+  </div>
+</details>

@@ -1,6 +1,5 @@
 ---
-import CodeTabs from "./CodeTabs.astro";
-import Disclosure from "./Disclosure.astro";
+import CodeDisclosure from "./CodeDisclosure.astro";
 import type { RefGroup } from "../data/api";
 
 interface Props {
@@ -39,9 +38,7 @@ const { groups } = Astro.props;
                 </a>
               )}
               {entry.snippet && (
-                <Disclosure>
-                  <CodeTabs tabs={entry.snippet} />
-                </Disclosure>
+                <CodeDisclosure tabs={entry.snippet} />
               )}
             </li>
           ))}
