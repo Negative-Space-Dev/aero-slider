@@ -799,7 +799,11 @@ export const extensionDemos: Record<ExtensionKey, Demo> = {
         id: "ext-main",
         label: "Product images",
         name: "main",
-        vars: { "--aero-slide-aspect": "16 / 9", "--aero-slide-gap": "12px" },
+        vars: {
+          "--aero-slides-per-view": "1.3",
+          "--aero-slide-aspect": "16 / 9",
+          "--aero-slide-gap": "12px",
+        },
         nav: true,
         slides: plates([1, 2, 3, 4, 5, 6], { label: "View" }),
       },
