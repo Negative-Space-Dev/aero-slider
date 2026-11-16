@@ -18,6 +18,7 @@
     .fig .muted { stroke: #a4aab3; }
     .fig .accent { stroke: #6aa5ff; }
     .fig .dashed { stroke-dasharray: 3 3; }
+    .fig .dashed-fine { stroke-dasharray: 2 2; }
     .fig text { font: 400 10px "Geist Mono"; letter-spacing: 0.1px; fill: #7c828b; }
     .fig .value { fill: #eceef1; }
     .fig .accent-text { fill: #6aa5ff; }
@@ -43,7 +44,7 @@
   <text id="name" class="name" x="114" y="70">Aero Slider</text>
   <g id="version">
     <rect id="version-box" y="44" height="34" rx="17" fill="#15171b" stroke="#2d3036" x="272.5000305175781" width="89.203125"></rect>
-    <text id="version-text" class="mono" y="67" style="font-size:16px" x="286.0000305175781">v1.1.0</text>
+    <text id="version-text" class="mono" y="67" style="font-size:16px" x="286.0000305175781">v1.2.0</text>
   </g>
   <text class="mono" x="1140" y="67" text-anchor="end">aeroslider.com</text>
 
@@ -79,22 +80,23 @@
     <rect class="muted" x="86.5" y="46.5" width="131" height="61" rx="3"></rect>
     <path class="strong" d="M0 120.5H320"></path><path class="strong" d="M-7.5 116V125"></path><path class="strong" d="M56.5 116V125"></path><path class="faint" d="M120.5 116V125"></path><path class="faint" d="M184.5 116V125"></path><path class="strong" d="M248.5 116V125"></path><path class="strong" d="M312.5 116V125"></path>
     <text x="4" y="138">snap points</text>
-    <text x="316" y="138" text-anchor="end">track</text></svg><text class="cell-title" x="810" y="356">9.9 KB gzipped</text>
+    <text x="316" y="138" text-anchor="end">track</text></svg><text class="cell-title" x="810" y="356">7.8 – 10.4 KB</text>
       <svg class="fig" x="810" y="409.125" width="300" height="136.875" viewBox="0 0 320 146"><defs>
       <pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path class="strong" d="M0 0V5"></path></pattern>
       <pattern id="hatch-dense" width="2.5" height="2.5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path class="faint" d="M0 0V2.5"></path></pattern>
+      <pattern id="hatch-muted" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><path class="faint" d="M0 0V5"></path></pattern>
+      <pattern id="hatch-muted-dense" width="2.5" height="2.5" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><path class="faint" d="M0 0V2.5"></path></pattern>
     </defs>
-    <text x="12" y="40">js 8.7 KB</text>
-    <text x="312" y="40" text-anchor="end">css 1.2 KB</text>
-    <path class="strong" d="M12.5 44V50M311.5 44V50"></path>
-    <rect x="12.5" y="52.5" width="263.69890732496964" height="22" fill="url(#hatch)"></rect>
-    <rect x="276.19890732496964" y="52.5" width="35.30109267503035" height="22" fill="url(#hatch-dense)"></rect>
-    <rect class="faint" x="12.5" y="52.5" width="299" height="22" rx="1"></rect>
-    <path class="faint" d="M276.19890732496964 52.5V74.5"></path>
-    <path class="accent" d="M12.5 82V94M311.5 82V94M12.5 88.5H122M202 88.5H311.5"></path>
-    <text x="162" y="92" text-anchor="middle" class="accent-text">9.9 KB gzip</text>
-    <path class="strong" d="M12.5 120V128M42.85208417644678 120V128M12.5 124.5H42.85208417644678"></path>
-    <text x="50.35208417644678" y="128">1 KB</text>
-    <text x="312" y="128" text-anchor="end" class="value">0 dependencies</text></svg>
+    <text x="12" y="44">core js + css</text>
+    <text x="308" y="44" text-anchor="end">extensions</text>
+    <path class="strong" d="M12.5 50V56M307.5 50V56"></path>
+    <rect x="12.5" y="58.5" width="193.73232908458866" height="22" fill="url(#hatch)"></rect><rect x="207.23232908458866" y="58.5" width="25.781769022788726" height="22" fill="url(#hatch-dense)"></rect><rect x="234.01409810737738" y="58.5" width="65.7400540749324" height="22" fill="url(#hatch-muted)"></rect><rect x="300.7541521823098" y="58.5" width="6.745847817690226" height="22" fill="url(#hatch-muted-dense)"></rect>
+    <rect class="faint" x="12.5" y="58.5" width="220.51409810737738" height="22" rx="1"></rect>
+    <rect class="faint dashed-fine" x="234.01409810737738" y="58.5" width="73.48590189262262" height="22" rx="1"></rect>
+    <path class="faint" d="M207.23232908458866 58.5V80.5M300.7541521823098 58.5V80.5"></path>
+    <path class="strong" d="M12.5 90V102M233.01409810737738 90V102M12.5 96.5H84.75704905368869M160.7570490536887 96.5H233.01409810737738"></path>
+    <text x="122.75704905368869" y="99.5" text-anchor="middle" class="value">7.8 KB core</text>
+    <path class="accent" d="M12.5 114V126M307.5 114V126M12.5 120.5H122M198 120.5H307.5"></path>
+    <text x="160" y="123.5" text-anchor="middle" class="accent-text">10.4 KB full</text></svg>
   <use href="#mark" x="60" y="300"></use><use href="#mark" x="60" y="570"></use><use href="#mark" x="420" y="300"></use><use href="#mark" x="420" y="570"></use><use href="#mark" x="780" y="300"></use><use href="#mark" x="780" y="570"></use><use href="#mark" x="1140" y="300"></use><use href="#mark" x="1140" y="570"></use>
 </svg>

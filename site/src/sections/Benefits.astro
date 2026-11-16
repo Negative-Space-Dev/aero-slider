@@ -161,26 +161,23 @@ const inFrame = (x: number) => x >= 86 && x + 56 <= 218;
             <path class="dr-faint" d="M0 0V2.5" />
           </pattern>
         </defs>
-        <text x={barX} y="22">core js + css</text>
-        <text x={barEnd} y="22" text-anchor="end">extensions</text>
-        <path class="dr-strong" d={`M${barX + 0.5} 28V34M${barEnd - 0.5} 28V34`} />
+        <text x={barX} y="30">core js + css</text>
+        <text x={barEnd} y="30" text-anchor="end">extensions</text>
+        <path class="dr-strong" d={`M${barX + 0.5} 36V42M${barEnd - 0.5} 36V42`} />
         {segments.map((segment) => (
-          <rect x={segment.x + 0.5} y="36.5" width={Math.max(0, segment.width - 1)} height="22" fill={segment.fill} />
+          <rect x={segment.x + 0.5} y="44.5" width={Math.max(0, segment.width - 1)} height="22" fill={segment.fill} />
         ))}
-        <rect class="dr-faint" x={barX + 0.5} y="36.5" width={coreEnd - barX - 1} height="22" rx="1" />
-        <rect class="dr-faint dr-dashed-fine" x={coreEnd + 0.5} y="36.5" width={barEnd - coreEnd - 1} height="22" rx="1" />
-        <path class="dr-faint" d={`M${segments[1]!.x + 0.5} 36.5V58.5M${segments[3]!.x + 0.5} 36.5V58.5`} />
-        <path class="dr-strong" d={dimension(barX, coreEnd, 74, 76)} />
-        <text x={(barX + coreEnd) / 2} y="77.5" text-anchor="middle" class="dr-value">
+        <rect class="dr-faint" x={barX + 0.5} y="44.5" width={coreEnd - barX - 1} height="22" rx="1" />
+        <rect class="dr-faint dr-dashed-fine" x={coreEnd + 0.5} y="44.5" width={barEnd - coreEnd - 1} height="22" rx="1" />
+        <path class="dr-faint" d={`M${segments[1]!.x + 0.5} 44.5V66.5M${segments[3]!.x + 0.5} 44.5V66.5`} />
+        <path class="dr-strong" d={dimension(barX, coreEnd, 82, 76)} />
+        <text x={(barX + coreEnd) / 2} y="85.5" text-anchor="middle" class="dr-value">
           {kb(core.total)} KB core
         </text>
-        <path class="dr-accent" d={dimension(barX, barEnd, 98, 76)} />
-        <text x={(barX + barEnd) / 2} y="101.5" text-anchor="middle" class="dr-accent-text">
+        <path class="dr-accent" d={dimension(barX, barEnd, 106, 76)} />
+        <text x={(barX + barEnd) / 2} y="109.5" text-anchor="middle" class="dr-accent-text">
           {kb(full.total)} KB full
         </text>
-        <path class="dr-strong" d={`M${barX + 0.5} 120V128M${barX + unit + 0.5} 120V128M${barX + 0.5} 124.5H${barX + unit + 0.5}`} />
-        <text x={barX + unit + 8} y="128">1 KB</text>
-        <text x={barEnd} y="128" text-anchor="end" class="dr-value">0 dependencies</text>
       </svg>
     </article>
   </div>
