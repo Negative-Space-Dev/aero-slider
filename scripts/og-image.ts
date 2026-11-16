@@ -16,7 +16,9 @@ const out = "site/public/og-image";
 
 // ── Figures the card states ─────────────────────────────────────────────
 // Level 6 is Node's default, which the site's own figures (site/src/lib/bundle-size.ts) use.
-const gzipKB = (path: string) => gzipSync(readFileSync(path, "utf8"), { level: 6 }).length / 1000;
+// Rounded to 0.1 KB like the site's figures, so a total is the sum of its rounded parts.
+const gzipKB = (path: string) =>
+  Math.round(gzipSync(readFileSync(path, "utf8"), { level: 6 }).length / 100) / 10;
 const sizes = (name: string) => {
   const size = { js: gzipKB(`dist/${name}.min.js`), css: gzipKB(`dist/${name}.min.css`) };
   return { ...size, total: size.js + size.css };
