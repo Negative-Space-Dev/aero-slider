@@ -4,7 +4,8 @@ import fullCss from "../../../dist/aero-slider.min.css?raw";
 import coreJs from "../../../dist/aero-slider.core.min.js?raw";
 import coreCss from "../../../dist/aero-slider.core.min.css?raw";
 
-const gzipKB = (source: string) => gzipSync(source).length / 1000;
+// Rounded to the 0.1 KB the site shows, so a total is the sum of the parts printed beside it.
+const gzipKB = (source: string) => Math.round(gzipSync(source).length / 100) / 10;
 
 const sizes = (js: string, css: string) => {
   const size = { js: gzipKB(js), css: gzipKB(css) };
