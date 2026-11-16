@@ -1,8 +1,5 @@
-import { CLONE_ATTR, SLIDE_INDEX_ATTR } from "../attributes.ts";
+import { CLONE_ATTR, FOCUSABLE, SLIDE_INDEX_ATTR } from "../attributes.ts";
 import type { SliderCore } from "../slider.ts";
-
-const FOCUSABLE =
-  "a, area, button, input, select, textarea, iframe, summary, audio[controls], video[controls], embed, object, [contenteditable], [tabindex]";
 
 /** Clones of every slide on both sides, so native scrolling can run past the ends. */
 export function loop(core: SliderCore) {

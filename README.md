@@ -84,6 +84,7 @@ The slider does this:
 
 - Makes the container the one tab stop. Arrow keys, Home and End move the slider while the container, a nav button or a dot has focus. Keys pressed inside slide content stay with that content.
 - Marks the current dot, and the current thumbnail of a synced strip, with `aria-current="true"`.
+- Makes each thumbnail of a synced strip that isn't a control of its own a button: a tab stop with `role="button"` that Enter and Space press, named "Go to slide N" when it has no name. The teardown takes all of it back.
 - Hides loop clones from screen readers, the tab order and forms.
 - Keeps keyboard focus when a nav button disables or the dots are rebuilt, and brings a partly shown slide into view when focus moves into it.
 - Announces the new position ("2 of 5") in a hidden live region when a user changes slide. It stays quiet for the moves autoplay makes on its own. Set `data-aero-status="Bild {index} von {count}"` on the container to word it for another language.
@@ -113,7 +114,7 @@ You write this:
 ```
 
 - **Dots.** The one dot in the markup is a template. Make it a `<button type="button">`: a `<span>` is not reachable by keyboard. `{index}` in its `aria-label` becomes each dot's slide number.
-- **Thumbnails.** Make each thumbnail of a synced strip a `<button type="button">` with its own name.
+- **Thumbnails.** Give each thumbnail of a synced strip its own name, such as an image's `alt`. A `<button type="button">` or a link is left as it is.
 - **Autoplay.** Anything that moves for more than five seconds needs a pause control. Wire your own button to `pause()` and `resume()`:
 
 ```js

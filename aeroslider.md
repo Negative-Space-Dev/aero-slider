@@ -173,7 +173,7 @@ const teardown = syncThumbnails(main, thumbs, { loop: false }); // strip loops b
 // later: teardown(); main.destroy(); thumbs.destroy();
 ```
 
-Both need the same number of slides. Make each thumbnail a `<button type="button">` with an `aria-label`. The current one gets `aero-slider__thumb--active` and `aria-current="true"`.
+Both need the same number of slides. A thumbnail that isn't a control of its own (no button or link in or on it) gets `tabindex="0"` and `role="button"`, so Tab reaches it and Enter or Space presses it, plus `aria-label="Go to slide N"` when it has no name of its own. Loop clones never do. The current one gets `aero-slider__thumb--active` and `aria-current="true"`. The teardown, or destroying the strip, removes all of it.
 
 - **Pause control**, required for autoplay that runs longer than five seconds:
 
@@ -191,9 +191,9 @@ toggle.addEventListener("click", () => {
 | The slider does                                                                                                    | You write                                                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
 | Makes the container the one tab stop. Arrow keys, Home and End work from the container, a nav button or a dot.     | Region role, role description and name on the container.                                                                    |
-| Sets `aria-current="true"` on the current dot and thumbnail.                                                       | Group role and name on each slide.                                                                                          |
+| Sets `aria-current="true"` on the current dot and thumbnail. Makes plain thumbnails buttons Enter and Space press. | Group role and name on each slide.                                                                                          |
 | Hides loop clones from screen readers, the tab order and forms.                                                    | Names on nav buttons, the dot template and thumbnails.                                                                      |
-| Keeps focus when a nav button disables or dots rebuild. Scrolls a partly shown slide into view when it gets focus. | `<button>` for dots and thumbnails.                                                                                         |
+| Keeps focus when a nav button disables or dots rebuild. Scrolls a partly shown slide into view when it gets focus. | `<button>` for dots.                                                                                                        |
 | Announces "2 of 5" in a hidden live region on a user change. Silent during autoplay.                               | A pause control for autoplay. `data-aero-status="Bild {index} von {count}"` on the container to translate the announcement. |
 
 ## Styling hooks
@@ -207,8 +207,8 @@ toggle.addEventListener("click", () => {
 ## Rules
 
 - Layout is CSS variables. Do not pass sizes as options or set widths in JavaScript.
-- Use `<button>` for dots and thumbnails. `<span>` and `<div>` cannot be reached by keyboard.
-- Do not expect roles, labels or a pause button from the slider.
+- Use `<button>` for dots. `<span>` and `<div>` cannot be reached by keyboard. Synced thumbnails are made buttons for you.
+- Do not expect roles, labels or a pause button from the slider. Synced thumbnails are the one exception.
 - Do not create the slider before its slides exist, unless you call `refresh()` afterwards.
 - Do not read or write loop clones. Filter on `[data-aero-slider-index]`.
 - Call `destroy()` before removing the element.
