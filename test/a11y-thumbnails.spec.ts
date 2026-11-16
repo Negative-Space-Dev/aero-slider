@@ -166,6 +166,19 @@ test("an image thumbnail keeps its alt text as its name", async ({ page }) => {
   await expect(track.locator("[aria-label]")).toHaveCount(0);
 });
 
+test("a placeholder link without href still becomes a button", async ({ page }) => {
+  const anchors = { ...strip, inner: (i: number) => `<a>${i}</a>` };
+  await mount(page, slider("main", 4) + slider("thumbs", 4, anchors));
+  await create(page, "main");
+  await create(page, "thumbs");
+  await sync(page, false);
+  const track = page.locator("#thumbs .aero-slider__track");
+  await track.getByRole("button", { name: "2" }).focus();
+  await page.keyboard.press("Enter");
+  await settled(page, "main");
+  expect(await index(page)).toBe(2);
+});
+
 test("Enter on a button inside a thumbnail is left to the button", async ({ page }) => {
   const inner = { ...strip, inner: (i: number) => `<button type="button">${i}</button>` };
   await mount(page, slider("main", 4) + slider("thumbs", 4, inner));
