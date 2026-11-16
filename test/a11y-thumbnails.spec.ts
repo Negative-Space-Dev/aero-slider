@@ -179,6 +179,44 @@ test("a placeholder link without href still becomes a button", async ({ page }) 
   expect(await index(page)).toBe(2);
 });
 
+test("an empty name is no name, and a name lost on refresh is replaced", async ({ page }) => {
+  const thumbsHtml = slider("thumbs", 3, {
+    ...strip,
+    inner: (i) => [`<img alt="">`, `<span id="missing-name"></span>`, `<span>Back view</span>`][i]!,
+  });
+  await mount(page, slider("main", 3) + thumbsHtml);
+  await page.evaluate(() => {
+    const [first, second] = document.querySelectorAll("#thumbs .aero-slider__track > *");
+    first!.setAttribute("aria-label", "");
+    first!.setAttribute("title", "");
+    second!.setAttribute("aria-labelledby", "missing-name");
+  });
+  const original = await thumbs(page);
+  await create(page, "main");
+  await create(page, "thumbs");
+  await sync(page, false);
+  const real = page.locator("#thumbs [data-aero-slider-index]");
+  await expect(real.nth(0)).toHaveAccessibleName("Go to slide 1");
+  await expect(real.nth(1)).toHaveAccessibleName("Go to slide 2");
+  await expect(real.nth(2)).toHaveAccessibleName("Back view");
+  await expect(real.nth(2)).not.toHaveAttribute("aria-label");
+
+  // The same element loses its text: the next rebuild names it.
+  await page.evaluate(() => {
+    document.querySelector("#thumbs [data-aero-slider-index='2']")!.innerHTML = `<img alt="">`;
+    window.sliders.thumbs!.refresh();
+  });
+  await expect(real.nth(2)).toHaveAccessibleName("Go to slide 3");
+
+  await page.evaluate(() => {
+    document.querySelector("#thumbs [data-aero-slider-index='2']")!.innerHTML =
+      "<span>Back view</span>";
+    (window as unknown as { unsync: () => void }).unsync();
+    window.sliders.thumbs!.destroy();
+  });
+  expect(await thumbs(page)).toBe(original); // the empty aria-label is back as it was
+});
+
 test("Enter on a button inside a thumbnail is left to the button", async ({ page }) => {
   const inner = { ...strip, inner: (i: number) => `<button type="button">${i}</button>` };
   await mount(page, slider("main", 4) + slider("thumbs", 4, inner));
