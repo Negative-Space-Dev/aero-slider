@@ -53,51 +53,37 @@ export function syncThumbnails(
       else child.removeAttribute("aria-current");
     }
   };
-  /** Each thumbnail made a button: its role from before, the author's aria-label, and the one
-   * given in its place, if any. Clones are never in it. */
-  const buttons = new Map<
-    HTMLElement,
-    [role: string | null, label: string | null, given: string | undefined]
-  >();
-  const put = (el: Element, name: string, value: string | null): void =>
-    value === null ? el.removeAttribute(name) : el.setAttribute(name, value);
+  /** Each thumbnail made a button, with its role from before and whether it had a name. Clones
+   * are never in it. */
+  const buttons = new Map<HTMLElement, [role: string | null, named: boolean]>();
   const restore = (el: HTMLElement): void => {
-    const [role, label, given] = buttons.get(el)!;
+    const [role, named] = buttons.get(el)!;
     el.removeAttribute("tabindex"); // it had none: FOCUSABLE covers [tabindex]
-    put(el, "role", role);
-    if (el.getAttribute("aria-label") === given) put(el, "aria-label", label);
+    if (role === null) el.removeAttribute("role");
+    else el.setAttribute("role", role);
+    if (!named) el.removeAttribute("aria-label");
     buttons.delete(el);
   };
-  /** Whether `el` names itself, given the aria-label it had before it was made a button. */
-  const named = (el: HTMLElement, label: string | null): boolean =>
-    !!(
-      label?.trim() ||
-      el.title.trim() ||
-      el.textContent!.trim() ||
-      [el, ...el.querySelectorAll("img")].some((img) => (img as HTMLImageElement).alt?.trim()) ||
-      el
-        .getAttribute("aria-labelledby")
-        ?.split(/\s+/)
-        .some((id) => document.getElementById(id)?.textContent!.trim())
-    );
   /** Makes each real thumbnail without a control of its own a named button, and lets go of any
-   * that left the strip. Each rebuild checks the name again and renumbers the one it gave. */
+   * that left the strip. Renumbering updates the name it was given. */
   const enhance = (): void => {
     for (const el of buttons.keys()) if (el.parentElement !== track) restore(el);
     for (const el of track.querySelectorAll<HTMLElement>(`:scope > [${SLIDE_INDEX_ATTR}]`)) {
       if (!buttons.has(el)) {
         if (el.matches(FOCUSABLE) || el.querySelector(FOCUSABLE)) continue; // a link or a button
-        buttons.set(el, [el.getAttribute("role"), null, undefined]);
+        buttons.set(el, [
+          el.getAttribute("role"),
+          !!(
+            el.textContent!.trim() ||
+            el.matches("img[alt]:not([alt='']), [aria-label], [aria-labelledby], [title]") ||
+            el.querySelector("img[alt]:not([alt=''])")
+          ),
+        ]);
         el.tabIndex = 0;
         el.setAttribute("role", "button");
       }
-      const entry = buttons.get(el)!;
-      const current = el.getAttribute("aria-label");
-      if (current !== entry[2]) entry[1] = current; // the author's, perhaps changed since
-      entry[2] = named(el, entry[1])
-        ? undefined
-        : `Go to slide ${+el.getAttribute(SLIDE_INDEX_ATTR)! + 1}`;
-      put(el, "aria-label", entry[2] ?? entry[1]);
+      if (!buttons.get(el)![1])
+        el.setAttribute("aria-label", `Go to slide ${+el.getAttribute(SLIDE_INDEX_ATTR)! + 1}`);
     }
   };
 
