@@ -17,9 +17,12 @@ const out = "site/public/og-image";
 // ── Figures the card states ─────────────────────────────────────────────
 // Level 6 is Node's default, which the site's own figures (site/src/lib/bundle-size.ts) use.
 const gzipKB = (path: string) => gzipSync(readFileSync(path, "utf8"), { level: 6 }).length / 1000;
-const js = gzipKB("dist/aero-slider.min.js");
-const css = gzipKB("dist/aero-slider.min.css");
-const total = js + css;
+const sizes = (name: string) => {
+  const size = { js: gzipKB(`dist/${name}.min.js`), css: gzipKB(`dist/${name}.min.css`) };
+  return { ...size, total: size.js + size.css };
+};
+const core = sizes("aero-slider.core");
+const full = sizes("aero-slider");
 const kb = (value: number) => value.toFixed(1);
 const version: string = JSON.parse(readFileSync("package.json", "utf8")).version;
 
@@ -89,29 +92,48 @@ function nativeScrollFigure(): string {
     <text x="316" y="138" text-anchor="end">track</text>`;
 }
 
+// As Benefits.astro draws it: the core's JavaScript and CSS, then the extensions' on the same bar.
 function sizeFigure(): string {
   const barX = 12;
-  const unit = Math.min(36, 300 / total);
-  const jsW = js * unit;
-  const cssW = css * unit;
-  const end = barX + jsW + cssW;
-  const mid = (barX + end) / 2;
+  const unit = Math.min(36, 296 / full.total);
+  const segments = [
+    { width: core.js * unit, fill: "url(#hatch)" },
+    { width: core.css * unit, fill: "url(#hatch-dense)" },
+    { width: (full.js - core.js) * unit, fill: "url(#hatch-muted)" },
+    { width: (full.css - core.css) * unit, fill: "url(#hatch-muted-dense)" },
+  ].map((segment, i, all) => ({
+    ...segment,
+    x: barX + all.slice(0, i).reduce((sum, { width }) => sum + width, 0),
+  }));
+  const coreEnd = barX + core.total * unit;
+  const barEnd = barX + full.total * unit;
+  const dimension = (from: number, to: number, y: number, gap: number) => {
+    const mid = (from + to) / 2;
+    return `M${from + 0.5} ${y - 6}V${y + 6}M${to - 0.5} ${y - 6}V${y + 6}M${from + 0.5} ${y + 0.5}H${mid - gap / 2}M${mid + gap / 2} ${y + 0.5}H${to - 0.5}`;
+  };
+  const bars = segments
+    .map((s) => `<rect x="${s.x + 0.5}" y="36.5" width="${Math.max(0, s.width - 1)}" height="22" fill="${s.fill}"/>`)
+    .join("");
   return `<defs>
       <pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path class="strong" d="M0 0V5"/></pattern>
       <pattern id="hatch-dense" width="2.5" height="2.5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path class="faint" d="M0 0V2.5"/></pattern>
+      <pattern id="hatch-muted" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><path class="faint" d="M0 0V5"/></pattern>
+      <pattern id="hatch-muted-dense" width="2.5" height="2.5" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><path class="faint" d="M0 0V2.5"/></pattern>
     </defs>
-    <text x="${barX}" y="40">js ${kb(js)} KB</text>
-    <text x="${end}" y="40" text-anchor="end">css ${kb(css)} KB</text>
-    <path class="strong" d="M${barX + 0.5} 44V50M${end - 0.5} 44V50"/>
-    <rect x="${barX + 0.5}" y="52.5" width="${jsW}" height="22" fill="url(#hatch)"/>
-    <rect x="${barX + jsW + 0.5}" y="52.5" width="${cssW - 1}" height="22" fill="url(#hatch-dense)"/>
-    <rect class="faint" x="${barX + 0.5}" y="52.5" width="${jsW + cssW - 1}" height="22" rx="1"/>
-    <path class="faint" d="M${barX + jsW + 0.5} 52.5V74.5"/>
-    <path class="accent" d="M${barX + 0.5} 82V94M${end - 0.5} 82V94M${barX + 0.5} 88.5H${mid - 40}M${mid + 40} 88.5H${end - 0.5}"/>
-    <text x="${mid}" y="92" text-anchor="middle" class="accent-text">${kb(total)} KB gzip</text>
+    <text x="${barX}" y="22">core js + css</text>
+    <text x="${barEnd}" y="22" text-anchor="end">extensions</text>
+    <path class="strong" d="M${barX + 0.5} 28V34M${barEnd - 0.5} 28V34"/>
+    ${bars}
+    <rect class="faint" x="${barX + 0.5}" y="36.5" width="${coreEnd - barX - 1}" height="22" rx="1"/>
+    <rect class="faint dashed-fine" x="${coreEnd + 0.5}" y="36.5" width="${barEnd - coreEnd - 1}" height="22" rx="1"/>
+    <path class="faint" d="M${segments[1]!.x + 0.5} 36.5V58.5M${segments[3]!.x + 0.5} 36.5V58.5"/>
+    <path class="strong" d="${dimension(barX, coreEnd, 74, 76)}"/>
+    <text x="${(barX + coreEnd) / 2}" y="77.5" text-anchor="middle" class="value">${kb(core.total)} KB core</text>
+    <path class="accent" d="${dimension(barX, barEnd, 98, 76)}"/>
+    <text x="${(barX + barEnd) / 2}" y="101.5" text-anchor="middle" class="accent-text">${kb(full.total)} KB full</text>
     <path class="strong" d="M${barX + 0.5} 120V128M${barX + unit + 0.5} 120V128M${barX + 0.5} 124.5H${barX + unit + 0.5}"/>
     <text x="${barX + unit + 8}" y="128">1 KB</text>
-    <text x="${end}" y="128" text-anchor="end" class="value">0 dependencies</text>`;
+    <text x="${barEnd}" y="128" text-anchor="end" class="value">0 dependencies</text>`;
 }
 
 // ── Layout ──────────────────────────────────────────────────────────────
@@ -125,7 +147,7 @@ const figH = (figW / 320) * 146;
 const cells = [
   { title: "CSS-first", figure: cssFirstFigure() },
   { title: "Native scroll", figure: nativeScrollFigure() },
-  { title: `${kb(total)} KB gzipped`, figure: sizeFigure() },
+  { title: `${kb(core.total)} KB core`, figure: sizeFigure() },
 ]
   .map((cell, i) => {
     const x = sheet.x + i * cellW;
@@ -166,6 +188,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" 
     .fig .muted { stroke: ${c.muted}; }
     .fig .accent { stroke: ${c.accent}; }
     .fig .dashed { stroke-dasharray: 3 3; }
+    .fig .dashed-fine { stroke-dasharray: 2 2; }
     .fig text { font: 400 10px "Geist Mono"; letter-spacing: 0.1px; fill: ${c.faint}; }
     .fig .value { fill: ${c.ink}; }
     .fig .accent-text { fill: ${c.accent}; }
@@ -226,4 +249,4 @@ const finalSvg = await page.evaluate(() => {
 writeFileSync(`${out}.svg`, finalSvg + "\n");
 await page.locator("body > svg").screenshot({ path: `${out}.png` });
 await browser.close();
-console.log(`${out}.svg and ${out}.png: ${kb(total)} KB, v${version}`);
+console.log(`${out}.svg and ${out}.png: ${kb(core.total)} KB core, ${kb(full.total)} KB full, v${version}`);
