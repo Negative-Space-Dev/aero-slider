@@ -42,8 +42,9 @@ const behaviours = [
   "A click on a thumbnail, loop clones included, calls <code>primary.goTo()</code> with its index.",
   "On each <code>aero:slideChange</code> from <code>primary</code>, the matching thumbnails get <code>aero-slider__thumb--active</code> and <code>aria-current=\"true\"</code>, and the strip scrolls to them with <code>thumbnails.goTo()</code>.",
   "Starts with the primary's current slide marked.",
+  'Makes each thumbnail that isn\'t a control of its own a button: <code>tabindex="0"</code> and <code>role="button"</code>, so Tab reaches it and Enter or Space presses it through the same path as a click. A thumbnail with no name of its own gets <code>aria-label="Go to slide N"</code>. Buttons, links and loop clones are left alone, and it holds after <code>refresh()</code> and <code>update()</code>.',
   'Leaves the strip\'s alignment alone. Set <code>alignment: "center"</code> on it to keep the active thumbnail centred.',
-  "The teardown removes its listeners, the pointer cursor, the active class and <code>aria-current</code>. It doesn't destroy either slider or undo the <code>update()</code>.",
+  "The teardown, or destroying the strip, removes its listeners, the pointer cursor, the active class, <code>aria-current</code> and the button attributes. It doesn't destroy either slider or undo the <code>update()</code>.",
 ];
 ---
 
