@@ -152,6 +152,20 @@ test("unnamed thumbnails are named for their slide, and rebuilt strips stay butt
   expect(await thumbs(page)).toBe(original);
 });
 
+test("an image thumbnail keeps its alt text as its name", async ({ page }) => {
+  await mount(page, slider("main", 3) + slider("thumbs", 3, strip));
+  await page.evaluate(() => {
+    for (const [i, slide] of document.querySelectorAll("#thumbs .aero-slider__track > *").entries())
+      slide.replaceWith(Object.assign(new Image(40, 40), { alt: `Photo ${i + 1}` }));
+  });
+  await create(page, "main");
+  await create(page, "thumbs");
+  await sync(page, false);
+  const track = page.locator("#thumbs .aero-slider__track");
+  await expect(track.getByRole("button", { name: "Photo 2" })).toHaveCount(1);
+  await expect(track.locator("[aria-label]")).toHaveCount(0);
+});
+
 test("Enter on a button inside a thumbnail is left to the button", async ({ page }) => {
   const inner = { ...strip, inner: (i: number) => `<button type="button">${i}</button>` };
   await mount(page, slider("main", 4) + slider("thumbs", 4, inner));

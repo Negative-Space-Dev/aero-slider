@@ -75,8 +75,8 @@ export function syncThumbnails(
           el.getAttribute("role"),
           !!(
             el.textContent!.trim() ||
-            el.querySelector("img[alt]:not([alt=''])") ||
-            el.matches("[aria-label], [aria-labelledby], [title]")
+            el.matches("img[alt]:not([alt='']), [aria-label], [aria-labelledby], [title]") ||
+            el.querySelector("img[alt]:not([alt=''])")
           ),
         ]);
         el.tabIndex = 0;
