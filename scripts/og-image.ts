@@ -112,7 +112,7 @@ function sizeFigure(): string {
     return `M${from + 0.5} ${y - 6}V${y + 6}M${to - 0.5} ${y - 6}V${y + 6}M${from + 0.5} ${y + 0.5}H${mid - gap / 2}M${mid + gap / 2} ${y + 0.5}H${to - 0.5}`;
   };
   const bars = segments
-    .map((s) => `<rect x="${s.x + 0.5}" y="36.5" width="${Math.max(0, s.width - 1)}" height="22" fill="${s.fill}"/>`)
+    .map((s) => `<rect x="${s.x + 0.5}" y="72.5" width="${Math.max(0, s.width - 1)}" height="22" fill="${s.fill}"/>`)
     .join("");
   return `<defs>
       <pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path class="strong" d="M0 0V5"/></pattern>
@@ -120,20 +120,17 @@ function sizeFigure(): string {
       <pattern id="hatch-muted" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><path class="faint" d="M0 0V5"/></pattern>
       <pattern id="hatch-muted-dense" width="2.5" height="2.5" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><path class="faint" d="M0 0V2.5"/></pattern>
     </defs>
-    <text x="${barX}" y="22">core js + css</text>
-    <text x="${barEnd}" y="22" text-anchor="end">extensions</text>
-    <path class="strong" d="M${barX + 0.5} 28V34M${barEnd - 0.5} 28V34"/>
+    <text x="${barX}" y="58">core js + css</text>
+    <text x="${barEnd}" y="58" text-anchor="end">extensions</text>
+    <path class="strong" d="M${barX + 0.5} 64V70M${barEnd - 0.5} 64V70"/>
     ${bars}
-    <rect class="faint" x="${barX + 0.5}" y="36.5" width="${coreEnd - barX - 1}" height="22" rx="1"/>
-    <rect class="faint dashed-fine" x="${coreEnd + 0.5}" y="36.5" width="${barEnd - coreEnd - 1}" height="22" rx="1"/>
-    <path class="faint" d="M${segments[1]!.x + 0.5} 36.5V58.5M${segments[3]!.x + 0.5} 36.5V58.5"/>
-    <path class="strong" d="${dimension(barX, coreEnd, 74, 76)}"/>
-    <text x="${(barX + coreEnd) / 2}" y="77.5" text-anchor="middle" class="value">${kb(core.total)} KB core</text>
-    <path class="accent" d="${dimension(barX, barEnd, 98, 76)}"/>
-    <text x="${(barX + barEnd) / 2}" y="101.5" text-anchor="middle" class="accent-text">${kb(full.total)} KB full</text>
-    <path class="strong" d="M${barX + 0.5} 120V128M${barX + unit + 0.5} 120V128M${barX + 0.5} 124.5H${barX + unit + 0.5}"/>
-    <text x="${barX + unit + 8}" y="128">1 KB</text>
-    <text x="${barEnd}" y="128" text-anchor="end" class="value">0 dependencies</text>`;
+    <rect class="faint" x="${barX + 0.5}" y="72.5" width="${coreEnd - barX - 1}" height="22" rx="1"/>
+    <rect class="faint dashed-fine" x="${coreEnd + 0.5}" y="72.5" width="${barEnd - coreEnd - 1}" height="22" rx="1"/>
+    <path class="faint" d="M${segments[1]!.x + 0.5} 72.5V94.5M${segments[3]!.x + 0.5} 72.5V94.5"/>
+    <path class="strong" d="${dimension(barX, coreEnd, 110, 76)}"/>
+    <text x="${(barX + coreEnd) / 2}" y="113.5" text-anchor="middle" class="value">${kb(core.total)} KB core</text>
+    <path class="accent" d="${dimension(barX, barEnd, 134, 76)}"/>
+    <text x="${(barX + barEnd) / 2}" y="137.5" text-anchor="middle" class="accent-text">${kb(full.total)} KB full</text>`;
 }
 
 // ── Layout ──────────────────────────────────────────────────────────────
@@ -147,7 +144,7 @@ const figH = (figW / 320) * 146;
 const cells = [
   { title: "CSS-first", figure: cssFirstFigure() },
   { title: "Native scroll", figure: nativeScrollFigure() },
-  { title: `${kb(core.total)} KB core`, figure: sizeFigure() },
+  { title: `${kb(core.total)}–${kb(full.total)} KB`, figure: sizeFigure() },
 ]
   .map((cell, i) => {
     const x = sheet.x + i * cellW;
