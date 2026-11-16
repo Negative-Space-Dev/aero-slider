@@ -53,16 +53,19 @@ export function syncThumbnails(
       else child.removeAttribute("aria-current");
     }
   };
-  /** Each thumbnail made a button, with its role and aria-label from before. Clones are never
-   * in it. */
-  const buttons = new Map<HTMLElement, [role: string | null, label: string | null]>();
+  /** Each thumbnail made a button: its role from before, the author's aria-label, and the one
+   * given in its place, if any. Clones are never in it. */
+  const buttons = new Map<
+    HTMLElement,
+    [role: string | null, label: string | null, given: string | undefined]
+  >();
   const put = (el: Element, name: string, value: string | null): void =>
     value === null ? el.removeAttribute(name) : el.setAttribute(name, value);
   const restore = (el: HTMLElement): void => {
-    const [role, label] = buttons.get(el)!;
+    const [role, label, given] = buttons.get(el)!;
     el.removeAttribute("tabindex"); // it had none: FOCUSABLE covers [tabindex]
     put(el, "role", role);
-    put(el, "aria-label", label);
+    if (el.getAttribute("aria-label") === given) put(el, "aria-label", label);
     buttons.delete(el);
   };
   /** Whether `el` names itself, given the aria-label it had before it was made a button. */
@@ -84,16 +87,17 @@ export function syncThumbnails(
     for (const el of track.querySelectorAll<HTMLElement>(`:scope > [${SLIDE_INDEX_ATTR}]`)) {
       if (!buttons.has(el)) {
         if (el.matches(FOCUSABLE) || el.querySelector(FOCUSABLE)) continue; // a link or a button
-        buttons.set(el, [el.getAttribute("role"), el.getAttribute("aria-label")]);
+        buttons.set(el, [el.getAttribute("role"), null, undefined]);
         el.tabIndex = 0;
         el.setAttribute("role", "button");
       }
-      const label = buttons.get(el)![1];
-      put(
-        el,
-        "aria-label",
-        named(el, label) ? label : `Go to slide ${+el.getAttribute(SLIDE_INDEX_ATTR)! + 1}`
-      );
+      const entry = buttons.get(el)!;
+      const current = el.getAttribute("aria-label");
+      if (current !== entry[2]) entry[1] = current; // the author's, perhaps changed since
+      entry[2] = named(el, entry[1])
+        ? undefined
+        : `Go to slide ${+el.getAttribute(SLIDE_INDEX_ATTR)! + 1}`;
+      put(el, "aria-label", entry[2] ?? entry[1]);
     }
   };
 

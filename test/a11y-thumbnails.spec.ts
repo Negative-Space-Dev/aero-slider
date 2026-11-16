@@ -217,6 +217,36 @@ test("an empty name is no name, and a name lost on refresh is replaced", async (
   expect(await thumbs(page)).toBe(original); // the empty aria-label is back as it was
 });
 
+test("a label the page changes later survives rebuilds and the teardown", async ({ page }) => {
+  const labelled = { ...strip, inner: () => `<img alt="">` };
+  await mount(page, slider("main", 3) + slider("thumbs", 3, labelled));
+  await page.evaluate(() =>
+    document.querySelector("#thumbs .aero-slider__track > *")!.setAttribute("aria-label", "Old")
+  );
+  await create(page, "main");
+  await create(page, "thumbs");
+  await sync(page, false);
+  const real = page.locator("#thumbs [data-aero-slider-index]");
+  await expect(real.nth(0)).toHaveAccessibleName("Old");
+  await page.evaluate(() => {
+    document
+      .querySelector("#thumbs [data-aero-slider-index='0']")!
+      .setAttribute("aria-label", "New");
+    // A given name the page replaces is the page's from then on.
+    document
+      .querySelector("#thumbs [data-aero-slider-index='1']")!
+      .setAttribute("aria-label", "Mine");
+    window.sliders.thumbs!.refresh();
+  });
+  await expect(real.nth(0)).toHaveAccessibleName("New");
+  await expect(real.nth(1)).toHaveAccessibleName("Mine");
+  await expect(real.nth(2)).toHaveAccessibleName("Go to slide 3");
+  await page.evaluate(() => (window as unknown as { unsync: () => void }).unsync());
+  await expect(real.nth(0)).toHaveAttribute("aria-label", "New");
+  await expect(real.nth(1)).toHaveAttribute("aria-label", "Mine");
+  await expect(real.nth(2)).not.toHaveAttribute("aria-label");
+});
+
 test("Enter on a button inside a thumbnail is left to the button", async ({ page }) => {
   const inner = { ...strip, inner: (i: number) => `<button type="button">${i}</button>` };
   await mount(page, slider("main", 4) + slider("thumbs", 4, inner));
