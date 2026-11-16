@@ -112,7 +112,10 @@ function sizeFigure(): string {
     return `M${from + 0.5} ${y - 6}V${y + 6}M${to - 0.5} ${y - 6}V${y + 6}M${from + 0.5} ${y + 0.5}H${mid - gap / 2}M${mid + gap / 2} ${y + 0.5}H${to - 0.5}`;
   };
   const bars = segments
-    .map((s) => `<rect x="${s.x + 0.5}" y="58.5" width="${Math.max(0, s.width - 1)}" height="22" fill="${s.fill}"/>`)
+    .map(
+      (s) =>
+        `<rect x="${s.x + 0.5}" y="58.5" width="${Math.max(0, s.width - 1)}" height="22" fill="${s.fill}"/>`
+    )
     .join("");
   return `<defs>
       <pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path class="strong" d="M0 0V5"/></pattern>
@@ -246,4 +249,6 @@ const finalSvg = await page.evaluate(() => {
 writeFileSync(`${out}.svg`, finalSvg + "\n");
 await page.locator("body > svg").screenshot({ path: `${out}.png` });
 await browser.close();
-console.log(`${out}.svg and ${out}.png: ${kb(core.total)} KB core, ${kb(full.total)} KB full, v${version}`);
+console.log(
+  `${out}.svg and ${out}.png: ${kb(core.total)} KB core, ${kb(full.total)} KB full, v${version}`
+);
