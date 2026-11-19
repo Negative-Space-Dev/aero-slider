@@ -61,9 +61,11 @@ function wireEdgeToEdge(): void {
   const group = getRequiredElementById("edge-align");
   // The highlighted `alignment: "start"` value in the sample code, kept in step with the switch.
   const line = [...getRequiredElementById("ex-edge-to-edge").querySelectorAll("pre .line")].find(
-    (each) => each.textContent?.trim().startsWith("alignment:"),
+    (each) => each.textContent?.trim().startsWith("alignment:")
   );
-  const value = [...(line?.children ?? [])].find((token) => /^\s*"\w+"$/.test(token.textContent ?? ""));
+  const value = [...(line?.children ?? [])].find((token) =>
+    /^\s*"\w+"$/.test(token.textContent ?? "")
+  );
   group.addEventListener("click", (event) => {
     const alignment = pick(group, event, "data-align")?.dataset.align;
     if (alignment) {
