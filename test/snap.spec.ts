@@ -216,14 +216,18 @@ test("snap: settle: a wheel stops the browser's smooth settle where it is", asyn
       )
     );
   });
-  // 1100 settles forward onto the slide at 1220.
-  await page.evaluate(() => (document.querySelector("#s .aero-slider__track")!.scrollLeft = 1100));
-  await page.waitForTimeout(40);
+  // 1100 settles forward onto the slide at 1220. The wheel goes once that settle is moving.
+  await page.evaluate(async () => {
+    const track = document.querySelector("#s .aero-slider__track")!;
+    track.scrollLeft = 1100;
+    while (track.scrollLeft <= 1100) await new Promise(requestAnimationFrame);
+  });
   for (let k = 0; k < 12; k++) {
     await page.mouse.wheel(-20, 0);
     await page.waitForTimeout(16);
   }
   const [atWheel, ...after] = await offsets;
+  expect(atWheel).toBeLessThan(1219); // the settle was still under way
   expect(Math.max(...after)).toBeLessThanOrEqual(atWheel! + 1);
 });
 
