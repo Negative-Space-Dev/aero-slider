@@ -9,6 +9,9 @@ function selectTab(block: HTMLElement, key: string): void {
   for (const panel of block.querySelectorAll<HTMLElement>("[data-panel]")) {
     panel.hidden = panel.dataset.panel !== key;
   }
+  for (const extra of block.querySelectorAll<HTMLElement>("[data-for]")) {
+    extra.hidden = extra.dataset.for !== key;
+  }
 }
 
 function activate(block: HTMLElement, key: string): void {

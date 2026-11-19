@@ -39,7 +39,19 @@ use({ loop }); // only the extensions you use`,
     code: `<link rel="stylesheet" href="${CDN}/aero-slider.min.css" />
 <script type="module" src="${CDN}/aero-slider.min.js"></script>`,
   },
+  {
+    label: "Download release",
+    lang: "html",
+    download: `${REPO}/releases/latest`,
+    code: `<!-- The files from the release .zip, next to your page -->
+<link rel="stylesheet" href="aero-slider.min.css" />
+<script type="module" src="aero-slider.min.js"></script>`,
+  },
 ];
+
+const globalCreate = `<script type="module">
+  const slider = AeroSlider.createSlider(document.querySelector(".aero-slider"), { loop: true });
+</script>`;
 
 const create: CodeTab[] = [
   {
@@ -47,13 +59,8 @@ const create: CodeTab[] = [
     lang: "javascript",
     code: `const slider = createSlider(document.querySelector(".aero-slider"), { loop: true });`,
   },
-  {
-    label: "CDN",
-    lang: "html",
-    code: `<script type="module">
-  const slider = AeroSlider.createSlider(document.querySelector(".aero-slider"), { loop: true });
-</script>`,
-  },
+  { label: "CDN", lang: "html", code: globalCreate },
+  { label: "Download release", lang: "html", code: globalCreate },
 ];
 
 const steps = [
