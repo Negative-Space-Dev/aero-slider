@@ -66,11 +66,6 @@
 .ex-slider {
   min-width: 0;
 }
-.ex-slider__caption {
-  margin-bottom: 0.625rem;
-  text-transform: none;
-  letter-spacing: 0.02em;
-}
 
 .ex__more {
   display: grid;

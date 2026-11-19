@@ -38,7 +38,7 @@ export interface DemoSlider {
   thumbs?: boolean;
   /** The instance's variable name in the JS sample. */
   name?: string;
-  /** Shown above the slider when an example has several. */
+  /** Names the slider in a comment in the HTML sample when an example has several. */
   caption?: string;
   /** Set as the container's inline style and printed as the CSS tab's rule. */
   vars?: CssVars;
