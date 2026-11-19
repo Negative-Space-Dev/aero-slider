@@ -40,7 +40,7 @@ use({ loop }); // only the extensions you use`,
 <script type="module" src="${CDN}/aero-slider.min.js"></script>`,
   },
   {
-    label: "Download release",
+    label: "Download",
     lang: "html",
     download: `${REPO}/releases/latest`,
     code: `<!-- The files from the release .zip, next to your page -->
@@ -60,7 +60,7 @@ const create: CodeTab[] = [
     code: `const slider = createSlider(document.querySelector(".aero-slider"), { loop: true });`,
   },
   { label: "CDN", lang: "html", code: globalCreate },
-  { label: "Download release", lang: "html", code: globalCreate },
+  { label: "Download", lang: "html", code: globalCreate },
 ];
 
 const steps = [
