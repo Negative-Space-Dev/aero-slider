@@ -7,6 +7,8 @@ export interface CodeTab {
   lang: CodeLang;
   /** Stable key for the tab; tabs in the same group switch together by key. Defaults to the label. */
   key?: string;
+  /** A download link shown beside the copy button while this tab is open. */
+  download?: string;
 }
 
 export function tabKey(tab: CodeTab): string {

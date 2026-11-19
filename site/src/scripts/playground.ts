@@ -518,8 +518,7 @@ if (isTouchDevice && draggableLabel) {
   const tooltip = document.createElement("div");
   tooltip.className =
     "fixed z-50 max-w-xs rounded-lg border border-line-strong bg-surface px-3 py-2 text-xs text-ink opacity-0 pointer-events-none transition-opacity";
-  tooltip.textContent =
-    "Touch devices have native swipe support — this setting is for enabling drag on desktop.";
+  tooltip.textContent = "Touch devices swipe natively. This turns on mouse drag.";
   document.body.appendChild(tooltip);
 
   let tooltipTimeout: ReturnType<typeof setTimeout> | null = null;

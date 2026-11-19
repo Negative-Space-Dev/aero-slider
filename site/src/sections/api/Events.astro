@@ -47,13 +47,9 @@ el.addEventListener("aero:dragEnd", (event) => {
   <div class="api-split">
     <div class="copy">
       <p>
-        The slider reports what it does as events on its container. Each is a native
-        <code>CustomEvent</code> named with the <code>aero:</code> prefix, carries its data on
-        <code>event.detail</code>, and bubbles.
-      </p>
-      <p>
-        Each event below says when it fires and what it is useful for, with a recipe to copy. In
-        the recipes, <code>el</code> is the container.
+        The slider fires bubbling <code>CustomEvent</code>s on its container, named with the
+        <code>aero:</code> prefix, with data on <code>event.detail</code>. In the recipes,
+        <code>el</code> is the container.
       </p>
     </div>
     <CodeTabs tabs={listen} />

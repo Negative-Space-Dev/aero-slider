@@ -15,7 +15,6 @@ import { instanceRefGroups } from "../../data/api";
   <RefList groups={instanceRefGroups} />
 
   <p class="note">
-    The instance is also on the container as <code>element.aeroSlider</code>, so code that only has
-    the element can still reach it. <code>destroy()</code> deletes it.
+    The instance stays on <code>element.aeroSlider</code> until <code>destroy()</code>.
   </p>
 </Entry>

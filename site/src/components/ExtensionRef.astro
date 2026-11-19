@@ -19,21 +19,20 @@ const events = eventEntryGroups(extension).flatMap((group) => group.entries);
 ---
 
 <Entry tag="Extension" title={title} id={id}>
+  <p slot="meta" class="api-files">{files.map((file) => <code>dist/extensions/{file}</code>)}</p>
   <div class="copy">
     <slot />
   </div>
-  <dl class="api-facts">
-    <div>
-      <dt class="caption">Requires</dt>
-      <dd set:html={requires ?? "The core."} />
-    </div>
-    <div>
-      <dt class="caption">Files</dt>
-      <dd class="api-facts__files">{files.map((file) => <code>dist/extensions/{file}</code>)}</dd>
-    </div>
-  </dl>
   <slot name="demo" />
-  <slot name="reference" />
-  <RefList groups={extensionRefGroups(extension)} />
-  {events.length > 0 && <ApiEventList groups={[{ title: "Events", entries: events }]} />}
+  <div class="ext-stack">
+    <dl class="api-facts">
+      <div>
+        <dt class="caption">Requires</dt>
+        <dd set:html={requires ?? "The core."} />
+      </div>
+    </dl>
+    <slot name="reference" />
+    <RefList groups={extensionRefGroups(extension)} />
+    {events.length > 0 && <ApiEventList groups={[{ title: "Events", entries: events }]} />}
+  </div>
 </Entry>

@@ -538,6 +538,9 @@ body {
       color 0.15s,
       background-color 0.15s;
   }
+  .code-tabs__copy[hidden] {
+    display: none;
+  }
   .code-tabs__copy:hover {
     background: var(--line);
     color: var(--ink);

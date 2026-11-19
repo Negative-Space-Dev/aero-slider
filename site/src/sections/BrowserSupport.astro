@@ -7,8 +7,8 @@ const browsers = ["Chrome", "Safari", "Firefox"] as const;
 const features: { feature: string; since: Record<(typeof browsers)[number], string>; usedFor: string }[] = [
   { feature: "CSS Variables", since: { Chrome: "49", Safari: "9.1", Firefox: "31" }, usedFor: "Configuring layout and gap size." },
   { feature: "Scroll Snapping", since: { Chrome: "69", Safari: "11", Firefox: "68" }, usedFor: "Locking slides into place after scrolling." },
-  { feature: "aspect-ratio", since: { Chrome: "88", Safari: "15", Firefox: "89" }, usedFor: "Maintaining proper height for the slider track." },
-  { feature: "contain: paint", since: { Chrome: "52", Safari: "15.4", Firefox: "69" }, usedFor: "Performance optimization for painting slides." },
+  { feature: "aspect-ratio", since: { Chrome: "88", Safari: "15", Firefox: "89" }, usedFor: "Sizing slides from --aero-slide-aspect." },
+  { feature: "contain: paint", since: { Chrome: "52", Safari: "15.4", Firefox: "69" }, usedFor: "Keeping slide painting inside the viewport." },
   { feature: "overscroll-behavior-x", since: { Chrome: "63", Safari: "16", Firefox: "59" }, usedFor: "Preventing rubber-banding when hitting the edge." },
 ];
 
@@ -31,8 +31,7 @@ const rows = features.map((row) => [
   <h2 class="mb-6 text-3xl font-medium tracking-[-0.025em] sm:text-4xl">Browser support</h2>
   <div class="copy">
     <p>
-      Chrome {baseline.Chrome}+, Firefox {baseline.Firefox}+ and Safari {baseline.Safari}+. Older
-      browsers degrade gracefully.
+      Chrome {baseline.Chrome}+, Firefox {baseline.Firefox}+ and Safari {baseline.Safari}+.
     </p>
   </div>
   <Disclosure label="CSS features by browser" class="mt-6">
