@@ -173,6 +173,58 @@ test.describe("snap: settle", () => {
     await settled(page, "s");
     expect(await state(page, "s")).toEqual({ index: 0, position: 0 });
   });
+
+  // A trackpad swipe is a stream of wheel events with pauses, and scrollend can fire inside it.
+  test("a stream of wheel events moves only forward, then settles once", async ({ page }) => {
+    const box = (await page.locator("#s .aero-slider__track").boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + 60);
+    const path = await recordScroll(page, "s", 800);
+    for (let k = 0; k < 20; k++) {
+      await page.mouse.wheel(20, 0);
+      await page.waitForTimeout(k === 9 ? 60 : 16);
+    }
+    const samples = await path();
+    expect(samples.slice(1).every((offset, k) => offset >= samples[k]! - 0.5)).toBe(true);
+    expect(samples.at(-1)!).toBeGreaterThan(STRIDE / 2);
+    await expect.poll(() => state(page, "s")).toEqual({ index: 1, position: STRIDE });
+  });
+});
+
+// The browser carries on a smooth scrollTo() under a wheel, pulling the track against it.
+test("snap: settle: a wheel stops the browser's smooth settle where it is", async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName === "firefox", "Firefox scrolls off the main thread and drifts a frame on");
+  await fiveSlides(page, "settle", 0);
+  const box = (await page.locator("#s .aero-slider__track").boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + 60);
+  const offsets = page.evaluate(() => {
+    const track = document.querySelector("#s .aero-slider__track")!;
+    return new Promise<number[]>((resolve) =>
+      track.addEventListener(
+        "wheel",
+        async () => {
+          const out = [track.scrollLeft];
+          for (let k = 0; k < 15; k++) {
+            await new Promise(requestAnimationFrame);
+            out.push(track.scrollLeft);
+          }
+          resolve(out);
+        },
+        { once: true }
+      )
+    );
+  });
+  // 1100 settles forward onto the slide at 1220.
+  await page.evaluate(() => (document.querySelector("#s .aero-slider__track")!.scrollLeft = 1100));
+  await page.waitForTimeout(40);
+  for (let k = 0; k < 12; k++) {
+    await page.mouse.wheel(-20, 0);
+    await page.waitForTimeout(16);
+  }
+  const [atWheel, ...after] = await offsets;
+  expect(Math.max(...after)).toBeLessThanOrEqual(atWheel! + 1);
 });
 
 // Each move reaches the page about 35ms after the last, and a loaded machine stretches that, so
