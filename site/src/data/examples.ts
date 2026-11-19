@@ -84,8 +84,6 @@ export interface Demo {
 export interface Example extends Demo {
   group: ExampleGroup;
   title: string;
-  /** One sentence: what this is for. HTML. */
-  lead: string;
   /** "Good to know" bullets. HTML. */
   notes?: string[];
 }
@@ -300,7 +298,6 @@ export const examples: Record<ExampleId, Example> = {
   "ex-product-row": {
     group: "controls",
     title: "Product row",
-    lead: "Use it for a row of product cards: a peek of the next card on phones, whole rows on wider screens, and buttons that still click.",
     html: true,
     sliders: [
       {
@@ -338,7 +335,6 @@ pageSize();`,
   "ex-edge-to-edge": {
     group: "layout",
     title: "Edge-to-edge carousel",
-    lead: "Use it when slides should run off both edges of the window while the active one lines up with your content column.",
     html: true,
     sliders: [
       {
@@ -346,7 +342,7 @@ pageSize();`,
         label: "Featured",
         className: "aero-slider--breakout",
         wrapperClass: "breakout-clip",
-        config: { alignment: "start", snap: "settle" },
+        config: { alignment: "start" },
         nav: true,
         dots: true,
         slides: [
@@ -362,7 +358,6 @@ pageSize();`,
     notes: [
       "<code>aero-slider--breakout</code> lets the viewport overflow and pads the track so the first and last slides line up with the column.",
       "<code>--aero-layout-width</code> is the width slides are sized against. Set it to your content column.",
-      '<code>snap: "settle"</code> lets a drag move freely, then eases onto the nearest card. A short pull on these wide cards springs back instead of moving a whole card.',
       "The edge padding is worked out from the track's own width, so it stays right with or without a scrollbar.",
       "The wrapper must span the window. Hide the page's horizontal overflow, because <code>100vw</code> includes the scrollbar.",
       "The dashed lines mark the column. The switch calls <code>update({ alignment })</code>.",
@@ -372,7 +367,6 @@ pageSize();`,
   "ex-mobile-only": {
     group: "layout",
     title: "Slider on phones, grid on desktop",
-    lead: "Use it when a set of tiles should swipe on a phone and sit in a plain grid on wider screens.",
     html: true,
     sliders: [
       {
@@ -413,7 +407,6 @@ sync();`,
   "ex-autoplay": {
     group: "motion",
     title: "Hero banner with autoplay",
-    lead: "Use it when a banner should move through its slides on its own and step aside as soon as someone interacts.",
     html: true,
     sliders: [
       {
@@ -459,7 +452,6 @@ sync();`,
   "ex-ticker": {
     group: "motion",
     title: "Logo ticker",
-    lead: "Use it for a strip of logos or press mentions that drifts steadily and never stops on a slide.",
     sliders: [
       {
         id: "ticker",
@@ -495,7 +487,6 @@ sync();`,
   "ex-announcement": {
     group: "motion",
     title: "Announcement bar",
-    lead: "Use it for the strip above a store's header: short messages that roll up one at a time.",
     html: true,
     sliders: [
       {
@@ -522,7 +513,6 @@ sync();`,
   "ex-gallery": {
     group: "controls",
     title: "Product gallery with thumbnails",
-    lead: "Use it for a product page: a large view above a strip of thumbnails that stays in step with it.",
     html: true,
     layout: "stack",
     sliders: [
@@ -574,7 +564,6 @@ sync();`,
   "ex-variants": {
     group: "layout",
     title: "Gallery that follows the variant",
-    lead: "Use it when a product's images change with the colour or flavour picked: each variant shows its own images plus the ones every variant shares.",
     html: variantHtml,
     layout: "stack",
     sliders: [
@@ -643,7 +632,6 @@ document.getElementById("swatches").addEventListener("click", (event) => {
   "ex-max-dots": {
     group: "controls",
     title: "Many slides, few dots",
-    lead: "Use it when there are more positions than dots that fit, and the dots should scroll along with the active slide.",
     html: true,
     sliders: [
       {
@@ -666,7 +654,6 @@ document.getElementById("swatches").addEventListener("click", (event) => {
   "ex-counter": {
     group: "controls",
     title: "Counter and progress bar",
-    lead: "Use it when a gallery should say “2 / 5” or fill a bar in place of dots, as most product pages do on a phone.",
     html: true,
     htmlAfter: `<p id="gallery-count">1 / 5</p>
 <div class="progress"><div id="gallery-bar"></div></div>`,
@@ -711,7 +698,6 @@ show(); // no slideChange fires for the starting slide`,
   "ex-styling": {
     group: "controls",
     title: "Arrows, dots and their states",
-    lead: "Arrows and dots are markup, not options: put the elements inside the slider and it wires them up. The library lays them out and nothing more, so their look is yours.",
     html: true,
     sliders: [
       {
