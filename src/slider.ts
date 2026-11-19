@@ -82,7 +82,7 @@ const DRAG_THRESHOLD_PX = 5;
 const FLICK_VELOCITY = 0.3; // px per ms
 const FLICK_PROJECTION_MS = 250;
 const SETTLE_FALLBACK_MS = 150; // for browsers without the scrollend event
-const WHEEL_SETTLE_MS = 200; // Firefox can skip scrollend after wheel scrolling
+const WHEEL_SETTLE_MS = 200; // after a wheel's last scroll: its scrollend can come mid-gesture
 
 /**
  * What a re-measure follows, which decides where the track goes. `resize`: the layout changed under
@@ -221,7 +221,7 @@ export function createSlider(
   // The scroll offset as last read, until something can have moved the track. Reading it lays the
   // page out if anything changed since the last frame, as it has in most slideChange handlers.
   let knownPosition: number | undefined;
-  let fallbackSettle = false; // a wheel or touch moved the track and scrollend may never come
+  let fallbackSettle = false; // a wheel or touch moved the track: settleTimer settles it, not scrollend
   const pressed = new Set<number>(); // mouse and pen pointers down on the track
   // Fingers on the track, from touch events: a pan turns the pointer stream into pointercancel
   // while the finger is still down, so pointer events can't say when it lifts.
@@ -1103,7 +1103,9 @@ export function createSlider(
     () => reducedMotion.matches && programmaticScroll && scrollTo(scrollTarget),
     { signal }
   );
-  track.addEventListener("scrollend", () => onSettle(), { signal });
+  // scrollend can fire between bursts of one wheel or trackpad gesture, with more scrolling to
+  // come. Easing then would fight it, so a wheel settles on its timer instead.
+  track.addEventListener("scrollend", () => fallbackSettle || onSettle(), { signal });
   // A wheel along the track takes over from any goTo() animation; one mostly across it is the page
   // scrolling past. Touch and mouse take over in onPointerDown.
   track.addEventListener(
@@ -1116,9 +1118,14 @@ export function createSlider(
           ? [deltaY, 0]
           : [deltaX, deltaY];
       if (Math.abs(along) <= Math.abs(across)) return;
+      fallbackSettle = true;
+      // A wheel doesn't stop a smooth scrollTo(): the browser would pull against it until it ends.
+      if (programmaticScroll && !easeFrame && !moveFrame) {
+        forgetPosition();
+        nativeScrollTo(scrollPosition(), "instant");
+      }
       programmaticScroll = false;
       remeasureAfter = "input";
-      fallbackSettle = true;
       cancelEase();
       settleSoon(); // a wheel too small to scroll sends no scroll event to settle after
     },

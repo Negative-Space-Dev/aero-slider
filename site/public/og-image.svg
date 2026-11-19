@@ -43,8 +43,8 @@
   </g>
   <text id="name" class="name" x="114" y="70">Aero Slider</text>
   <g id="version">
-    <rect id="version-box" y="44" height="34" rx="17" fill="#15171b" stroke="#2d3036" x="270.90625" width="86.8125"></rect>
-    <text id="version-text" class="mono" y="67" style="font-size:16px" x="284.40625">v1.2.1</text>
+    <rect id="version-box" y="44" height="34" rx="17" fill="#15171b" stroke="#2d3036" x="272.5000305175781" width="89.203125"></rect>
+    <text id="version-text" class="mono" y="67" style="font-size:16px" x="286.0000305175781">v1.2.2</text>
   </g>
   <text class="mono" x="1140" y="67" text-anchor="end">aeroslider.com</text>
 
@@ -80,7 +80,7 @@
     <rect class="muted" x="86.5" y="46.5" width="131" height="61" rx="3"></rect>
     <path class="strong" d="M0 120.5H320"></path><path class="strong" d="M-7.5 116V125"></path><path class="strong" d="M56.5 116V125"></path><path class="faint" d="M120.5 116V125"></path><path class="faint" d="M184.5 116V125"></path><path class="strong" d="M248.5 116V125"></path><path class="strong" d="M312.5 116V125"></path>
     <text x="4" y="138">snap points</text>
-    <text x="316" y="138" text-anchor="end">track</text></svg><text class="cell-title" x="810" y="356">7.7 – 10.6 KB</text>
+    <text x="316" y="138" text-anchor="end">track</text></svg><text class="cell-title" x="810" y="356">7.7 – 10.7 KB</text>
       <svg class="fig" x="810" y="409.125" width="300" height="136.875" viewBox="0 0 320 146"><defs>
       <pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path class="strong" d="M0 0V5"></path></pattern>
       <pattern id="hatch-dense" width="2.5" height="2.5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path class="faint" d="M0 0V2.5"></path></pattern>
@@ -90,13 +90,13 @@
     <text x="12" y="44">core js + css</text>
     <text x="308" y="44" text-anchor="end">extensions</text>
     <path class="strong" d="M12.5 50V56M307.5 50V56"></path>
-    <rect x="12.5" y="58.5" width="188.8867924528302" height="22" fill="url(#hatch)"></rect><rect x="202.3867924528302" y="58.5" width="24.132075471698116" height="22" fill="url(#hatch-dense)"></rect><rect x="227.5188679245283" y="58.5" width="71.60377358490568" height="22" fill="url(#hatch-muted)"></rect><rect x="300.122641509434" y="58.5" width="7.377358490566037" height="22" fill="url(#hatch-muted-dense)"></rect>
-    <rect class="faint" x="12.5" y="58.5" width="214.01886792452834" height="22" rx="1"></rect>
-    <rect class="faint dashed-fine" x="227.51886792452834" y="58.5" width="79.98113207547166" height="22" rx="1"></rect>
-    <path class="faint" d="M202.3867924528302 58.5V80.5M300.122641509434 58.5V80.5"></path>
-    <path class="strong" d="M12.5 90V102M226.51886792452834 90V102M12.5 96.5H81.50943396226417M157.50943396226415 96.5H226.51886792452834"></path>
-    <text x="119.50943396226417" y="99.5" text-anchor="middle" class="value">7.7 KB core</text>
+    <rect x="12.5" y="58.5" width="187.11214953271028" height="22" fill="url(#hatch)"></rect><rect x="200.61214953271028" y="58.5" width="23.897196261682243" height="22" fill="url(#hatch-dense)"></rect><rect x="225.50934579439252" y="58.5" width="73.69158878504673" height="22" fill="url(#hatch-muted)"></rect><rect x="300.20093457943926" y="58.5" width="7.299065420560746" height="22" fill="url(#hatch-muted-dense)"></rect>
+    <rect class="faint" x="12.5" y="58.5" width="212.00934579439254" height="22" rx="1"></rect>
+    <rect class="faint dashed-fine" x="225.50934579439254" y="58.5" width="81.99065420560746" height="22" rx="1"></rect>
+    <path class="faint" d="M200.61214953271028 58.5V80.5M300.20093457943926 58.5V80.5"></path>
+    <path class="strong" d="M12.5 90V102M224.50934579439254 90V102M12.5 96.5H80.50467289719627M156.50467289719626 96.5H224.50934579439254"></path>
+    <text x="118.50467289719627" y="99.5" text-anchor="middle" class="value">7.7 KB core</text>
     <path class="accent" d="M12.5 114V126M307.5 114V126M12.5 120.5H122M198 120.5H307.5"></path>
-    <text x="160" y="123.5" text-anchor="middle" class="accent-text">10.6 KB full</text></svg>
+    <text x="160" y="123.5" text-anchor="middle" class="accent-text">10.7 KB full</text></svg>
   <use href="#mark" x="60" y="300"></use><use href="#mark" x="60" y="570"></use><use href="#mark" x="420" y="300"></use><use href="#mark" x="420" y="570"></use><use href="#mark" x="780" y="300"></use><use href="#mark" x="780" y="570"></use><use href="#mark" x="1140" y="300"></use><use href="#mark" x="1140" y="570"></use>
 </svg>
