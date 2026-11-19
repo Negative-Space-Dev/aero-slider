@@ -24,6 +24,7 @@ const { tag, title, mono = false, id } = Astro.props;
     >
       {title}
     </h3>
+    <slot name="meta" />
   </header>
   <div class="space-y-5">
     <slot />
