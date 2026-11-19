@@ -25,7 +25,6 @@ const css = example.css;
       <span>{group.title}</span>
     </p>
     <h4 class="ex__title">{example.title}</h4>
-    <p class="ex__lead" set:html={example.lead} />
   </header>
 
   {css && <style is:inline set:html={css} />}

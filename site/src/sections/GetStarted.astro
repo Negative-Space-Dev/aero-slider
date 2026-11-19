@@ -1,6 +1,7 @@
 ---
 import CodeTabs from "../components/CodeTabs.astro";
 import type { CodeTab } from "../lib/code";
+import { REPO } from "../lib/site";
 
 const CDN = "https://unpkg.com/aero-slider/dist";
 
@@ -38,7 +39,19 @@ use({ loop }); // only the extensions you use`,
     code: `<link rel="stylesheet" href="${CDN}/aero-slider.min.css" />
 <script type="module" src="${CDN}/aero-slider.min.js"></script>`,
   },
+  {
+    label: "Download",
+    lang: "html",
+    download: `${REPO}/releases/latest`,
+    code: `<!-- The files from the release .zip, next to your page -->
+<link rel="stylesheet" href="aero-slider.min.css" />
+<script type="module" src="aero-slider.min.js"></script>`,
+  },
 ];
+
+const globalCreate = `<script type="module">
+  const slider = AeroSlider.createSlider(document.querySelector(".aero-slider"), { loop: true });
+</script>`;
 
 const create: CodeTab[] = [
   {
@@ -46,13 +59,8 @@ const create: CodeTab[] = [
     lang: "javascript",
     code: `const slider = createSlider(document.querySelector(".aero-slider"), { loop: true });`,
   },
-  {
-    label: "CDN",
-    lang: "html",
-    code: `<script type="module">
-  const slider = AeroSlider.createSlider(document.querySelector(".aero-slider"), { loop: true });
-</script>`,
-  },
+  { label: "CDN", lang: "html", code: globalCreate },
+  { label: "Download", lang: "html", code: globalCreate },
 ];
 
 const steps = [
@@ -60,14 +68,23 @@ const steps = [
     title: "Markup",
     text: [
       "A container, a viewport and a track. Each child of the track is a slide.",
-      "Arrows and dots are optional. Add them only if you want them.",
-      "You write the roles and labels. The slider keeps state such as <code>aria-current</code> on the active dot up to date.",
+      "Arrows and dots are optional.",
+      "You write the roles and labels. The slider keeps state such as <code>aria-current</code> up to date.",
     ],
     tabs: [{ label: "HTML", lang: "html", code: markup }] satisfies CodeTab[],
   },
   {
     title: "Load it",
-    text: 'From the package, or from a CDN without a bundler. The package needs <code>use()</code> for each <a href="#api-extensions">extension</a> you use, such as loop. The full CDN file has every extension and puts an <code>AeroSlider</code> object on <code>window</code>; the core and extension files are there too, to load only what you need.',
+    text: [
+      "Load it one of three ways:",
+      [
+        "Install the package from npm.",
+        "Link the files from a CDN.",
+        `Download the files from the <a href="${REPO}/releases/latest">latest release</a>.`,
+      ],
+      "The CDN and the release include a full file with every extension, which sets up a global <code>AeroSlider</code>. They also include the core and each extension as separate files, so you can load only what you need.",
+      'With the package, call <code>use()</code> for each <a href="#api-extensions">extension</a> you use.',
+    ],
     tabs: load,
   },
   {
@@ -91,7 +108,7 @@ const layers = [
   {
     tag: "JS",
     title: "JS config decides how it behaves",
-    body: '<code>snap</code>, <code>vertical</code> and the rest of the <a href="#api-options">options</a>, plus those of the <a href="#api-extensions">extensions</a> you load, such as <code>loop</code> and <code>autoplay</code>.',
+    body: '<code>snap</code>, <code>vertical</code> and the other <a href="#api-options">options</a>, plus <a href="#api-extensions">extension</a> options such as <code>loop</code> and <code>autoplay</code>.',
   },
 ];
 
@@ -128,19 +145,28 @@ const labelX = { left: 82, right: 314 };
 
   <div class="space-y-16 sm:space-y-20">
     <div>
-      <h3 class="caption mb-6">Quick start</h3>
       <ol class="space-y-10 sm:space-y-12">
         {
           steps.map((step, i) => (
-            <li class="grid gap-4 border-t border-line pt-6 lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-10">
+            <li class="grid gap-4 border-t border-line pt-6 first:border-t-0 first:pt-0 lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-10">
               <div>
                 <p class="flex items-baseline gap-3">
-                  <span class="caption text-accent tabular-nums">{String(i + 1).padStart(2, "0")}</span>
+                  <span class="caption relative -top-px text-[0.8125rem] text-accent tabular-nums">{String(i + 1).padStart(2, "0")}</span>
                   <span class="text-lg font-medium tracking-[-0.015em] text-ink">{step.title}</span>
                 </p>
-                {[step.text].flat().map((text) => (
-                  <p class="copy mt-2 text-[0.9375rem]" set:html={text} />
-                ))}
+                {[step.text].flat().map((text) =>
+                  Array.isArray(text) ? (
+                    <div class="copy mt-2 text-[0.9375rem]">
+                      <ul class="list-disc pl-5">
+                        {text.map((item) => (
+                          <li set:html={item} />
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <p class="copy mt-2 text-[0.9375rem]" set:html={text} />
+                  ),
+                )}
               </div>
               <CodeTabs tabs={step.tabs} group={step.tabs.length > 1 ? "setup" : undefined} class="self-start" />
             </li>
@@ -191,10 +217,9 @@ const labelX = { left: 82, right: 314 };
         </figure>
 
         {
-          layers.map((layer, i) => (
+          layers.map((layer) => (
             <div class="draft-cell lg:col-span-4">
               <div class="draft-cell__meta">
-                <span>Layer {String(i + 1).padStart(2, "0")}</span>
                 <span>{layer.tag}</span>
               </div>
               <h4>{layer.title}</h4>
@@ -205,8 +230,8 @@ const labelX = { left: 82, right: 314 };
       </div>
 
       <p class="note mt-6">
-        <strong>The library ships layout only.</strong> It has no styles for the arrow buttons and
-        no size or colour for the dots, so you style those yourself.
+        <strong>The library ships layout only.</strong> Arrows and dots have no styles, so you
+        style them yourself.
       </p>
     </div>
   </div>

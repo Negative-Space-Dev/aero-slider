@@ -38,7 +38,7 @@ export interface DemoSlider {
   thumbs?: boolean;
   /** The instance's variable name in the JS sample. */
   name?: string;
-  /** Shown above the slider when an example has several. */
+  /** Names the slider in a comment in the HTML sample when an example has several. */
   caption?: string;
   /** Set as the container's inline style and printed as the CSS tab's rule. */
   vars?: CssVars;
@@ -84,8 +84,6 @@ export interface Demo {
 export interface Example extends Demo {
   group: ExampleGroup;
   title: string;
-  /** One sentence: what this is for. HTML. */
-  lead: string;
   /** "Good to know" bullets. HTML. */
   notes?: string[];
 }
@@ -259,11 +257,11 @@ const variantSlides: DemoSlide[] = [
   ...variants.flatMap(({ key, label, tone }) =>
     ["Front", "Side", "Detail"].map((num) => ({ num, label, tone, variant: key }))
   ),
-  { num: "Fit", label: "All colours", tone: 4 },
-  { num: "Box", label: "All colours", tone: 4 },
+  { num: "Fit", label: "All colors", tone: 4 },
+  { num: "Box", label: "All colors", tone: 4 },
 ];
 
-const variantHtml = `<div id="swatches" role="group" aria-label="Colour">
+const variantHtml = `<div id="swatches" role="group" aria-label="Color">
   <button type="button" data-variant="graphite">Graphite</button>
   <button type="button" data-variant="ceramic">Ceramic</button>
   <button type="button" data-variant="blue">Blue</button>
@@ -272,14 +270,14 @@ const variantHtml = `<div id="swatches" role="group" aria-label="Colour">
 <div id="variant-gallery" class="aero-slider" role="region" aria-roledescription="carousel" aria-label="Product images">
   <div class="aero-slider__viewport">
     <div class="aero-slider__track">
-      <!-- data-variant: shown for that colour only -->
+      <!-- data-variant: shown for that color only -->
       <div data-variant="graphite">Graphite, front</div>
       <div data-variant="graphite">Graphite, side</div>
       <div data-variant="ceramic">Ceramic, front</div>
       <div data-variant="ceramic">Ceramic, side</div>
       <div data-variant="blue">Blue, front</div>
       <div data-variant="blue">Blue, side</div>
-      <!-- No data-variant: shown for every colour -->
+      <!-- No data-variant: shown for every color -->
       <div>Fit guide</div>
     </div>
   </div>
@@ -300,7 +298,6 @@ export const examples: Record<ExampleId, Example> = {
   "ex-product-row": {
     group: "controls",
     title: "Product row",
-    lead: "Use it for a row of product cards: a peek of the next card on phones, whole rows on wider screens, and buttons that still click.",
     html: true,
     sliders: [
       {
@@ -326,11 +323,9 @@ pageSize();`,
     notes: [
       "<code>--aero-slides-per-view</code> takes fractions. The part after the point is how much of the next card shows.",
       "The slider re-reads <code>--aero-slides-per-view</code> whenever the track or a slide changes size, so a media query takes effect with no JavaScript breakpoint config.",
-      "Card widths are worked out in CSS from the track width, the gap and the slides per view, so cards have their size before JavaScript runs.",
       "<code>--aero-slide-aspect: auto</code> lets a card take the height of its content. Leave it out to give every slide one shape.",
-      "The slider stretches each direct child of a slide to fill it. Put a card's image, text and button inside one wrapper, as here, and lay them out in that.",
-      "<code>noDrag</code> names what a mouse drag must not start on, so the link and the button click as usual. A press anywhere else on the card still drags, and touch is not affected.",
-      "Without <code>noDrag</code>, a drag that starts on a link or button swallows the click that ends it.",
+      "The slider stretches each direct child of a slide to fill it, so wrap the card's content in one element, as here.",
+      "<code>noDrag</code> keeps a mouse drag from starting on the link and button, so they click as usual. Without it, a drag that starts on them swallows the click. Touch is not affected.",
       "<code>perMove</code> sets how far the arrows, the arrow keys and autoplay go. Dragging still lands on any card.",
     ],
   },
@@ -338,7 +333,6 @@ pageSize();`,
   "ex-edge-to-edge": {
     group: "layout",
     title: "Edge-to-edge carousel",
-    lead: "Use it when slides should run off both edges of the window while the active one lines up with your content column.",
     html: true,
     sliders: [
       {
@@ -346,7 +340,7 @@ pageSize();`,
         label: "Featured",
         className: "aero-slider--breakout",
         wrapperClass: "breakout-clip",
-        config: { alignment: "start", snap: "settle" },
+        config: { alignment: "start" },
         nav: true,
         dots: true,
         slides: [
@@ -362,17 +356,13 @@ pageSize();`,
     notes: [
       "<code>aero-slider--breakout</code> lets the viewport overflow and pads the track so the first and last slides line up with the column.",
       "<code>--aero-layout-width</code> is the width slides are sized against. Set it to your content column.",
-      '<code>snap: "settle"</code> lets a drag move freely, then eases onto the nearest card. A short pull on these wide cards springs back instead of moving a whole card.',
-      "The edge padding is worked out from the track's own width, so it stays right with or without a scrollbar.",
       "The wrapper must span the window. Hide the page's horizontal overflow, because <code>100vw</code> includes the scrollbar.",
-      "The dashed lines mark the column. The switch calls <code>update({ alignment })</code>.",
     ],
   },
 
   "ex-mobile-only": {
     group: "layout",
     title: "Slider on phones, grid on desktop",
-    lead: "Use it when a set of tiles should swipe on a phone and sit in a plain grid on wider screens.",
     html: true,
     sliders: [
       {
@@ -403,8 +393,8 @@ phone.addEventListener("change", sync);
 sync();`,
     },
     notes: [
-      "<code>destroy()</code> removes the slider's listeners, clones and classes and leaves your markup, so the same elements can be laid out as a grid and started again later.",
-      "The library's classes are still in your markup, so the track keeps its flex row until your own CSS replaces it. That is the one rule in the media query.",
+      "<code>destroy()</code> removes the slider's listeners, clones and state classes and leaves your markup, so the same elements can become a grid and be started again later.",
+      "The track keeps its flex row until your CSS replaces it. That is the one rule in the media query.",
       "Keep the breakpoint in the script and the one in the stylesheet the same.",
       "Resize the window across 768px to watch it switch.",
     ],
@@ -413,7 +403,6 @@ sync();`,
   "ex-autoplay": {
     group: "motion",
     title: "Hero banner with autoplay",
-    lead: "Use it when a banner should move through its slides on its own and step aside as soon as someone interacts.",
     html: true,
     sliders: [
       {
@@ -433,7 +422,7 @@ sync();`,
           {
             num: "Watches",
             label: "Back in stock",
-            text: "The Field Watch returns in three colours.",
+            text: "The Field Watch returns in three colors.",
           },
           {
             num: "Travel",
@@ -445,13 +434,10 @@ sync();`,
       },
     ],
     notes: [
-      "The countdown restarts after any manual change, so a slide someone picks gets a full interval.",
-      "It pauses on hover, on keyboard focus, while pressed or dragged, and while the tab is hidden.",
-      "It does not run under <code>prefers-reduced-motion</code>, and stops as soon as that is turned on.",
-      "<code>pause()</code> and <code>resume()</code> hold it from code, on top of those pauses.",
-      'Autoplay always loops, so it needs the <a href="#api-loop">loop extension</a> as well as its own.',
+      "It pauses on hover, focus, press and drag, and while the tab is hidden. It is off under <code>prefers-reduced-motion</code>. A manual change restarts the countdown.",
+      'Autoplay always loops, so it needs the <a href="#api-loop">loop extension</a> too.',
       "Autoplay that runs for more than five seconds needs a pause control. Wire your own button to <code>pause()</code> and <code>resume()</code>.",
-      "A loop puts copies of the last slides in front of the first. Where the neighbours show, as here, slide 1 would start at the edge and jump to the centre when JavaScript runs. <code>data-aero-defer-visibility</code> reserves that space in CSS from the first paint, and the slider removes the attribute when it starts.",
+      "A loop puts clones of the last slides in front of the first. Where neighboring slides show, as here, <code>data-aero-defer-visibility</code> reserves their space in CSS so slide 1 doesn't jump when JavaScript starts.",
       'The reserved space is worked out from <code>--aero-slides-per-view</code> and <code>--aero-slide-gap</code> for center alignment. With another <code>alignment</code>, repeat it in the HTML as <code>data-aero-alignment="start"</code> or <code>"end"</code>.',
     ],
   },
@@ -459,7 +445,6 @@ sync();`,
   "ex-ticker": {
     group: "motion",
     title: "Logo ticker",
-    lead: "Use it for a strip of logos or press mentions that drifts steadily and never stops on a slide.",
     sliders: [
       {
         id: "ticker",
@@ -484,8 +469,8 @@ sync();`,
     ],
     notes: [
       '<code>autoplay: "continuous"</code> drifts the track at <code>autoplaySpeed</code> pixels per second. Like all autoplay it loops, so it needs the <code>loop</code> extension, and it implies <code>snap: "none"</code>.',
-      "The drift runs as animations on the slides with no per-frame JavaScript, so a busy main thread does not stall it.",
-      "It keeps drifting under the pointer. It holds while the slider is pressed or keyboard focus is inside, and <code>pause()</code> / <code>resume()</code> apply on top.",
+      "The drift uses Web Animations, not per-frame JavaScript, so a busy main thread doesn't stall it.",
+      "Hovering doesn't pause it. Pressing, keyboard focus and <code>pause()</code> do.",
       "Wheel and trackpad scrolling add to the drift.",
       "Under <code>prefers-reduced-motion</code> the track stays still.",
       "<code>draggable: false</code> keeps a mouse press from grabbing the strip. Leave it on if people should scrub through it.",
@@ -495,7 +480,6 @@ sync();`,
   "ex-announcement": {
     group: "motion",
     title: "Announcement bar",
-    lead: "Use it for the strip above a store's header: short messages that roll up one at a time.",
     html: true,
     sliders: [
       {
@@ -515,14 +499,12 @@ sync();`,
       "<code>vertical: true</code> scrolls top to bottom, whatever the text direction of the page. The up and down arrow keys, the drag axis and a swipe all follow.",
       "A vertical slider gets its height from its viewport. Give the viewport a <code>height</code>, as here, or let it follow <code>--aero-slide-aspect</code>.",
       "The slider adds <code>aero-slider--vertical</code> itself. Putting the class in the markup as well lays the bar out before JavaScript runs.",
-      "The autoplay rules from the hero banner apply: it pauses on hover and focus, and does not run under <code>prefers-reduced-motion</code>.",
     ],
   },
 
   "ex-gallery": {
     group: "controls",
     title: "Product gallery with thumbnails",
-    lead: "Use it for a product page: a large view above a strip of thumbnails that stays in step with it.",
     html: true,
     layout: "stack",
     sliders: [
@@ -562,7 +544,7 @@ sync();`,
     },
     notes: [
       "Both sliders need the same number of slides.",
-      "The strip can still be dragged; a click without a drag selects a thumbnail. It makes the strip loop. Pass <code>{ loop: false }</code> as the third argument to keep it from looping.",
+      "The strip can still be dragged, and a click selects a thumbnail. It loops by default; pass <code>{ loop: false }</code> as the third argument to stop that.",
       '<code>alignment: "center"</code> on the strip keeps the active thumbnail in the middle.',
       'Make each thumbnail a <code>&lt;button type="button"&gt;</code> with its own <code>aria-label</code>, so it can be reached and named.',
       'The active thumbnail gets <code>aero-slider__thumb--active</code> and <code>aria-current="true"</code>. Style it yourself.',
@@ -574,7 +556,6 @@ sync();`,
   "ex-variants": {
     group: "layout",
     title: "Gallery that follows the variant",
-    lead: "Use it when a product's images change with the colour or flavour picked: each variant shows its own images plus the ones every variant shares.",
     html: variantHtml,
     layout: "stack",
     sliders: [
@@ -632,18 +613,17 @@ document.getElementById("swatches").addEventListener("click", (event) => {
     notes: [
       "<code>refresh()</code> re-reads the slides from the track, so the slider becomes whatever elements are in it. Change the track first, then call it.",
       "Take slides out of the track to hide them. One hidden with CSS still counts as a slide, with its own stop and dot.",
-      "<code>refresh()</code> rests on the same index as before. <code>goTo(0, { instant: true })</code> after it starts the new set from its first image. The swap and the jump happen before the browser paints, so nothing flashes in between. The switch above the gallery turns that jump on and off.",
-      "Find slides by <code>data-aero-slider-index</code>, as here, and not by their place in the track. A looping track also holds copies of its slides, and the thumbnail strip loops.",
+      "<code>refresh()</code> keeps the current index. Call <code>goTo(0, { instant: true })</code> after it to start the new set from its first image, with no flash.",
+      "Find slides by <code>data-aero-slider-index</code>, not by their place in the track, which also holds loop clones.",
       "Reusing the same elements keeps the images they have already loaded.",
       "No <code>slideChange</code> fires when the set changes under the same index. Update a counter or caption yourself after the swap.",
-      'Slides named "2 of 5" in the markup need their names rewritten when the count changes.',
+      'Update slide labels such as "2 of 5" when the count changes.',
     ],
   },
 
   "ex-max-dots": {
     group: "controls",
     title: "Many slides, few dots",
-    lead: "Use it when there are more positions than dots that fit, and the dots should scroll along with the active slide.",
     html: true,
     sliders: [
       {
@@ -666,7 +646,6 @@ document.getElementById("swatches").addEventListener("click", (event) => {
   "ex-counter": {
     group: "controls",
     title: "Counter and progress bar",
-    lead: "Use it when a gallery should say “2 / 5” or fill a bar in place of dots, as most product pages do on a phone.",
     html: true,
     htmlAfter: `<p id="gallery-count">1 / 5</p>
 <div class="progress"><div id="gallery-bar"></div></div>`,
@@ -711,7 +690,6 @@ show(); // no slideChange fires for the starting slide`,
   "ex-styling": {
     group: "controls",
     title: "Arrows, dots and their states",
-    lead: "Arrows and dots are markup, not options: put the elements inside the slider and it wires them up. The library lays them out and nothing more, so their look is yours.",
     html: true,
     sliders: [
       {
@@ -737,7 +715,7 @@ show(); // no slideChange fires for the starting slide`,
       "The viewport is <code>position: relative</code>, so arrows inside it can be placed with <code>position: absolute</code>.",
       "The slider sets <code>disabled</code> on an arrow that cannot go further, so <code>:disabled</code> styles the end state. With <code>loop</code> no arrow is ever disabled.",
       'The current dot gets <code>aero-slider__dot--active</code> and <code>aria-current="true"</code>.',
-      "A dot this small is hard to tap. Make the button larger than the mark and draw the mark inside it, as the CSS here does with <code>::before</code>. Buttons 24px wide meet the WCAG target size, at the cost of dots set 24px apart.",
+      "Small dots are hard to tap. Make the button at least 24px wide and draw the dot inside it with <code>::before</code>, as here.",
       'Every class the slider sets is listed under <a href="#api-states">States in the API</a>.',
     ],
   },
