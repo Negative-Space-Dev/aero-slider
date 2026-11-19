@@ -134,11 +134,3 @@
   background: var(--accent);
 }
 
-/* An extension's demo, under the same rule as the other headings in its entry. */
-.ext-demo > h4 {
-  padding-bottom: 0.625rem;
-  border-bottom: 1px solid var(--line-strong);
-}
-.ext-demo .ex__demo {
-  margin-top: 1.25rem;
-}

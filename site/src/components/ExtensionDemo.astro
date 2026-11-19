@@ -14,7 +14,6 @@ const multi = demo.sliders.length > 1;
 ---
 
 <div class="ext-demo">
-  <h4 class="caption">Example</h4>
   <div class="ex__demo">
     <slot name="controls" />
     <div class:list={["ex__sliders", multi && `ex__sliders--${demo.layout ?? "row"}`]}>
