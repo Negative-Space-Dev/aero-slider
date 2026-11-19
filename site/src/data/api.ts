@@ -63,7 +63,7 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     type: '"start" | "center" | "end"',
     default: '"center"',
     description:
-      "Where the active slide rests in the viewport. The values are logical: <code>start</code> is the left edge, the right edge in a right-to-left slider and the top in a vertical one. At the ends of a non-looping track the scroll clamps, but <code>currentIndex</code> still names the focused slide.",
+      "Where the active slide sits in the viewport. <code>start</code> is the left edge, the right edge in a right-to-left slider and the top in a vertical one. Without loop, the scroll stops at the ends, but <code>currentIndex</code> still names the active slide.",
     example: "ex-edge-to-edge",
   },
   vertical: {
@@ -71,7 +71,7 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     type: "boolean",
     default: "false",
     description:
-      'Scrolls top to bottom, whatever the text direction of the page. Without it, the slider is horizontal and follows the text direction: <code>dir="rtl"</code> on the slider or any ancestor makes it right-to-left. That direction is read when the slider starts, so call <code>refresh()</code> after changing <code>dir</code>.',
+      'Scrolls top to bottom. Without it, the slider is horizontal and follows <code>dir="rtl"</code>. Call <code>refresh()</code> after changing <code>dir</code>.',
     example: "ex-announcement",
   },
   perMove: {
@@ -79,7 +79,7 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     type: "number",
     default: "1",
     description:
-      "Stops advanced by each <code>next()</code> and <code>prev()</code>, and so by the arrows, the arrow keys and autoplay. Without <code>loop</code>, slides that rest at the same place near an end share one stop.",
+      "How many slides <code>next()</code>, <code>prev()</code>, the arrows, the arrow keys and autoplay move at once.",
     example: "ex-product-row",
   },
   autoplay: {
@@ -88,7 +88,7 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     type: 'boolean | "continuous"',
     default: "false",
     description:
-      'Always loops: setting it turns looping on, whatever <code>loop</code> is set to. <code>true</code> advances one move every <code>autoplayInterval</code>. <code>"continuous"</code> drifts the track like a ticker at <code>autoplaySpeed</code>, and implies <code>snap: "none"</code>. Neither runs under reduced motion.',
+      'Turns looping on. <code>true</code> moves once every <code>autoplayInterval</code>. <code>"continuous"</code> drifts like a ticker at <code>autoplaySpeed</code>, with <code>snap: "none"</code>. Off under <code>prefers-reduced-motion</code>.',
     example: "ex-autoplay",
   },
   autoplayInterval: {
@@ -120,7 +120,7 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     type: "string",
     default: "form fields",
     description:
-      'A selector for elements inside slides where a mouse drag should not start. The default is <code>"input, textarea, select, [contenteditable]"</code>, so text fields and range inputs work as usual. Links and buttons are left out so that a slide that is a link can still be dragged. Video and audio with native controls are safe to drag, because browsers keep a press on the control bar inside their own controls: the picture drags the slider and the scrubber still scrubs. Firefox does not let a mouse drag a video with <code>controls</code> at all. Your value replaces the default.',
+      'Elements inside slides where a mouse drag should not start. The default, <code>"input, textarea, select, [contenteditable]"</code>, keeps form fields working. Your value replaces it. Links and buttons are left out so a slide that is a link can still be dragged.',
     example: "ex-product-row",
   },
   snap: {
@@ -135,7 +135,7 @@ export const options: Record<keyof SliderConfig, Doc<(typeof optionGroups)[numbe
     type: "number",
     default: "0",
     description:
-      "Length in ms of the scroll that <code>next()</code>, <code>prev()</code> and <code>goTo()</code> run, eased by <code>scrollEasing</code>, so it moves the same in every browser. <code>0</code> uses native smooth scrolling. Reduced motion makes every scroll instant.",
+      "How long, in ms, <code>next()</code>, <code>prev()</code> and <code>goTo()</code> take to scroll, eased by <code>scrollEasing</code>. <code>0</code> uses native smooth scrolling. Instant under <code>prefers-reduced-motion</code>.",
   },
   scrollEasing: {
     group: "Motion",
@@ -172,7 +172,7 @@ export const instanceMembers: Record<keyof SliderInstance, Doc<InstanceGroup>> =
     group: "Navigate",
     name: ".goTo(index, options?)",
     description:
-      "Scrolls to slide <code>index</code>. Out-of-range indexes wrap on a loop and clamp otherwise. <code>{ instant: true }</code> jumps there with no animation. It reads no layout, so it is cheap to call from an <code>aero:slideChange</code> handler, as a synced thumbnail strip does. Move the track with it rather than by scrolling the track yourself: the slider keeps its own record of the scroll offset.",
+      "Scrolls to slide <code>index</code>. Out-of-range indexes wrap on a loop and clamp otherwise. <code>{ instant: true }</code> skips the animation. Use it instead of scrolling the track yourself.",
   },
   pause: {
     extension: "autoplay",
@@ -247,7 +247,7 @@ export const events: Record<SliderEvent, EventDoc> = {
     group: "Navigation",
     type: "{ index: number }",
     description:
-      "The active slide changed, by arrows, dots, keys, a drag or swipe, autoplay or a method call. It fires as soon as the new slide is known, before the scroll lands.",
+      "The active slide changed, however it moved. Fires as soon as the new slide is known, before the scroll lands.",
     useFor: "A “2 / 5” counter, analytics, or keeping your own UI in step with the slider.",
     snippet: recipe(`const counter = document.querySelector(".slide-counter");
 const slider = createSlider(el, { loop: true });
@@ -297,7 +297,7 @@ el.addEventListener("aero:hidden", (event) => videoIn(event.detail.index)?.pause
     group: "Drag",
     type: "{ index: number }",
     description:
-      "A mouse or pen drag moved past a few pixels and took over the track. <code>index</code> is the slide it started from. Touch fires no drag events: a finger swipe scrolls the track natively. To follow every way of moving, use <code>aero:slideChange</code>.",
+      "A mouse or pen drag began. <code>index</code> is the slide it started from. Touch swipes fire no drag events; use <code>aero:slideChange</code> to follow every move.",
     useFor: "Reacting to the first drag, such as removing a “drag to explore” hint.",
     snippet: recipe(`const hint = el.querySelector(".drag-hint");
 el.addEventListener("aero:dragStart", () => hint.remove(), { once: true });`),
@@ -319,7 +319,7 @@ el.addEventListener("aero:dragStart", () => hint.remove(), { once: true });`),
     group: "Autoplay",
     type: "{}",
     description:
-      "Autoplay began running: at start, when <code>update()</code> turns it on, and each time a hover, focus, press or <code>pause()</code> lets go. Never under reduced motion. The first one fires inside <code>createSlider</code>, before it returns, so listen before you create.",
+      "Autoplay started or resumed. Never under <code>prefers-reduced-motion</code>. The first one fires inside <code>createSlider</code>, so listen before you create.",
     useFor: "A progress bar or a playing light that matches what autoplay is really doing.",
     snippet:
       recipe(`// <div class="autoplay-bar"> with transform-origin: left, inside the container.
@@ -359,7 +359,7 @@ createSlider(el, { autoplay: true, loop: true });`),
     group: "Layout",
     type: "{}",
     description:
-      "The slider or one of its slides changed size: the window resized, the page layout gave the container a new width, an image loaded, or a CSS variable such as <code>--aero-slides-per-view</code> changed. A new gap between slides of a fixed width resizes nothing, so it fires once the track comes to rest. Fires before the slider re-measures and moves the slides back into place.",
+      "The slider or one of its slides changed size. Fires before the slider re-measures and moves the slides back into place.",
     useFor: "Hiding anything pinned to where a slide was, before the slider moves it.",
     snippet: recipe(`// A tooltip pinned to a slide would point at the wrong spot once slides move.
 const tip = document.querySelector(".slide-tip");
@@ -387,7 +387,7 @@ createSlider(el);`),
     group: "Lifecycle",
     type: "{}",
     description:
-      "<code>createSlider</code> finished setting up. It fires before <code>createSlider</code> returns, so a listener added afterwards never hears it. To check later, read <code>el.aeroSlider</code>: the instance is there from the moment <code>aero:ready</code> fires until <code>destroy()</code>. The container also gets the <code>aero-slider--ready</code> class, for CSS.",
+      "<code>createSlider</code> finished setting up. Fires before <code>createSlider</code> returns, so listen first, or check <code>el.aeroSlider</code> later. The container also gets <code>aero-slider--ready</code>.",
     useFor:
       "Setup that needs the instance when other code creates the slider, such as a framework component or a CMS block.",
     snippet: recipe(`// Works whether this runs before or after createSlider.
@@ -477,49 +477,49 @@ attributes.push({
   type: "string",
   default: '"{index} of {count}"',
   description:
-    "Wording of the position the slider announces to screen readers when a user changes slide, for example <code>Bild {index} von {count}</code>.",
+    "What screen readers hear when the slide changes, for example <code>Bild {index} von {count}</code>.",
 });
 
 export const stateClasses: RefEntry[] = [
-  { name: "aero-slider--ready", description: "The slider has initialized" },
+  { name: "aero-slider--ready", description: "The slider has initialized." },
   {
     name: "aero-slider--draggable",
     description:
-      "<code>draggable</code> is on. The track shows the <code>grab</code> cursor only then",
+      "<code>draggable</code> is on. The track shows the <code>grab</code> cursor only then.",
   },
   {
     name: "aero-slider--dragging",
-    description: "A mouse or pen drag is in progress (<code>grabbing</code> cursor)",
+    description: "A mouse or pen drag is in progress (<code>grabbing</code> cursor).",
   },
   {
     name: "aero-slider--free",
     description:
-      '<code>snap</code> is <code>"settle"</code> or <code>"none"</code>. Turns CSS scroll snapping off',
+      '<code>snap</code> is <code>"settle"</code> or <code>"none"</code>. Turns CSS scroll snapping off.',
   },
-  { name: "aero-slider--vertical", description: "<code>vertical</code> is on" },
+  { name: "aero-slider--vertical", description: "<code>vertical</code> is on." },
 ];
 
 /** Classes the slider sets on the controls, listed beside the container's state classes. */
 export const controlStates: RefEntry[] = [
   {
     name: "aero-slider__dot--active",
-    description: "The dot for the current position",
+    description: "The dot for the current position.",
   },
   {
     name: ":disabled",
     description:
-      "Set on <code>aero-slider__nav--prev</code> or <code>--next</code> when it cannot go further. Never with <code>loop</code>",
+      "Set on <code>aero-slider__nav--prev</code> or <code>--next</code> when it cannot go further. Never with <code>loop</code>.",
   },
   {
     extension: "scrollingDots",
     name: "aero-slider__dot--edge",
     description:
-      "With <code>maxDots</code>: the outermost dot of the window when more dots lie beyond it. <code>aero-slider__dot--near-edge</code> marks the next one in, and <code>aero-slider__dot--hidden</code> the dots outside the window",
+      "With <code>maxDots</code>: the outermost dot of the window when more dots lie beyond it. <code>aero-slider__dot--near-edge</code> marks the next one in, and <code>aero-slider__dot--hidden</code> the dots outside the window.",
   },
   {
     extension: "thumbnails",
     name: "aero-slider__thumb--active",
-    description: "Set by <code>syncThumbnails</code> on the thumbnail of the current slide",
+    description: "Set by <code>syncThumbnails</code> on the thumbnail of the current slide.",
   },
 ];
 

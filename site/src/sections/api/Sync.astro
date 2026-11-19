@@ -13,7 +13,7 @@ const groups: RefGroup[] = [
         name: "thumbnails",
         type: "SliderInstance",
         description:
-          "The strip. It needs the same number of slides as <code>primary</code>: thumbnail <code>i</code> stands for slide <code>i</code>.",
+          "The thumbnail strip. It needs the same number of slides as <code>primary</code>.",
       },
       {
         name: "options.loop",
@@ -38,13 +38,12 @@ const groups: RefGroup[] = [
 ];
 
 const behaviours = [
-  "Turns dragging off on the strip and sets its <code>loop</code>, through <code>thumbnails.update()</code>, so clicks alone drive it.",
-  "A click on a thumbnail, loop clones included, calls <code>primary.goTo()</code> with its index.",
-  "On each <code>aero:slideChange</code> from <code>primary</code>, the matching thumbnails get <code>aero-slider__thumb--active</code> and <code>aria-current=\"true\"</code>, and the strip scrolls to them with <code>thumbnails.goTo()</code>.",
-  "Starts with the primary's current slide marked.",
-  'Makes each thumbnail that isn\'t a control of its own a button: <code>tabindex="0"</code> and <code>role="button"</code>, so Tab reaches it and Enter or Space presses it through the same path as a click. A thumbnail with no name of its own gets <code>aria-label="Go to slide N"</code>. Buttons, links and loop clones are left alone, and it holds after <code>refresh()</code> and <code>update()</code>.',
-  'Leaves the strip\'s alignment alone. Set <code>alignment: "center"</code> on it to keep the active thumbnail centred.',
-  "The teardown, or destroying the strip, removes its listeners, the pointer cursor, the active class, <code>aria-current</code> and the button attributes. It doesn't destroy either slider or undo the <code>update()</code>.",
+  "Sets the strip's <code>loop</code> option. The strip can still be dragged.",
+  "Clicking a thumbnail shows that slide in <code>primary</code>.",
+  "Marks the active thumbnail with <code>aero-slider__thumb--active</code> and <code>aria-current=\"true\"</code>, and scrolls the strip to keep it in view.",
+  'Gives thumbnails that aren\'t already buttons or links <code>role="button"</code> and <code>tabindex="0"</code>, so the keyboard can reach them. One with no label gets <code>aria-label="Go to slide N"</code>.',
+  'Set <code>alignment: "center"</code> on the strip to keep the active thumbnail centered.',
+  "Teardown removes the sync's listeners, classes and attributes. It doesn't destroy either slider.",
 ];
 ---
 
@@ -56,10 +55,9 @@ const behaviours = [
   files={["aero-slider.thumbnails.min.js"]}
 >
   <p>
-    Links a thumbnail strip to a main slider: a click on a thumbnail shows that slide, and the
-    strip follows the main slider however it moves. Both are ordinary sliders made with
-    <code>createSlider</code>. The <a href="#ex-gallery">gallery example</a> shows a full
-    product gallery.
+    Links a thumbnail strip to a main slider: clicking a thumbnail shows that slide, and the
+    strip follows the main slider. Both are made with <code>createSlider</code>. See the
+    <a href="#ex-gallery">gallery example</a>.
   </p>
 
   <ExtensionDemo slot="demo" extension="thumbnails">

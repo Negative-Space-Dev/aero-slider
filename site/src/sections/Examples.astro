@@ -44,8 +44,8 @@ const groups = exampleGroups.map((group) => ({
             <Example id={id} index={indexOf(id)}>
               <div slot="controls" class="ex-controls">
                 <div class="ex-controls__row">
-                  <span class="caption">Colour</span>
-                  <div id="swatches" class="segmented" role="group" aria-label="Colour">
+                  <span class="caption">Color</span>
+                  <div id="swatches" class="segmented" role="group" aria-label="Color">
                     {variantOptions.map(({ key, label }, i) => (
                       <button
                         type="button"
@@ -61,7 +61,7 @@ const groups = exampleGroups.map((group) => ({
                 </div>
                 <div class="ex-controls__row">
                   <span class="caption">On switch</span>
-                  <div id="variant-rest" class="segmented" role="group" aria-label="After a colour switch">
+                  <div id="variant-rest" class="segmented" role="group" aria-label="After a color switch">
                     <button type="button" data-rest="first" data-active aria-pressed="true">
                       First slide
                     </button>
