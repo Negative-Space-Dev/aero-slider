@@ -44,7 +44,7 @@
   <text id="name" class="name" x="114" y="70">Aero Slider</text>
   <g id="version">
     <rect id="version-box" y="44" height="34" rx="17" fill="#15171b" stroke="#2d3036" x="272.5000305175781" width="89.203125"></rect>
-    <text id="version-text" class="mono" y="67" style="font-size:16px" x="286.0000305175781">v1.2.2</text>
+    <text id="version-text" class="mono" y="67" style="font-size:16px" x="286.0000305175781">v1.2.3</text>
   </g>
   <text class="mono" x="1140" y="67" text-anchor="end">aeroslider.com</text>
 
