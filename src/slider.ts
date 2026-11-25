@@ -847,10 +847,8 @@ export function createSlider(
   // rather than skip it. Computed sizes keep their fractions, which clientWidth rounds away: a
   // 0.4px change to each of 100 slides moves the last one 40px.
   const measuredSizes = new Map<Element, string>();
-  const sizeOf = (el: Element) => {
-    const style = getComputedStyle(el);
-    return `${style.width},${style.height}`;
-  };
+  // Only the size along the track: snap positions depend on nothing else.
+  const sizeOf = (el: Element) => getComputedStyle(el)[isVertical() ? "height" : "width"];
   // The observer calls back after layout, so the reads here and in relayout() force nothing.
   const resizeObserver = new ResizeObserver((entries) => {
     if (destroyed) return;
