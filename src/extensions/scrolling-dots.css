@@ -6,11 +6,16 @@
   overflow: hidden;
   justify-content: flex-start;
   padding-inline: 6px;
+  /* The window slides mid-swipe. On iOS, its dots starting to animate in the slider's own stacking
+     context stopped a native swipe's glide dead wherever it was (8 of 8 slides on an iPhone, none
+     once isolated). Isolated, the window's changes stay inside its own layer. */
+  isolation: isolate;
+  will-change: transform;
+  contain: layout paint;
 }
 
-/* The window and its dots keep a layer of their own the whole time. Changing the index otherwise
-   gives a dot a layer or takes one away (a scale, the fade, the window sliding), and on iOS that
-   stops a native swipe's glide dead wherever it is. */
+/* The window and its dots keep a layer of their own the whole time: changing the index never
+   gives a dot a layer or takes one away (a scale, the fade, the window sliding). */
 .aero-slider__pagination-track,
 .aero-slider__pagination-track .aero-slider__dot {
   will-change: transform, opacity;
