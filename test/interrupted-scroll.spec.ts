@@ -93,7 +93,8 @@ test("a track stopped short of a slide, where there's no scrollend, settles soon
   await stoppable(page, false, false);
   const supported = await page.evaluate(() => {
     const track = document.querySelector("#s .aero-slider__track")!;
-    for (let o = track; o; o = Object.getPrototypeOf(o)) delete (o as Partial<Element>).onscrollend;
+    for (let o = track; o; o = Object.getPrototypeOf(o))
+      delete (o as Partial<HTMLElement>).onscrollend;
     return "onscrollend" in track;
   });
   expect(supported).toBe(false);
