@@ -8,6 +8,14 @@
   padding-inline: 6px;
 }
 
+/* The window and its dots keep a layer of their own the whole time. Changing the index otherwise
+   gives a dot a layer or takes one away (a scale, the fade, the window sliding), and on iOS that
+   stops a native swipe's glide dead wherever it is. */
+.aero-slider__pagination-track,
+.aero-slider__pagination-track .aero-slider__dot {
+  will-change: transform, opacity;
+}
+
 .aero-slider__pagination-track {
   display: flex;
   gap: inherit;
