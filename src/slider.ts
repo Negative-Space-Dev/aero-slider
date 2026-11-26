@@ -613,8 +613,14 @@ export function createSlider(
       // callback, and one from a track still moving cancels it.
       idleFrame = requestAnimationFrame(() => {
         // The move was stopped short of its target, perhaps by a touch iOS hides from the page
-        // (webkit.org/b/191218). Settle from where that left the track.
-        if (!moveFrame && !easeFrame && Math.abs(scrollPosition() - scrollTarget) > 1)
+        // (webkit.org/b/191218). Settle from where that left the track. A move that a narrower
+        // track clamped short is still a move: the re-measure rests it on the slide it was for.
+        if (
+          !moveFrame &&
+          !easeFrame &&
+          !extentChanged() &&
+          Math.abs(scrollPosition() - scrollTarget) > 1
+        )
           programmaticScroll = false;
         onSettle();
       });

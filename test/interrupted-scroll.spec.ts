@@ -75,6 +75,32 @@ for (const loop of [false, true]) {
   }
 }
 
+// A new gap that narrows the track clamps the move short of its stale target. That's a resize,
+// not an interruption: the move still rests on the slide it was for.
+test("a move a new gap clamps short, with no scrollend, rests on the slide asked for", async ({
+  page,
+}) => {
+  const slides = Array.from(
+    { length: 6 },
+    (_, i) => `<div style="flex:none;width:100px;height:100px">${i}</div>`
+  ).join("");
+  await mount(
+    page,
+    `<div id="s" class="aero-slider" style="width:300px;--aero-slide-gap:100px"><div class="aero-slider__track">${slides}</div></div>`
+  );
+  await create(page, "s", { alignment: "center", snap: "none" });
+  await page.evaluate(async () => {
+    const el = document.getElementById("s")!;
+    const track = el.querySelector(".aero-slider__track")!;
+    track.addEventListener("scrollend", (e) => e.stopPropagation(), { capture: true });
+    window.sliders.s!.goTo(4); // at 700px, past where a 50px gap ends the track (550px)
+    while (track.scrollLeft < 100) await new Promise(requestAnimationFrame);
+    el.style.setProperty("--aero-slide-gap", "50px");
+  });
+  // Slide 4 now rests at 500px; 550px is slide 5's.
+  await expect.poll(() => state(page, "s")).toEqual({ index: 4, position: 500 });
+});
+
 // Where a scrollend should come, the settle that stands in for a missing one waits long enough
 // that a native glide pausing in its last pixels isn't eased onto its slide from under it.
 test("a track that pauses short of a slide, where a scrollend should come, is left to finish", async ({
