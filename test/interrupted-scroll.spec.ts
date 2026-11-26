@@ -75,6 +75,34 @@ for (const loop of [false, true]) {
   }
 }
 
+// Where a scrollend should come, the settle that stands in for a missing one waits long enough
+// that a native glide pausing in its last pixels isn't eased onto its slide from under it.
+test("a track that pauses short of a slide, where a scrollend should come, is left to finish", async ({
+  page,
+}) => {
+  await stoppable(page, false, false);
+  await scrollBy(page, 400);
+  await page.waitForTimeout(350);
+  expect((await state(page, "s")).position).toBe(400);
+  await expect.poll(() => state(page, "s")).toEqual({ index: 1, position: 610 });
+});
+
+test("a track stopped short of a slide, where there's no scrollend, settles soon", async ({
+  page,
+}) => {
+  await stoppable(page, false, false);
+  const supported = await page.evaluate(() => {
+    const track = document.querySelector("#s .aero-slider__track")!;
+    for (let o = track; o; o = Object.getPrototypeOf(o)) delete (o as Partial<Element>).onscrollend;
+    return "onscrollend" in track;
+  });
+  expect(supported).toBe(false);
+  await scrollBy(page, 400);
+  await page.waitForTimeout(350);
+  expect((await state(page, "s")).position).not.toBe(400);
+  await expect.poll(() => state(page, "s")).toEqual({ index: 1, position: 610 });
+});
+
 test("a press on a track stopped between slides waits for its release, then rests on a slide", async ({
   page,
 }) => {
@@ -93,7 +121,7 @@ test("a press on a track stopped between slides waits for its release, then rest
 // that was stopped. Where in a frame the two meet varies, so try a spread of delays.
 test("a goTo() as a settle comes due still reaches its slide", async ({ page }) => {
   await stoppable(page, false, false);
-  for (const delay of [160, 170, 180, 185, 190, 195, 200, 205, 210]) {
+  for (const delay of [460, 470, 480, 485, 490, 495, 500, 505, 510]) {
     await page.evaluate(async (delay) => {
       const track = document.querySelector("#s .aero-slider__track")!;
       window.sliders.s!.goTo(0, { instant: true });
@@ -116,7 +144,7 @@ test("a goTo() on a page too busy to deliver its scroll events still reaches its
     const track = document.querySelector("#s .aero-slider__track")!;
     window.sliders.s!.goTo(4);
     while (track.scrollLeft < 60) await new Promise(requestAnimationFrame);
-    const until = performance.now() + 350;
+    const until = performance.now() + 650;
     while (performance.now() < until);
   });
   await expect.poll(() => state(page, "s")).toEqual({ index: 4, position: 2440 });

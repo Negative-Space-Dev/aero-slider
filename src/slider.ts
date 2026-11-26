@@ -81,9 +81,13 @@ function configure(config: Config, changes: SliderConfig = {}): void {
 const DRAG_THRESHOLD_PX = 5;
 const FLICK_VELOCITY = 0.3; // px per ms
 const FLICK_PROJECTION_MS = 250;
-// How long a track holds still before it settles without a scrollend. A wheel's scrollend can come
-// mid-gesture, and WebKit doesn't always send one (webkit.org/b/325497).
+// How long a track holds still before it settles without a scrollend: where there's no scrollend,
+// and after a wheel, whose scrollend can come mid-gesture.
 const IDLE_SETTLE_MS = 200;
+// Where a scrollend should come, the timer only stands in for one that never does: WebKit doesn't
+// always send it (webkit.org/b/325497), or stops a glide without ending it. It waits longer, so it
+// can't cut a native glide short: an iPhone glide's last pixels can pause over 100 ms.
+const MISSED_SCROLLEND_MS = 500;
 
 /**
  * What a re-measure follows, which decides where the track goes. `resize`: the layout changed under
@@ -592,7 +596,7 @@ export function createSlider(
         }
       });
     }
-    settleSoon();
+    settleSoon(fallbackSettle || !("onscrollend" in track) ? IDLE_SETTLE_MS : MISSED_SCROLLEND_MS);
   }
 
   function cancelSettle(): void {
@@ -601,8 +605,8 @@ export function createSlider(
     settleTimer = 0;
   }
 
-  /** Settles once the track holds still, for when no scrollend will say so. */
-  function settleSoon(): void {
+  /** Settles once the track holds still `wait` ms, for when no scrollend will say so. */
+  function settleSoon(wait = IDLE_SETTLE_MS): void {
     cancelSettle();
     settleTimer = window.setTimeout(() => {
       // A busy page delays scroll events past the timer. A frame delivers them before this
@@ -614,7 +618,7 @@ export function createSlider(
           programmaticScroll = false;
         onSettle();
       });
-    }, IDLE_SETTLE_MS);
+    }, wait);
   }
 
   /** `scrolled` is false when goTo() found the track already in place: nothing there may read layout. */
