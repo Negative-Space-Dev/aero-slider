@@ -62,6 +62,19 @@ test("a slide that stays the same size announces no resize", async ({ page }) =>
   expect(resized).toBe(0);
 });
 
+// Snap positions depend only on sizes along the track. An image loading in one slide can change its
+// height by a fraction of a pixel, and a re-measure then would pull a moving track onto its slide.
+test("a slide changing size only across the track announces no resize", async ({ page }) => {
+  await mount(page, mixed(8));
+  await create(page, "s", { alignment: "start" });
+  await settled(page, "s");
+  const resized = await resizedDuring(page, () => {
+    document.querySelector<HTMLElement>('#s [data-aero-slider-index="1"]')!.style.height =
+      "100.015625px";
+  });
+  expect(resized).toBe(0);
+});
+
 test("slides added before refresh() are tracked, and removed ones are not", async ({ page }) => {
   await mount(page, mixed(6));
   await create(page, "s", { alignment: "start" });

@@ -81,8 +81,13 @@ function configure(config: Config, changes: SliderConfig = {}): void {
 const DRAG_THRESHOLD_PX = 5;
 const FLICK_VELOCITY = 0.3; // px per ms
 const FLICK_PROJECTION_MS = 250;
-const SETTLE_FALLBACK_MS = 150; // for browsers without the scrollend event
-const WHEEL_SETTLE_MS = 200; // after a wheel's last scroll: its scrollend can come mid-gesture
+// How long a track holds still before it settles without a scrollend: where there's no scrollend,
+// and after a wheel, whose scrollend can come mid-gesture.
+const IDLE_SETTLE_MS = 200;
+// Where a scrollend should come, the timer only stands in for one that never does: WebKit doesn't
+// always send it (webkit.org/b/325497), or stops a glide without ending it. It waits longer, so it
+// can't cut a native glide short: an iPhone glide's last pixels can pause over 100 ms.
+const MISSED_SCROLLEND_MS = 500;
 
 /**
  * What a re-measure follows, which decides where the track goes. `resize`: the layout changed under
@@ -215,13 +220,14 @@ export function createSlider(
   let dragging = false;
   let suppressNextClick = false;
   let scrollFrame = 0;
-  let settleTimer = 0;
+  let settleTimer = 0; // 0 when no settle is pending
+  let idleFrame = 0; // the timer ran out: a frame to see whether the track still moves
   let easeFrame = 0; // a scrollDuration animation is in flight
   let moveFrame = 0; // a smooth move is waiting for the next frame to start
   // The scroll offset as last read, until something can have moved the track. Reading it lays the
   // page out if anything changed since the last frame, as it has in most slideChange handlers.
   let knownPosition: number | undefined;
-  let fallbackSettle = false; // a wheel or touch moved the track: settleTimer settles it, not scrollend
+  let fallbackSettle = false; // a wheel moved the track: settleTimer settles it, not scrollend
   const pressed = new Set<number>(); // mouse and pen pointers down on the track
   // Fingers on the track, from touch events: a pan turns the pointer stream into pointercancel
   // while the finger is still down, so pointer events can't say when it lifts.
@@ -517,6 +523,7 @@ export function createSlider(
    * clamped too; otherwise onSettle() would wait forever for a spot the track can't reach.
    */
   function startMove(target: number, smooth = true): void {
+    cancelSettle(); // owed to an earlier scroll, it could take this move for one that was stopped
     moveSmooth = smooth;
     coasting = false;
     programmaticScroll = true;
@@ -589,28 +596,45 @@ export function createSlider(
         }
       });
     }
-    if (!("onscrollend" in track) || fallbackSettle) {
-      clearTimeout(settleTimer);
-      settleTimer = window.setTimeout(
-        onSettle,
-        fallbackSettle ? WHEEL_SETTLE_MS : SETTLE_FALLBACK_MS
-      );
-    }
+    settleSoon(fallbackSettle || !("onscrollend" in track) ? IDLE_SETTLE_MS : MISSED_SCROLLEND_MS);
+  }
+
+  function cancelSettle(): void {
+    clearTimeout(settleTimer);
+    cancelAnimationFrame(idleFrame);
+    settleTimer = 0;
+  }
+
+  /** Settles once the track holds still `wait` ms, for when no scrollend will say so. */
+  function settleSoon(wait = IDLE_SETTLE_MS): void {
+    cancelSettle();
+    settleTimer = window.setTimeout(() => {
+      // A busy page delays scroll events past the timer. A frame delivers them before this
+      // callback, and one from a track still moving cancels it.
+      idleFrame = requestAnimationFrame(() => {
+        // The move was stopped short of its target, perhaps by a touch iOS hides from the page
+        // (webkit.org/b/191218). Settle from where that left the track. A move that a narrower
+        // track clamped short is still a move: the re-measure rests it on the slide it was for.
+        if (
+          !moveFrame &&
+          !easeFrame &&
+          !extentChanged() &&
+          Math.abs(scrollPosition() - scrollTarget) > 1
+        )
+          programmaticScroll = false;
+        onSettle();
+      });
+    }, wait);
   }
 
   /** `scrolled` is false when goTo() found the track already in place: nothing there may read layout. */
-  function settleSoon(): void {
-    clearTimeout(settleTimer);
-    settleTimer = window.setTimeout(onSettle, WHEEL_SETTLE_MS);
-  }
-
   function onSettle(scrolled = true): void {
     if (dragging) return;
-    clearTimeout(settleTimer);
     fallbackSettle = false;
     // A pointer still down owns the track: a finger may still be scrolling it, and a teleport now
     // would swap the pressed card for its copy, so a click would miss the link. Settle on release.
     if (pressed.size || touches.size) {
+      cancelSettle();
       settleDeferred = true;
       return;
     }
@@ -621,6 +645,7 @@ export function createSlider(
     if (stale) remeasureUnobserved(programmaticScroll && !coasting ? "move" : "scroll");
     // A scrollend from an instant scroll issued just before goTo() lands mid-animation; wait for ours.
     if (programmaticScroll && Math.abs(scrollPosition() - scrollTarget) > 1) return;
+    cancelSettle();
     const userScroll = !programmaticScroll;
     programmaticScroll = false;
     track.style.scrollSnapType = "";
@@ -693,11 +718,11 @@ export function createSlider(
     remeasureAfter = "input";
     // Fingers are counted from touch events (see touchstart below).
     if (event.pointerType !== "touch") pressed.add(event.pointerId);
-    // A wheel settle that was still pending waits for the pointer or finger to lift. So does the
+    // A settle that was still pending waits for the pointer or finger to lift. So does the
     // settle a move owes when the press stops it short, or before it starts.
-    if (fallbackSettle || easeFrame || moveFrame) settleDeferred = true;
+    if (settleTimer || easeFrame || moveFrame) settleDeferred = true;
     fallbackSettle = false;
-    clearTimeout(settleTimer);
+    cancelSettle();
     cancelEase();
     if (!config.draggable || event.button !== 0 || event.pointerType === "touch") return;
     if (config.noDrag && (event.target as Element).closest(config.noDrag)) return;
@@ -832,10 +857,8 @@ export function createSlider(
   // rather than skip it. Computed sizes keep their fractions, which clientWidth rounds away: a
   // 0.4px change to each of 100 slides moves the last one 40px.
   const measuredSizes = new Map<Element, string>();
-  const sizeOf = (el: Element) => {
-    const style = getComputedStyle(el);
-    return `${style.width},${style.height}`;
-  };
+  // Only the size along the track: snap positions depend on nothing else.
+  const sizeOf = (el: Element) => getComputedStyle(el)[isVertical() ? "height" : "width"];
   // The observer calls back after layout, so the reads here and in relayout() force nothing.
   const resizeObserver = new ResizeObserver((entries) => {
     if (destroyed) return;
@@ -1000,7 +1023,7 @@ export function createSlider(
     controller.abort(); // removes every listener; features clean up on this signal too
     resizeObserver.disconnect();
     intersectionObserver?.disconnect();
-    clearTimeout(settleTimer);
+    cancelSettle();
     cancelAnimationFrame(scrollFrame);
     cancelEase();
     for (const clone of track.querySelectorAll(`[${CLONE_ATTR}]`)) clone.remove();
@@ -1145,7 +1168,6 @@ export function createSlider(
     } else if (!pressed.delete((event as PointerEvent).pointerId)) return;
     if (pressed.size || touches.size || !settleDeferred) return;
     settleDeferred = false;
-    fallbackSettle = true;
     settleSoon();
   };
   // Fingers are counted in the capture phase on window, so content that stops touchstart can't

@@ -322,7 +322,7 @@ pageSize();`,
     },
     notes: [
       "<code>--aero-slides-per-view</code> takes fractions. The part after the point is how much of the next card shows.",
-      "The slider re-reads <code>--aero-slides-per-view</code> whenever the track or a slide changes size, so a media query takes effect with no JavaScript breakpoint config.",
+      "The slider re-reads <code>--aero-slides-per-view</code> whenever the track or a slide changes size along the track, so a media query takes effect with no JavaScript breakpoint config.",
       "<code>--aero-slide-aspect: auto</code> lets a card take the height of its content. Leave it out to give every slide one shape.",
       "The slider stretches each direct child of a slide to fill it, so wrap the card's content in one element, as here.",
       "<code>noDrag</code> keeps a mouse drag from starting on the link and button, so they click as usual. Without it, a drag that starts on them swallows the click. Touch is not affected.",

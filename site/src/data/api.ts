@@ -359,7 +359,7 @@ createSlider(el, { autoplay: true, loop: true });`),
     group: "Layout",
     type: "{}",
     description:
-      "The slider or one of its slides changed size. Fires before the slider re-measures and moves the slides back into place.",
+      "The slider or one of its slides changed size along the track. Fires before the slider re-measures and moves the slides back into place.",
     useFor: "Hiding anything pinned to where a slide was, before the slider moves it.",
     snippet: recipe(`// A tooltip pinned to a slide would point at the wrong spot once slides move.
 const tip = document.querySelector(".slide-tip");
